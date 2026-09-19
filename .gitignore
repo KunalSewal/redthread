@@ -1,0 +1,40 @@
+# Dataset (708 MB). Keep the README tracked.
+data/*
+!data/README.md
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+*.parquet
+
+# Node
+node_modules/
+.next/
+dist/
+build/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+~$*
+
+# Claude Code personal settings
+.claude/settings.local.json
+
+# Personal reference notes (kept locally, not published)
+Guide.md
+TigerGraph Stack Engineering Briefing*.md
+*.docx

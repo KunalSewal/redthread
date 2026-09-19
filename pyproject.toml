@@ -1,0 +1,34 @@
+[project]
+name = "redthread"
+version = "0.1.0"
+description = "Agentic fraud investigation on TigerGraph"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "pandas>=2.2",
+    "pyarrow>=17",
+    "pydantic>=2.8",
+    "python-dotenv>=1.0",
+    "pyTigerGraph==2.0.4",
+    "tigergraph-mcp==1.0.3",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["data: needs the dataset in data/ (skipped when absent)"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]

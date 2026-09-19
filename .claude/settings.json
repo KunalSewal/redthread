@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./data/transactions.csv)",
+      "Read(./data/identity.csv)",
+      "Read(./.env)",
+      "Read(./.env.*)"
+    ]
+  }
+}
