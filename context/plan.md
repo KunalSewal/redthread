@@ -13,7 +13,7 @@ case_pack / live alert
  │ intake → gather (LLM tool loop) → assess → policy(initial) → request evidence        │
  │        → simulate response → reassess → policy(final) → SAR writer → write-back      │
  └───────┬──────────────────────────────┬─────────────────────────────┬────────────────┘
-         │ MCP (stdio, allowlisted)     │ deterministic Python         │ Claude API
+         │ MCP (stdio, allowlisted)     │ deterministic Python         │ Gemini API
          ▼                              ▼                              ▼
  tigergraph-mcp ──► TigerGraph Savanna   policy engine, exposure,      reasoning, tool choice,
    installed GSQL queries,               routes, ID validation,        synthesis, SAR narrative
