@@ -11,6 +11,8 @@ dependencies = [
     "pyTigerGraph==2.0.4",
     "tigergraph-mcp==1.0.3",
     "google-genai>=1.0",
+    "sentence-transformers>=3.0",
+    "pypdf>=4.0",
     "lightgbm>=4.5",
     "scikit-learn>=1.5",
 ]

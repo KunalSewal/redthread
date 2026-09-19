@@ -173,11 +173,12 @@ def _state() -> dict:
     return json.loads(STATE.read_text()) if STATE.exists() else {}
 
 
-def load_file(job: str, path) -> dict:
-    """Post one CSV to a loading job, header stripped, and check every data line was accepted."""
-    header, _, body = path.read_text(encoding="utf-8").partition("\n")
+def load_file(job: str, path, sep: str = ",", has_header: bool = True) -> dict:
+    """Post one file to a loading job (header stripped) and check every data line was accepted."""
+    text = path.read_text(encoding="utf-8")
+    body = text.partition("\n")[2] if has_header else text
     expected = body.count("\n") + (0 if body.endswith("\n") or not body else 1)
-    result = connection().runLoadingJobWithData(body, "f", job, sep=",", eol="\n", timeout=0)
+    result = connection().runLoadingJobWithData(body, "f", job, sep=sep, eol="\n", timeout=0)
     stats = _summarize(result)
     stats["expected"] = expected
     if stats.get("valid") != expected or stats.get("rejected"):
