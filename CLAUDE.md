@@ -93,8 +93,8 @@ See `context/decisions.md` for the current decision log. Update the Status line 
 each work session.
 
 - **Status (2026-09-19):** Data prep, fraud model, policy engine, answer schema/validator done and
-  tested. GSQL schema + loading jobs written but untested. Waiting on Savanna credentials and
-  `ANTHROPIC_API_KEY` in `.env`. Next: `scripts/setup_graph.py`, installed queries, embeddings, agent.
+  tested. GSQL schema + loading jobs written but untested. LLM is Gemini (key in `.env`, verified).
+  Waiting on Savanna credentials (`TG_HOST`, `TG_USERNAME`, `TG_PASSWORD`) in `.env`. Next: `scripts/setup_graph.py`, installed queries, embeddings, agent.
   Build plan and progress: `context/plan.md`.
 
 ## Commands

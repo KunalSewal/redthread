@@ -14,9 +14,13 @@ Open questions stay at the top until resolved.
 - **2026-09-19: TigerGraph Savanna free tier (TG-4), not local Community Edition.** The dev machine
   has 15.7 GB RAM total (CE needs 16 GB minimum, 20–24 GB recommended for this data). Savanna gives
   256 GB with no ops. Cost: auto-stop and credit clock; pre-warm before demos.
-- **2026-09-19: Claude (Anthropic API) as the LLM, LangGraph as the orchestrator, official
-  `tigergraph-mcp` via `langchain-mcp-adapters` as the tool surface.** LangGraph is the MCP server's
-  recommended client and gives explicit, inspectable state for case progression.
+- **2026-09-19: LangGraph as the orchestrator, official `tigergraph-mcp` as the tool surface.**
+  LangGraph is the MCP server's recommended client and gives explicit, inspectable state for case
+  progression. The agent's MCP server runs with a `TG_ALLOWED_TOOLS` allowlist (read-only tools plus
+  the case write-back query).
+- **2026-09-20: Google Gemini as the LLM (supersedes Claude).** The owner has a Gemini API key.
+  `gemini-3.1-pro-preview` for investigation reasoning, `gemini-3.8-flash` for light tasks; both
+  pinned in `src/redthread/config.py` and overridable by env var. Verified callable on 2026-09-20.
 - **2026-09-19: Local embeddings (`BAAI/bge-small-en-v1.5`, 384-d) for GraphRAG.** Free,
   reproducible, no second API key; well under the 4096-d vector cap.
 - **2026-09-19: UI = FastAPI + React (Vite).** Keeps the backend in the same Python package as the agent.

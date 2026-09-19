@@ -44,7 +44,7 @@ case_pack / live alert
 4. [x] Hand investigation to design queries (findings in `context/data-dictionary.md`).
 5. [ ] GSQL schema + loading jobs (written, untested) → installed queries. **Needs Savanna.**
 6. [ ] Load graph; embeddings for closed cases + policy/pattern/regulatory docs. **Needs Savanna.**
-7. [ ] Agent (LangGraph + MCP + Claude). **Needs ANTHROPIC_API_KEY.**
+7. [ ] Agent (LangGraph + MCP + Gemini).
 8. [ ] Run 20 cases → `cases/`; validate; iterate on accuracy.
 9. [ ] Optional: monitor Nov–Dec alerts → `cases_extra/`.
 10. [ ] UI.
