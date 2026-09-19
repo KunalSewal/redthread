@@ -1,0 +1,167 @@
+{
+  "case_id": "HHG-014",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.99,
+    "pattern": "undocumented",
+    "pattern_description": "Coordinated online purchases across dozens of unrelated accounts using a specific Samsung device profile behind an anonymous proxy. The device is always new to the account and the activity does not match standard typologies.",
+    "affected_txn_ids": [
+      "3460634",
+      "3478561"
+    ],
+    "first_suspicious_txn_id": "3460634",
+    "connected_card_ids": [
+      "C02975-K1",
+      "C06617-K1",
+      "C12645-K1",
+      "C03528-K1",
+      "C09998-K1",
+      "C12132-K2",
+      "C09733-K1"
+    ],
+    "connected_device_profiles": [
+      "SM-G935F Build/NRD90M | Android 7.0 | chrome 62.0 for android | 1920x1080"
+    ],
+    "exposure_usd": 187.33,
+    "evidence": [
+      {
+        "claim": "The flagged transaction and an earlier transaction were made online using device D004630, which was new to the account and behind an anonymous proxy.",
+        "source": "graph",
+        "ref": "query:card_window(card=C13487-K1, 2016-11-12..2016-11-25)",
+        "entity_ids": [
+          "3460634",
+          "3478561",
+          "D004630"
+        ]
+      },
+      {
+        "claim": "Device D004630 has been used on 21 different cards in the recent window, always as a new device and behind a proxy.",
+        "source": "graph",
+        "ref": "query:device_neighbors(device=D004630, 2016-10-23..2016-11-25)",
+        "entity_ids": [
+          "D004630"
+        ]
+      },
+      {
+        "claim": "The device is part of fraud ring 36700632, which includes 7 cards with confirmed fraud.",
+        "source": "graph",
+        "ref": "query:ring_members(ring=36700632)",
+        "entity_ids": [
+          "D004630",
+          "C02975-K1",
+          "C06617-K1",
+          "C12645-K1",
+          "C03528-K1",
+          "C09998-K1",
+          "C12132-K2",
+          "C09733-K1"
+        ]
+      },
+      {
+        "claim": "There are 4 closed cases of confirmed fraud linked to this device, where analysts noted the same undocumented pattern of abuse.",
+        "source": "document",
+        "ref": "query:linked_cases(tx=3478561)",
+        "entity_ids": [
+          "CC-3035",
+          "CC-2985",
+          "CC-2971",
+          "CC-2649",
+          "D004630"
+        ]
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-2649",
+      "CC-2971",
+      "CC-2985",
+      "CC-3035"
+    ],
+    "summary": "The flagged transaction and an earlier one on card C13487-K1 were made online using a specific Samsung device profile (D004630) behind an anonymous proxy. This device was new to the account and has been used across 21 different cards in the recent window. It is linked to a known fraud ring and has four prior closed cases of confirmed fraud. The activity represents coordinated abuse across multiple customers that does not fit standard typologies. The decision is to block the card and file a report for undocumented fraud.",
+    "written_to_graph": true,
+    "graph_case_id": "CASE-HHG-014"
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "Section 6: probability 0.99 >= 0.85 on 4 independent signals"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "3a: fraud probability at or above 0.30; R9: coordinated abuse across customers fitting no known pattern; R6: several cards show fraud from device:D004630"
+      },
+      {
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "R9; R6: shared origin device:D004630"
+      },
+      {
+        "action": "MONITOR_CONNECTED_CARDS",
+        "route": "auto",
+        "reason": "R6: 7 connected card(s) share the same origin"
+      },
+      {
+        "action": "ESCALATE_TO_ANALYST",
+        "route": "auto",
+        "reason": "R9"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "Section 6: probability 0.99 >= 0.85 on 4 independent signals"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "3a: fraud probability at or above 0.30; R9: coordinated abuse across customers fitting no known pattern; R6: several cards show fraud from device:D004630"
+      },
+      {
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "R9; R6: shared origin device:D004630"
+      },
+      {
+        "action": "MONITOR_CONNECTED_CARDS",
+        "route": "auto",
+        "reason": "R6: 7 connected card(s) share the same origin"
+      },
+      {
+        "action": "ESCALATE_TO_ANALYST",
+        "route": "auto",
+        "reason": "R9"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": true,
+    "reason": "3a and R9: coordinated activity that fits no documented pattern",
+    "narrative": "This report details suspicious online activity involving card C13487-K1 and multiple other accounts. Between November 15, 2016, and November 22, 2016, two online transactions totaling $187.33 were conducted on card C13487-K1 in region 191. These transactions were initiated using a specific Samsung device profile (ID D004630, SM-G935F Build/NRD90M | Android 7.0 | chrome 62.0 for android | 1920x1080) operating behind an anonymous proxy. The device was marked as new to the account at the time of the transactions. Graph analysis reveals this same device profile has been used across 21 different cards recently, always as a new device and behind a proxy. Furthermore, the device is part of a known fraud ring (ID 36700632) connected to seven other cards (including C02975-K1, C06617-K1, and C12645-K1) with confirmed fraud. Four prior closed cases of confirmed fraud are also linked to this device, showing a consistent pattern of undocumented abuse. The coordinated use of a single device and proxy across dozens of unrelated accounts indicates a systematic compromise. The total exposure for the flagged card is $187.33.",
+    "subjects": [
+      "C13487",
+      "C13487-K1",
+      "C02975-K1",
+      "C06617-K1",
+      "C12645-K1",
+      "C03528-K1",
+      "C09998-K1",
+      "C12132-K2",
+      "C09733-K1"
+    ],
+    "total_amount_usd": 187.33,
+    "activity_dates": [
+      "2016-11-15",
+      "2016-11-22"
+    ]
+  },
+  "stop_reason": "The investigation stopped because the fraud probability reached 0.99, which is decisive under Section 6, supported by multiple independent pieces of evidence including a shared device behind a proxy, links to a known fraud ring, and prior confirmed fraud cases.",
+  "tool_calls": 25,
+  "tokens": 32856,
+  "latency_s": 69.1
+}
