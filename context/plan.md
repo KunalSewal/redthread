@@ -37,11 +37,12 @@ case_pack / live alert
 
 ## Phases
 
-1. [ ] Scaffold: pyproject, package layout, .env.example, test harness, git remote.
-2. [ ] Data prep: derive card IDs and device profiles, emit vertex/edge files. Tests.
-3. [ ] Policy engine + answer schema + validator. Tests.
-4. [ ] Hand investigation of cases with pandas to design queries (no answers written by hand).
-5. [ ] GSQL schema, loading jobs, installed queries. **Needs Savanna.**
+1. [x] Scaffold: pyproject, package layout, .env.example, test harness, git remote.
+2. [x] Data prep: card IDs, device profiles, holders, card–device links, vertex/edge files. Tests.
+2b. [x] Transaction fraud model trained on closed cases (AUC 0.968 on October holdout); scores in graph.
+3. [x] Policy engine + answer schema + validator. Tests.
+4. [x] Hand investigation to design queries (findings in `context/data-dictionary.md`).
+5. [ ] GSQL schema + loading jobs (written, untested) → installed queries. **Needs Savanna.**
 6. [ ] Load graph; embeddings for closed cases + policy/pattern/regulatory docs. **Needs Savanna.**
 7. [ ] Agent (LangGraph + MCP + Claude). **Needs ANTHROPIC_API_KEY.**
 8. [ ] Run 20 cases → `cases/`; validate; iterate on accuracy.

@@ -2,7 +2,7 @@ import pandas as pd
 import pytest
 
 from redthread import paths
-from redthread.data.entities import derive_card_ids, device_profile_strings, region_code
+from redthread.data.entities import derive_card_ids, device_profile_strings, holder_ids, region_code
 
 
 def test_card_ids_rank_card_types_alphabetically_with_null_first():
@@ -29,6 +29,15 @@ def test_device_profile_format_and_all_missing():
     profiles = device_profile_strings(identity)
     assert profiles[0] == "SAMSUNG SM-G892A Build/NRD90M | Android 7.0 | samsung browser 6.2 | unknown"
     assert pd.isna(profiles[1])
+
+
+def test_holder_ids_share_anchor_day():
+    # Same card and region; day 100 with D1=10 and day 105 with D1=15 are the same holder.
+    card = pd.Series(["C1-K1", "C1-K1", "C1-K1"])
+    addr1 = pd.Series([264.0, 264.0, None])
+    dt = pd.Series([100 * 86_400 + 5, 105 * 86_400 + 99, 7])
+    d1 = pd.Series([10.0, 15.0, None])
+    assert holder_ids(card, addr1, dt, d1).tolist() == ["C1-K1|264|90", "C1-K1|264|90", "C1-K1|NA|NA"]
 
 
 def test_region_code():

@@ -42,12 +42,42 @@ Open item: keying on `(card4, card6)` also gives 100% on labeled rows but differ
 on 8 unlabeled rows (14,318 cards). Use `card6`-only unless a case ID contradicts it; revisit if so.
 Implement this once in the loader and unit-test it against the closed cases.
 
+## Customers are issuer buckets; holders are the real people
+
+`customer_id` is the IEEE `card1` issuer code, so one "customer" can hold hundreds of unrelated
+people's transactions across dozens of regions (C12382: 422 txns, 40+ regions). Naive "cardholder
+history" signals (new region, unusual amount) fire constantly on that crowd.
+
+**Holder** = `card_id | billing region | anchor day`, where anchor day = `floor(TransactionDT / 86400) - D1`
+(D1 counts days since the card's first use, so the anchor is constant for one holder).
+Implemented in `redthread.data.entities.holder_ids`. 222,481 holders; many are single-transaction
+because online txns often lack a region. Use holder history for "is this normal for this person",
+and card history only as context. Example: HHG-001's flagged $77.07 in region 444 shares its holder
+with $77.08 (Nov 26) and $77.05 (Dec 11): a weekly recurring purchase.
+
+## Labels and the fraud model
+
+- Confirmed-fraud closed cases cover **3.37% of Jul–Oct transactions**, matching the original
+  dataset's fraud rate, so the closed cases are an essentially complete label set for Jul–Oct.
+- Bank `risk_score` on Jul–Oct: AUC 0.85; fraud share by band: <0.1: 0.5%, 0.5–0.7: 18%,
+  0.7–0.85: 25%, >0.85: 37%. Useful but noisy, as the README warns.
+- `scripts/train_model.py` trains LightGBM on all Vesta features plus holder aggregates.
+  Train Jul–Sep, test Oct: **AUC 0.968, average precision 0.64** (bank score: 0.87 / 0.25).
+  Scores: Nov–Dec from a Jul–Oct model; Jul–Oct out-of-fold by month (AUC 0.970, AP 0.76).
+  Stored as `Txn.model_score` (-1 = missing). It is evidence, not a verdict, like the risk score.
+
 ## Verified facts: identity
 
 - `id_15` (device New/Found for this account): Found 67,773, New 61,754, Unknown 11,653, null 3,252.
 - `id_23` (proxy): transparent 3,492, anonymous 1,185, hidden 611, null for the rest.
 - **Device profile** = `DeviceInfo | id_30 (OS) | id_31 (browser) | id_33 (screen)`, as in the
-  README example. 9,706 distinct profiles. Normalize nulls consistently before hashing into an ID.
+  README example, nulls rendered `unknown`. 9,705 profiles (one all-null combination excluded),
+  IDs `D000001…` in order of first use.
+- **Device specificity matters.** Median profile is used by 1 card; max 842. Partial profiles like
+  `unknown | unknown | chrome 66.0 | unknown` are shared by hundreds of cards and are not evidence of
+  a link. Weight device links by `DeviceProfile.n_cards`.
+- The undocumented ring device from the closed cases is **D004630** (SAMSUNG SM-G935F, anonymous
+  proxy). HHG-014's flagged transaction is on it.
 
 ## Verified facts: closed cases
 

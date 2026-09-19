@@ -15,6 +15,7 @@ explains itself. Graded on 20 benchmark cases (`data/case_pack.csv`) against a h
 - Data files, columns, joins, profiling facts: `context/data-dictionary.md`
 - Fraud Policy condensed (actions, routes, R1–R10, SAR, stopping): `context/policy-cheatsheet.md`
 - Architecture decisions and open questions: `context/decisions.md`
+- Build plan, architecture diagram, and progress: `context/plan.md`
 - Authoritative sources (do not edit): `data/README.md` (task, policy, answer format),
   `TigerGraph Agentic Fraud Investigation Problem Statement.docx`, the two briefing `.md` files at root.
 
@@ -31,6 +32,9 @@ explains itself. Graded on 20 benchmark cases (`data/case_pack.csv`) against a h
 6. **Missing fields score zero.** Every answer file must pass schema validation.
 7. **The LLM reasons, selects tools, synthesizes and explains. Graph analysis is done in GSQL.**
    Do not have the LLM "eyeball" raw rows in place of a query.
+8. **`customer_id` is an issuer bucket, not a person.** Judge "normal for this cardholder" at the
+   `Holder` level (see `context/data-dictionary.md`). Weight device links by device specificity.
+9. **No benchmark-artifact signals.** Only evidence an analyst could defend.
 
 ## Data handling (the 708 MB CSV)
 
@@ -88,9 +92,20 @@ tests/
 See `context/decisions.md` for the current decision log. Update the Status line below at the end of
 each work session.
 
-- **Status (2026-09-19):** Repo scaffolding + context docs only. No code, no graph yet.
-  Next: decide platform (Savanna vs CE Docker), LLM, framework; design schema; write loader.
+- **Status (2026-09-19):** Data prep, fraud model, policy engine, answer schema/validator done and
+  tested. GSQL schema + loading jobs written but untested. Waiting on Savanna credentials and
+  `ANTHROPIC_API_KEY` in `.env`. Next: `scripts/setup_graph.py`, installed queries, embeddings, agent.
+  Build plan and progress: `context/plan.md`.
 
 ## Commands
 
-(None yet. Add build/test/run commands here as soon as they exist.)
+All commands from the repo root, using the project venv (`.venv`, Python 3.12).
+
+```bash
+python -m venv .venv && .venv/Scripts/pip install -e ".[dev]"   # setup
+.venv/Scripts/python scripts/train_model.py     # ~4 min; writes data/processed/txn_scores.csv
+.venv/Scripts/python scripts/prepare_data.py    # ~1 min; writes data/processed/*.csv (needs scores)
+.venv/Scripts/python -m pytest -q               # tests (data tests skip if data/ is absent)
+.venv/Scripts/ruff check src tests scripts      # lint
+.venv/Scripts/python -m redthread.validate cases   # validate answer files
+```

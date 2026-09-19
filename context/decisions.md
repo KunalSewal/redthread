@@ -20,6 +20,17 @@ Open questions stay at the top until resolved.
 - **2026-09-19: Local embeddings (`BAAI/bge-small-en-v1.5`, 384-d) for GraphRAG.** Free,
   reproducible, no second API key; well under the 4096-d vector cap.
 - **2026-09-19: UI = FastAPI + React (Vite).** Keeps the backend in the same Python package as the agent.
+- **2026-09-19: Train our own transaction fraud model on the closed cases.** The closed cases label
+  essentially all Jul–Oct fraud, so a LightGBM model is trainable and far better than the bank's
+  score (AP 0.64 vs 0.25 on an October holdout). It is one evidence signal the agent cites, not the
+  verdict; the agent still has to establish pattern, episode, links and policy actions from the graph.
+  Only the provided dataset is used (never the public IEEE-CIS files).
+- **2026-09-19: Model resolved account holders as a `Holder` vertex.** `customer_id` is an issuer
+  bucket; `card + region + (day - D1)` recovers the individual. Without this, "cardholder history"
+  is the history of a crowd.
+- **2026-09-19: No reliance on data-generation artifacts.** Signals must be ones a fraud analyst
+  could defend (behaviour, devices, links, prior cases, model scores), not quirks of how the
+  benchmark was built.
 - **2026-09-19: Repo `github.com/KunalSewal/redthread` (public).** Personal reference notes
   (`Guide.md`, the briefing, the problem-statement docx) stay local and git-ignored.
 

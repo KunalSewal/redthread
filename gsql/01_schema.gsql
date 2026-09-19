@@ -1,0 +1,59 @@
+// RedThread graph schema. Run with: python scripts/setup_graph.py schema
+// Design notes: context/graph-design.md
+
+// ---- Entities from the dataset --------------------------------------------------------
+CREATE VERTEX Customer (PRIMARY_ID customer_id STRING, n_cards INT) WITH primary_id_as_attribute="true"
+CREATE VERTEX Card (PRIMARY_ID card_id STRING, customer_id STRING, card4 STRING, card6 STRING) WITH primary_id_as_attribute="true"
+// A resolved account holder inside an issuer bucket: card + billing region + anchor day (day - D1)
+CREATE VERTEX Holder (PRIMARY_ID holder_id STRING, card_id STRING, region STRING, anchor_day STRING,
+    n_txns INT, first_ts DATETIME, last_ts DATETIME, amount_mean DOUBLE) WITH primary_id_as_attribute="true"
+CREATE VERTEX Txn (PRIMARY_ID tx_id STRING, card_id STRING, holder_id STRING, ts DATETIME, amount DOUBLE,
+    product_cd STRING, channel STRING, risk_score DOUBLE, model_score DOUBLE, region STRING, country STRING,
+    dist1 DOUBLE, p_email STRING, r_email STRING, device_status STRING, proxy STRING, match_status STRING,
+    c1 DOUBLE, c13 DOUBLE, c14 DOUBLE, d1 DOUBLE, d15 DOUBLE,
+    m1 STRING, m2 STRING, m3 STRING, m4 STRING, m5 STRING, m6 STRING) WITH primary_id_as_attribute="true"
+CREATE VERTEX DeviceProfile (PRIMARY_ID device_id STRING, profile STRING, device_info STRING, os STRING,
+    browser STRING, screen STRING, device_type STRING, first_seen DATETIME, n_cards INT) WITH primary_id_as_attribute="true"
+CREATE VERTEX EmailDomain (PRIMARY_ID domain STRING) WITH primary_id_as_attribute="true"
+CREATE VERTEX BillingRegion (PRIMARY_ID region STRING) WITH primary_id_as_attribute="true"
+CREATE VERTEX Pattern (PRIMARY_ID name STRING, description STRING) WITH primary_id_as_attribute="true"
+CREATE VERTEX ClosedCase (PRIMARY_ID case_id STRING, customer_id STRING, card_id STRING, opened_at DATETIME,
+    closed_at DATETIME, outcome STRING, pattern STRING, first_fraud_txn_id STRING, n_txns INT,
+    exposure_usd DOUBLE, actions_taken STRING, report_filed STRING, analyst_notes STRING) WITH primary_id_as_attribute="true"
+
+// ---- Agent memory ------------------------------------------------------------------------
+CREATE VERTEX FraudCase (PRIMARY_ID case_id STRING, alert_id STRING, trigger_type STRING, status STRING,
+    verdict STRING, fraud_probability DOUBLE, pattern STRING, pattern_description STRING,
+    exposure_usd DOUBLE, summary STRING, opened_at DATETIME, updated_at DATETIME, sar_filed BOOL,
+    final_actions STRING, record_json STRING) WITH primary_id_as_attribute="true"
+CREATE VERTEX CaseEvent (PRIMARY_ID event_id STRING, case_id STRING, step INT, kind STRING, detail STRING,
+    at DATETIME) WITH primary_id_as_attribute="true"
+CREATE VERTEX DocChunk (PRIMARY_ID chunk_id STRING, source STRING, section STRING, content STRING) WITH primary_id_as_attribute="true"
+
+// ---- Relationships -----------------------------------------------------------------------
+CREATE DIRECTED EDGE OWNS (FROM Customer, TO Card) WITH REVERSE_EDGE="OWNED_BY"
+CREATE DIRECTED EDGE MADE (FROM Card, TO Txn) WITH REVERSE_EDGE="MADE_BY"
+CREATE DIRECTED EDGE HAS_HOLDER (FROM Card, TO Holder) WITH REVERSE_EDGE="HOLDER_OF"
+CREATE DIRECTED EDGE BY_HOLDER (FROM Txn, TO Holder) WITH REVERSE_EDGE="HOLDER_TXN"
+CREATE DIRECTED EDGE FROM_DEVICE (FROM Txn, TO DeviceProfile) WITH REVERSE_EDGE="DEVICE_TXN"
+CREATE DIRECTED EDGE USED_DEVICE (FROM Card, TO DeviceProfile, n_txns INT, first_ts DATETIME, last_ts DATETIME) WITH REVERSE_EDGE="DEVICE_CARD"
+CREATE DIRECTED EDGE PURCHASER_EMAIL (FROM Txn, TO EmailDomain) WITH REVERSE_EDGE="PURCHASER_EMAIL_OF"
+CREATE DIRECTED EDGE RECIPIENT_EMAIL (FROM Txn, TO EmailDomain) WITH REVERSE_EDGE="RECIPIENT_EMAIL_OF"
+CREATE DIRECTED EDGE BILLED_IN (FROM Txn, TO BillingRegion) WITH REVERSE_EDGE="REGION_TXN"
+CREATE DIRECTED EDGE NEXT (FROM Txn, TO Txn, gap_s INT) WITH REVERSE_EDGE="PREV"
+
+CREATE DIRECTED EDGE INVOLVES (FROM ClosedCase, TO Txn) WITH REVERSE_EDGE="IN_CLOSED_CASE"
+CREATE DIRECTED EDGE ON_CARD (FROM ClosedCase, TO Card) WITH REVERSE_EDGE="CARD_CLOSED_CASE"
+CREATE DIRECTED EDGE CONNECTED_TO (FROM ClosedCase, TO Card) WITH REVERSE_EDGE="CONNECTED_CLOSED_CASE"
+CREATE DIRECTED EDGE OF_PATTERN (FROM ClosedCase, TO Pattern) WITH REVERSE_EDGE="PATTERN_CLOSED_CASE"
+
+CREATE DIRECTED EDGE CASE_FLAGGED (FROM FraudCase, TO Txn) WITH REVERSE_EDGE="FLAGGED_IN_CASE"
+CREATE DIRECTED EDGE CASE_AFFECTS (FROM FraudCase, TO Txn) WITH REVERSE_EDGE="AFFECTED_IN_CASE"
+CREATE DIRECTED EDGE CASE_ON_CARD (FROM FraudCase, TO Card) WITH REVERSE_EDGE="CARD_FRAUD_CASE"
+CREATE DIRECTED EDGE CASE_CONNECTED_CARD (FROM FraudCase, TO Card) WITH REVERSE_EDGE="CONNECTED_FRAUD_CASE"
+CREATE DIRECTED EDGE CASE_DEVICE (FROM FraudCase, TO DeviceProfile) WITH REVERSE_EDGE="DEVICE_FRAUD_CASE"
+CREATE DIRECTED EDGE CASE_PATTERN (FROM FraudCase, TO Pattern) WITH REVERSE_EDGE="PATTERN_FRAUD_CASE"
+CREATE DIRECTED EDGE SIMILAR_TO (FROM FraudCase, TO ClosedCase, score DOUBLE) WITH REVERSE_EDGE="SIMILAR_FROM"
+CREATE DIRECTED EDGE HAS_EVENT (FROM FraudCase, TO CaseEvent) WITH REVERSE_EDGE="EVENT_OF"
+
+CREATE GRAPH RedThread (*)

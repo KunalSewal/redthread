@@ -10,6 +10,8 @@ dependencies = [
     "python-dotenv>=1.0",
     "pyTigerGraph==2.0.4",
     "tigergraph-mcp==1.0.3",
+    "lightgbm>=4.5",
+    "scikit-learn>=1.5",
 ]
 
 [project.optional-dependencies]
@@ -27,7 +29,7 @@ testpaths = ["tests"]
 markers = ["data: needs the dataset in data/ (skipped when absent)"]
 
 [tool.ruff]
-line-length = 110
+line-length = 120
 target-version = "py312"
 
 [tool.ruff.lint]

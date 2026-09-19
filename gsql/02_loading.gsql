@@ -1,0 +1,104 @@
+// Loading jobs for data/processed/*.csv (written by scripts/prepare_data.py).
+// Files are posted by scripts/setup_graph.py; numeric "missing" is -1 (see prepare_data.py).
+USE GRAPH RedThread
+
+CREATE LOADING JOB load_customers FOR GRAPH RedThread {
+  DEFINE FILENAME f;
+  LOAD f TO VERTEX Customer VALUES ($"customer_id", $"n_cards")
+    USING SEPARATOR=",", HEADER="true", EOL="\n", QUOTE="double";
+}
+
+CREATE LOADING JOB load_cards FOR GRAPH RedThread {
+  DEFINE FILENAME f;
+  LOAD f TO VERTEX Card VALUES ($"card_id", $"customer_id", $"card4", $"card6"),
+         TO EDGE OWNS VALUES ($"customer_id", $"card_id")
+    USING SEPARATOR=",", HEADER="true", EOL="\n", QUOTE="double";
+}
+
+CREATE LOADING JOB load_holders FOR GRAPH RedThread {
+  DEFINE FILENAME f;
+  LOAD f TO VERTEX Holder VALUES ($"holder_id", $"card_id", $"region", $"anchor_day", $"n_txns",
+                                  $"first_ts", $"last_ts", $"amount_mean"),
+         TO EDGE HAS_HOLDER VALUES ($"card_id", $"holder_id")
+    USING SEPARATOR=",", HEADER="true", EOL="\n", QUOTE="double";
+}
+
+CREATE LOADING JOB load_devices FOR GRAPH RedThread {
+  DEFINE FILENAME f;
+  LOAD f TO VERTEX DeviceProfile VALUES ($"device_id", $"profile", $"device_info", $"os", $"browser",
+                                         $"screen", $"device_type", $"first_seen", $"n_cards")
+    USING SEPARATOR=",", HEADER="true", EOL="\n", QUOTE="double";
+}
+
+CREATE LOADING JOB load_transactions FOR GRAPH RedThread {
+  DEFINE FILENAME f;
+  LOAD f TO VERTEX Txn VALUES ($"tx_id", $"card_id", $"holder_id", $"ts", $"amount", $"product_cd",
+                              $"channel", $"risk_score", $"model_score", $"region", $"country", $"dist1",
+                              $"p_email", $"r_email", $"device_status", $"proxy", $"match_status",
+                              $"C1", $"C13", $"C14", $"D1", $"D15",
+                              $"M1", $"M2", $"M3", $"M4", $"M5", $"M6"),
+         TO EDGE MADE VALUES ($"card_id", $"tx_id"),
+         TO EDGE BY_HOLDER VALUES ($"tx_id", $"holder_id"),
+         TO EDGE FROM_DEVICE VALUES ($"tx_id", $"device_id") WHERE $"device_id" != "",
+         TO EDGE PURCHASER_EMAIL VALUES ($"tx_id", $"p_email") WHERE $"p_email" != "",
+         TO EDGE RECIPIENT_EMAIL VALUES ($"tx_id", $"r_email") WHERE $"r_email" != "",
+         TO EDGE BILLED_IN VALUES ($"tx_id", $"region") WHERE $"region" != ""
+    USING SEPARATOR=",", HEADER="true", EOL="\n", QUOTE="double";
+}
+
+CREATE LOADING JOB load_card_device FOR GRAPH RedThread {
+  DEFINE FILENAME f;
+  LOAD f TO EDGE USED_DEVICE VALUES ($"card_id", $"device_id", $"n_txns", $"first_ts", $"last_ts")
+    USING SEPARATOR=",", HEADER="true", EOL="\n", QUOTE="double";
+}
+
+CREATE LOADING JOB load_next FOR GRAPH RedThread {
+  DEFINE FILENAME f;
+  LOAD f TO EDGE NEXT VALUES ($"from_tx", $"to_tx", $"gap_s")
+    USING SEPARATOR=",", HEADER="true", EOL="\n", QUOTE="double";
+}
+
+CREATE LOADING JOB load_patterns FOR GRAPH RedThread {
+  DEFINE FILENAME f;
+  LOAD f TO VERTEX Pattern VALUES ($"name", $"description")
+    USING SEPARATOR=",", HEADER="true", EOL="\n", QUOTE="double";
+}
+
+CREATE LOADING JOB load_closed_cases FOR GRAPH RedThread {
+  DEFINE FILENAME f;
+  LOAD f TO VERTEX ClosedCase VALUES ($"case_id", $"customer_id", $"card_id", $"opened_at", $"closed_at",
+                                      $"outcome", $"pattern", $"first_fraud_txn_id", $"n_txns",
+                                      $"exposure_usd", $"actions_taken", $"report_filed", $"analyst_notes"),
+         TO EDGE ON_CARD VALUES ($"case_id", $"card_id"),
+         TO EDGE OF_PATTERN VALUES ($"case_id", $"pattern")
+    USING SEPARATOR=",", HEADER="true", EOL="\n", QUOTE="double";
+}
+
+CREATE LOADING JOB load_closed_case_involves FOR GRAPH RedThread {
+  DEFINE FILENAME f;
+  LOAD f TO EDGE INVOLVES VALUES ($"case_id", $"tx_id")
+    USING SEPARATOR=",", HEADER="true", EOL="\n", QUOTE="double";
+}
+
+CREATE LOADING JOB load_closed_case_connected FOR GRAPH RedThread {
+  DEFINE FILENAME f;
+  LOAD f TO EDGE CONNECTED_TO VALUES ($"case_id", $"card_id")
+    USING SEPARATOR=",", HEADER="true", EOL="\n", QUOTE="double";
+}
+
+CREATE LOADING JOB load_doc_chunks FOR GRAPH RedThread {
+  DEFINE FILENAME f;
+  LOAD f TO VERTEX DocChunk VALUES ($"chunk_id", $"source", $"section", $"content")
+    USING SEPARATOR=",", HEADER="true", EOL="\n", QUOTE="double";
+}
+
+// Embeddings: "<id>|<v1,v2,...>" per line, no header.
+CREATE LOADING JOB load_closed_case_emb FOR GRAPH RedThread {
+  DEFINE FILENAME f;
+  LOAD f TO VECTOR ATTRIBUTE emb ON VERTEX ClosedCase VALUES ($0, SPLIT($1, ",")) USING SEPARATOR="|";
+}
+
+CREATE LOADING JOB load_doc_chunk_emb FOR GRAPH RedThread {
+  DEFINE FILENAME f;
+  LOAD f TO VECTOR ATTRIBUTE emb ON VERTEX DocChunk VALUES ($0, SPLIT($1, ",")) USING SEPARATOR="|";
+}
