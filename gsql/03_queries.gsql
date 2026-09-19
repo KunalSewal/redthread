@@ -42,7 +42,7 @@ CREATE OR REPLACE QUERY holder_history(VERTEX<Holder> holder, DATETIME before_ts
   MapAccum<STRING, SumAccum<INT>> @@regions, @@products, @@channels, @@emails;
   SumAccum<INT> @@n;
   SumAccum<DOUBLE> @@amount_sum;
-  MaxAccum<DOUBLE> @@amount_max;
+  MaxAccum<DOUBLE> @@amount_max = 0;  // default sentinel (-1.8e308) breaks JSON parsers when empty
   MinAccum<DATETIME> @@first_ts;
   SetAccum<STRING> @@devices;
   start = {holder};
@@ -64,7 +64,7 @@ CREATE OR REPLACE QUERY holder_history(VERTEX<Holder> holder, DATETIME before_ts
 CREATE OR REPLACE QUERY device_neighbors(VERTEX<DeviceProfile> device, DATETIME from_ts, DATETIME to_ts) FOR GRAPH RedThread {
   SumAccum<INT> @n_txns;
   SumAccum<DOUBLE> @amount;
-  MaxAccum<DOUBLE> @max_model_score;
+  MaxAccum<DOUBLE> @max_model_score = -1;  // -1 = missing; the default sentinel breaks JSON parsers
   MinAccum<DATETIME> @first_ts;
   MaxAccum<DATETIME> @last_ts;
   OrAccum @new_device;
@@ -82,7 +82,8 @@ CREATE OR REPLACE QUERY device_neighbors(VERTEX<DeviceProfile> device, DATETIME 
         ACCUM @@case_summaries += cc.case_id + "|" + cc.card_id + "|" + cc.outcome + "|" + cc.pattern + "|"
                                   + datetime_format(cc.opened_at, "%Y-%m-%d");
   agent_cases = SELECT f FROM start:d -(DEVICE_FRAUD_CASE:e)-> FraudCase:f;
-  PRINT start AS device;
+  PRINT start[start.device_id, start.profile, start.device_info, start.os, start.browser, start.screen,
+        start.device_type, start.first_seen, start.n_cards, start.ring_id, start.ring_size] AS device;
   PRINT cards[cards.card_id, cards.ring_id, cards.ring_size, cards.@n_txns, cards.@amount, cards.@max_model_score,
         cards.@first_ts, cards.@last_ts, cards.@new_device, cards.@proxy, cards.@tx_ids];
   PRINT @@case_summaries AS closed_cases_on_device;
@@ -252,7 +253,7 @@ CREATE OR REPLACE QUERY ring_wcc(DOUBLE score_min = 0.5, INT max_device_cards = 
 // A ring's cards and devices, with activity and fraud signals in a window.
 CREATE OR REPLACE QUERY ring_members(INT ring_id, DATETIME from_ts, DATETIME to_ts, INT max_members = 80) FOR GRAPH RedThread {
   SumAccum<INT> @n_txns;
-  MaxAccum<DOUBLE> @max_model_score;
+  MaxAccum<DOUBLE> @max_model_score = -1;
   SetAccum<STRING> @closed_fraud_cases;
   SetAccum<STRING> @agent_cases;
   members = SELECT c FROM Card:c WHERE c.ring_id == ring_id AND ring_id >= 0 LIMIT max_members;
