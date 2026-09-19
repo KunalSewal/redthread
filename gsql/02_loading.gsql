@@ -12,7 +12,7 @@ CREATE LOADING JOB load_customers FOR GRAPH RedThread {
 
 CREATE LOADING JOB load_cards FOR GRAPH RedThread {
   DEFINE FILENAME f;
-  LOAD f TO VERTEX Card VALUES ($"card_id", $"customer_id", $"card4", $"card6"),
+  LOAD f TO VERTEX Card VALUES ($"card_id", $"customer_id", $"card4", $"card6", _, _),
          TO EDGE OWNS VALUES ($"customer_id", $"card_id")
     USING SEPARATOR=",", HEADER="false", EOL="\n", QUOTE="double";
 }
@@ -28,7 +28,7 @@ CREATE LOADING JOB load_holders FOR GRAPH RedThread {
 CREATE LOADING JOB load_devices FOR GRAPH RedThread {
   DEFINE FILENAME f;
   LOAD f TO VERTEX DeviceProfile VALUES ($"device_id", $"profile", $"device_info", $"os", $"browser",
-                                         $"screen", $"device_type", $"first_seen", $"n_cards")
+                                         $"screen", $"device_type", $"first_seen", $"n_cards", _, _)
     USING SEPARATOR=",", HEADER="false", EOL="\n", QUOTE="double";
 }
 
@@ -103,4 +103,9 @@ CREATE LOADING JOB load_closed_case_emb FOR GRAPH RedThread {
 CREATE LOADING JOB load_doc_chunk_emb FOR GRAPH RedThread {
   DEFINE FILENAME f;
   LOAD f TO VECTOR ATTRIBUTE emb ON VERTEX DocChunk VALUES ($0, SPLIT($1, ",")) USING SEPARATOR="|";
+}
+
+CREATE LOADING JOB load_fraud_case_emb FOR GRAPH RedThread {
+  DEFINE FILENAME f;
+  LOAD f TO VECTOR ATTRIBUTE emb ON VERTEX FraudCase VALUES ($0, SPLIT($1, ",")) USING SEPARATOR="|";
 }

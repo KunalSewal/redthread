@@ -1,0 +1,318 @@
+// Installed queries: the agent's graph toolset (called through TigerGraph MCP) plus batch analytics.
+// Install with: python scripts/setup_graph.py queries
+
+// ---------------------------------------------------------------------------------------------
+// Alert context: the flagged transaction and everything one or two hops away that frames it.
+CREATE OR REPLACE QUERY alert_context(VERTEX<Txn> tx) FOR GRAPH RedThread {
+  start = {tx};
+  card = SELECT c FROM start:t -(MADE_BY:e)-> Card:c;
+  holder = SELECT h FROM start:t -(BY_HOLDER:e)-> Holder:h;
+  device = SELECT d FROM start:t -(FROM_DEVICE:e)-> DeviceProfile:d;
+  customer = SELECT cu FROM card:c -(OWNED_BY:e)-> Customer:cu;
+  customer_cards = SELECT c FROM customer:cu -(OWNS:e)-> Card:c;
+  prior_closed_cases = SELECT cc FROM customer_cards:c -(CARD_CLOSED_CASE:e)-> ClosedCase:cc;
+  prior_agent_cases = SELECT f FROM customer_cards:c -(CARD_FRAUD_CASE:e)-> FraudCase:f;
+  PRINT start AS flagged, card, holder, device, customer, customer_cards;
+  PRINT prior_closed_cases[prior_closed_cases.case_id, prior_closed_cases.card_id, prior_closed_cases.opened_at,
+        prior_closed_cases.outcome, prior_closed_cases.pattern, prior_closed_cases.n_txns,
+        prior_closed_cases.exposure_usd, prior_closed_cases.analyst_notes];
+  PRINT prior_agent_cases[prior_agent_cases.case_id, prior_agent_cases.alert_id, prior_agent_cases.verdict,
+        prior_agent_cases.pattern, prior_agent_cases.summary];
+}
+
+// ---------------------------------------------------------------------------------------------
+// Card activity in a window, each transaction annotated with its device and any closed case.
+CREATE OR REPLACE QUERY card_window(VERTEX<Card> card, DATETIME from_ts, DATETIME to_ts) FOR GRAPH RedThread {
+  SetAccum<STRING> @closed_cases;
+  SetAccum<STRING> @agent_cases;
+  SumAccum<STRING> @device_id;
+  SumAccum<INT> @device_cards;
+  start = {card};
+  txns = SELECT t FROM start:c -(MADE:e)-> Txn:t WHERE t.ts >= from_ts AND t.ts <= to_ts;
+  tmp = SELECT d FROM txns:t -(FROM_DEVICE:e)-> DeviceProfile:d
+        ACCUM t.@device_id += d.device_id, t.@device_cards += d.n_cards;
+  tmp = SELECT cc FROM txns:t -(IN_CLOSED_CASE:e)-> ClosedCase:cc ACCUM t.@closed_cases += cc.case_id;
+  tmp = SELECT f FROM txns:t -(AFFECTED_IN_CASE:e)-> FraudCase:f ACCUM t.@agent_cases += f.case_id;
+  PRINT txns;
+}
+
+// ---------------------------------------------------------------------------------------------
+// The resolved holder's history before a time: the baseline for "is this normal for this person".
+CREATE OR REPLACE QUERY holder_history(VERTEX<Holder> holder, DATETIME before_ts, INT max_txns = 300) FOR GRAPH RedThread {
+  MapAccum<STRING, SumAccum<INT>> @@regions, @@products, @@channels, @@emails;
+  SumAccum<INT> @@n;
+  SumAccum<DOUBLE> @@amount_sum;
+  MaxAccum<DOUBLE> @@amount_max;
+  MinAccum<DATETIME> @@first_ts;
+  SetAccum<STRING> @@devices;
+  start = {holder};
+  txns = SELECT t FROM start:h -(HOLDER_TXN:e)-> Txn:t WHERE t.ts < before_ts
+         ACCUM @@n += 1, @@amount_sum += t.amount, @@amount_max += t.amount, @@first_ts += t.ts,
+               @@regions += (t.region -> 1), @@products += (t.product_cd -> 1),
+               @@channels += (t.channel -> 1), @@emails += (t.p_email -> 1)
+         ORDER BY t.ts DESC LIMIT max_txns;
+  tmp = SELECT d FROM txns:t -(FROM_DEVICE:e)-> DeviceProfile:d ACCUM @@devices += d.device_id;
+  PRINT @@n AS n_txns, @@amount_sum AS amount_sum, @@amount_max AS amount_max, @@first_ts AS first_ts,
+        @@regions AS regions, @@products AS products, @@channels AS channels, @@emails AS emails,
+        @@devices AS devices;
+  PRINT txns[txns.tx_id, txns.ts, txns.amount, txns.product_cd, txns.channel, txns.region, txns.p_email,
+        txns.model_score, txns.device_status];
+}
+
+// ---------------------------------------------------------------------------------------------
+// Every card that used a device in a window, plus all-time closed and agent cases on the device.
+CREATE OR REPLACE QUERY device_neighbors(VERTEX<DeviceProfile> device, DATETIME from_ts, DATETIME to_ts) FOR GRAPH RedThread {
+  SumAccum<INT> @n_txns;
+  SumAccum<DOUBLE> @amount;
+  MaxAccum<DOUBLE> @max_model_score;
+  MinAccum<DATETIME> @first_ts;
+  MaxAccum<DATETIME> @last_ts;
+  OrAccum @new_device;
+  OrAccum @proxy;
+  SetAccum<STRING> @tx_ids;
+  SetAccum<STRING> @@case_summaries;
+  start = {device};
+  txns = SELECT t FROM start:d -(DEVICE_TXN:e)-> Txn:t WHERE t.ts >= from_ts AND t.ts <= to_ts;
+  cards = SELECT c FROM txns:t -(MADE_BY:e)-> Card:c
+          ACCUM c.@n_txns += 1, c.@amount += t.amount, c.@max_model_score += t.model_score,
+                c.@first_ts += t.ts, c.@last_ts += t.ts, c.@tx_ids += t.tx_id,
+                c.@new_device += (t.device_status == "New"), c.@proxy += (t.proxy_type != "");
+  all_txns = SELECT t FROM start:d -(DEVICE_TXN:e)-> Txn:t;
+  tmp = SELECT cc FROM all_txns:t -(IN_CLOSED_CASE:e)-> ClosedCase:cc
+        ACCUM @@case_summaries += cc.case_id + "|" + cc.card_id + "|" + cc.outcome + "|" + cc.pattern + "|"
+                                  + datetime_format(cc.opened_at, "%Y-%m-%d");
+  agent_cases = SELECT f FROM start:d -(DEVICE_FRAUD_CASE:e)-> FraudCase:f;
+  PRINT start AS device;
+  PRINT cards[cards.card_id, cards.ring_id, cards.ring_size, cards.@n_txns, cards.@amount, cards.@max_model_score,
+        cards.@first_ts, cards.@last_ts, cards.@new_device, cards.@proxy, cards.@tx_ids];
+  PRINT @@case_summaries AS closed_cases_on_device;
+  PRINT agent_cases[agent_cases.case_id, agent_cases.verdict, agent_cases.pattern, agent_cases.summary];
+}
+
+// ---------------------------------------------------------------------------------------------
+// Policy R6 detector: for each element the flagged transaction shares (device profile, billing
+// region, recipient email), the other cards active on it in the window and how many look like fraud.
+CREATE OR REPLACE QUERY shared_origin(VERTEX<Txn> tx, INT window_days = 7, DOUBLE score_min = 0.5) FOR GRAPH RedThread {
+  MaxAccum<DATETIME> @@t0;
+  SetAccum<STRING> @elems;
+  MapAccum<STRING, SetAccum<STRING>> @@cards, @@hot_cards, @@case_cards;
+  MapAccum<STRING, SumAccum<INT>> @@n_txns, @@n_hot_txns;
+  MapAccum<STRING, SumAccum<INT>> @@element_cards_all_time;
+  DATETIME lo;
+  DATETIME hi;
+  start = {tx};
+  tmp = SELECT t FROM start:t ACCUM @@t0 += t.ts;
+  lo = datetime_sub(@@t0, INTERVAL window_days DAY);
+  hi = datetime_add(@@t0, INTERVAL window_days DAY);
+
+  devs = SELECT d FROM start:t -(FROM_DEVICE:e)-> DeviceProfile:d
+         ACCUM @@element_cards_all_time += ("device:" + d.device_id -> d.n_cards);
+  regs = SELECT r FROM start:t -(BILLED_IN:e)-> BillingRegion:r;
+  mails = SELECT m FROM start:t -(RECIPIENT_EMAIL:e)-> EmailDomain:m;
+
+  n1 = SELECT t FROM devs:d -(DEVICE_TXN:e)-> Txn:t WHERE t.ts >= lo AND t.ts <= hi
+       ACCUM t.@elems += "device:" + d.device_id;
+  n2 = SELECT t FROM regs:r -(REGION_TXN:e)-> Txn:t WHERE t.ts >= lo AND t.ts <= hi
+       ACCUM t.@elems += "region:" + r.region;
+  n3 = SELECT t FROM mails:m -(RECIPIENT_EMAIL_OF:e)-> Txn:t WHERE t.ts >= lo AND t.ts <= hi
+       ACCUM t.@elems += "recipient_email:" + m.domain;
+  nb = n1 UNION n2 UNION n3;
+
+  tmp = SELECT c FROM nb:t -(MADE_BY:e)-> Card:c
+        ACCUM FOREACH el IN t.@elems DO
+                @@cards += (el -> c.card_id), @@n_txns += (el -> 1),
+                IF t.model_score >= score_min THEN
+                  @@hot_cards += (el -> c.card_id), @@n_hot_txns += (el -> 1)
+                END
+              END;
+  tmp = SELECT f FROM nb:t -(AFFECTED_IN_CASE:e)-> FraudCase:f WHERE f.verdict == "fraud"
+        ACCUM FOREACH el IN t.@elems DO @@case_cards += (el -> f.case_id) END;
+  PRINT lo AS window_from, hi AS window_to;
+  PRINT @@n_txns AS n_txns, @@n_hot_txns AS n_hot_txns, @@element_cards_all_time AS device_cards_all_time;
+  PRINT @@hot_cards AS hot_cards, @@case_cards AS agent_fraud_cases;
+  PRINT @@cards AS cards;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Prior cases reachable from the alert: same card, same holder, same device, or listed as connected.
+CREATE OR REPLACE QUERY linked_cases(VERTEX<Txn> tx) FOR GRAPH RedThread {
+  SetAccum<STRING> @via;
+  start = {tx};
+  card = SELECT c FROM start:t -(MADE_BY:e)-> Card:c;
+  holder = SELECT h FROM start:t -(BY_HOLDER:e)-> Holder:h;
+  device = SELECT d FROM start:t -(FROM_DEVICE:e)-> DeviceProfile:d WHERE d.n_cards <= 200;
+
+  c1 = SELECT cc FROM card:c -(CARD_CLOSED_CASE:e)-> ClosedCase:cc ACCUM cc.@via += "same_card";
+  c2 = SELECT cc FROM card:c -(CONNECTED_CLOSED_CASE:e)-> ClosedCase:cc ACCUM cc.@via += "listed_as_connected_card";
+  htx = SELECT t FROM holder:h -(HOLDER_TXN:e)-> Txn:t;
+  c3 = SELECT cc FROM htx:t -(IN_CLOSED_CASE:e)-> ClosedCase:cc ACCUM cc.@via += "same_holder";
+  dtx = SELECT t FROM device:d -(DEVICE_TXN:e)-> Txn:t;
+  c4 = SELECT cc FROM dtx:t -(IN_CLOSED_CASE:e)-> ClosedCase:cc ACCUM cc.@via += "same_device";
+  closed = c1 UNION c2 UNION c3 UNION c4;
+
+  f1 = SELECT f FROM card:c -(CARD_FRAUD_CASE:e)-> FraudCase:f ACCUM f.@via += "same_card";
+  f2 = SELECT f FROM card:c -(CONNECTED_FRAUD_CASE:e)-> FraudCase:f ACCUM f.@via += "listed_as_connected_card";
+  f3 = SELECT f FROM device:d -(DEVICE_FRAUD_CASE:e)-> FraudCase:f ACCUM f.@via += "same_device";
+  agent = f1 UNION f2 UNION f3;
+  PRINT closed[closed.case_id, closed.card_id, closed.opened_at, closed.outcome, closed.pattern, closed.n_txns,
+        closed.exposure_usd, closed.analyst_notes, closed.@via];
+  PRINT agent[agent.case_id, agent.alert_id, agent.verdict, agent.pattern, agent.exposure_usd, agent.summary, agent.@via];
+}
+
+// ---------------------------------------------------------------------------------------------
+// GraphRAG retrieval: vector search, then traverse from each hit to the entities it touched.
+CREATE OR REPLACE QUERY similar_closed_cases(LIST<FLOAT> qv, INT k = 8) FOR GRAPH RedThread {
+  MapAccum<VERTEX, FLOAT> @@distances;
+  SetAccum<STRING> @cases;
+  MapAccum<STRING, SetAccum<STRING>> @@case_devices;
+  hits = vectorSearch({ClosedCase.emb}, qv, k, {distance_map: @@distances});
+  tx = SELECT t FROM hits:cc -(INVOLVES:e)-> Txn:t ACCUM t.@cases += cc.case_id;
+  tmp = SELECT d FROM tx:t -(FROM_DEVICE:e)-> DeviceProfile:d
+        ACCUM FOREACH cid IN t.@cases DO @@case_devices += (cid -> d.device_id) END;
+  PRINT hits[hits.case_id, hits.card_id, hits.opened_at, hits.outcome, hits.pattern, hits.n_txns,
+        hits.exposure_usd, hits.actions_taken, hits.report_filed, hits.analyst_notes];
+  PRINT @@case_devices AS case_devices;
+  PRINT @@distances AS distances;
+}
+
+CREATE OR REPLACE QUERY similar_fraud_cases(LIST<FLOAT> qv, INT k = 5) FOR GRAPH RedThread {
+  MapAccum<VERTEX, FLOAT> @@distances;
+  hits = vectorSearch({FraudCase.emb}, qv, k, {distance_map: @@distances});
+  PRINT hits[hits.case_id, hits.alert_id, hits.verdict, hits.pattern, hits.pattern_description,
+        hits.exposure_usd, hits.final_actions, hits.summary];
+  PRINT @@distances AS distances;
+}
+
+CREATE OR REPLACE QUERY policy_search(LIST<FLOAT> qv, INT k = 5) FOR GRAPH RedThread {
+  MapAccum<VERTEX, FLOAT> @@distances;
+  hits = vectorSearch({DocChunk.emb}, qv, k, {distance_map: @@distances});
+  PRINT hits[hits.chunk_id, hits.source, hits.section, hits.content];
+  PRINT @@distances AS distances;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Batch ring detection: weakly connected components over cards linked through a *specific* device
+// that was *new to each account* in a *suspicious* transaction (in a confirmed-fraud closed case, or
+// model_score >= score_min): "the same unfamiliar device turned up on several accounts".
+// Sharing a device is not suspicious by itself: popular phones are shared by ~100 cards, and partial
+// profiles ("unknown | chrome 66") by hundreds; linking through them chains unrelated fraud together. Writes ring_id/ring_size on Card and
+// DeviceProfile (-1 = not in a ring).
+CREATE OR REPLACE QUERY ring_wcc(DOUBLE score_min = 0.5, INT max_device_cards = 150, INT min_ring_cards = 2) FOR GRAPH RedThread {
+  SetAccum<STRING> @@generic_info;
+  OrAccum @susp;
+  SetAccum<VERTEX<Card>> @card;
+  SetAccum<VERTEX<Card>> @scards;
+  MinAccum<INT> @cc;
+  SumAccum<INT> @last;
+  MapAccum<INT, SumAccum<INT>> @@ring_cards;
+  MapAccum<INT, SumAccum<INT>> @@ring_devices;
+  SumAccum<INT> @@iterations;
+  @@generic_info += "iOS Device"; @@generic_info += "MacOS"; @@generic_info += "Windows";
+  @@generic_info += "Trident/7.0"; @@generic_info += "Linux"; @@generic_info += "SAMSUNG";
+
+  reset = SELECT c FROM Card:c POST-ACCUM c.ring_id = -1, c.ring_size = 1;
+  reset = SELECT d FROM DeviceProfile:d POST-ACCUM d.ring_id = -1, d.ring_size = 0;
+
+  confirmed = SELECT t FROM ClosedCase:cc -(INVOLVES:e)-> Txn:t WHERE cc.outcome == "confirmed_fraud";
+  hot = SELECT t FROM Txn:t WHERE t.model_score >= score_min;
+  susp = confirmed UNION hot;
+  tmp = SELECT c FROM susp:t -(MADE_BY:e)-> Card:c ACCUM t.@card += c;
+  sdev = SELECT d FROM susp:t -(FROM_DEVICE:e)-> DeviceProfile:d
+         WHERE t.device_status == "New" AND d.n_cards <= max_device_cards
+               AND d.device_info != "" AND d.screen != "" AND d.os != ""
+               AND NOT @@generic_info.contains(d.device_info) AND NOT (d.device_info LIKE "rv:%")
+         ACCUM d.@scards += t.@card
+         HAVING d.@scards.size() >= 2;
+
+  scards = SELECT c FROM sdev:d -(DEVICE_CARD:e)-> Card:c WHERE d.@scards.contains(c)
+           POST-ACCUM c.@cc += getvid(c), c.@last = getvid(c);
+  active = scards;
+  WHILE active.size() > 0 LIMIT 100 DO
+    @@iterations += 1;
+    devs = SELECT d FROM active:c -(USED_DEVICE:e)-> DeviceProfile:d
+           WHERE d.@scards.size() >= 2 AND d.@scards.contains(c)
+           ACCUM d.@cc += c.@cc;
+    active = SELECT c FROM devs:d -(DEVICE_CARD:e)-> Card:c WHERE d.@scards.contains(c)
+             ACCUM c.@cc += d.@cc
+             HAVING c.@cc != c.@last;
+    active = SELECT c FROM active:c POST-ACCUM c.@last = c.@cc;
+  END;
+  // Devices take the label of their suspicious cards.
+  sdev = SELECT d FROM sdev:d -(DEVICE_CARD:e)-> Card:c WHERE d.@scards.contains(c) ACCUM d.@cc += c.@cc;
+  scards = SELECT c FROM scards:c POST-ACCUM @@ring_cards += (c.@cc -> 1);
+  sdev = SELECT d FROM sdev:d POST-ACCUM @@ring_devices += (d.@cc -> 1);
+  scards = SELECT c FROM scards:c WHERE @@ring_cards.get(c.@cc) >= min_ring_cards
+           POST-ACCUM c.ring_id = c.@cc, c.ring_size = @@ring_cards.get(c.@cc);
+  sdev = SELECT d FROM sdev:d WHERE @@ring_cards.get(d.@cc) >= min_ring_cards
+         POST-ACCUM d.ring_id = d.@cc, d.ring_size = @@ring_cards.get(d.@cc);
+  PRINT @@iterations AS iterations, susp.size() AS suspicious_txns, sdev.size() AS ring_devices,
+        scards.size() AS ring_cards, @@ring_cards.size() AS rings;
+}
+
+// A ring's cards and devices, with activity and fraud signals in a window.
+CREATE OR REPLACE QUERY ring_members(INT ring_id, DATETIME from_ts, DATETIME to_ts, INT max_members = 80) FOR GRAPH RedThread {
+  SumAccum<INT> @n_txns;
+  MaxAccum<DOUBLE> @max_model_score;
+  SetAccum<STRING> @closed_fraud_cases;
+  SetAccum<STRING> @agent_cases;
+  members = SELECT c FROM Card:c WHERE c.ring_id == ring_id AND ring_id >= 0 LIMIT max_members;
+  devices = SELECT d FROM DeviceProfile:d WHERE d.ring_id == ring_id AND ring_id >= 0;
+  tx = SELECT t FROM members:c -(MADE:e)-> Txn:t WHERE t.ts >= from_ts AND t.ts <= to_ts
+       ACCUM c.@n_txns += 1, c.@max_model_score += t.model_score;
+  tmp = SELECT cc FROM members:c -(CARD_CLOSED_CASE:e)-> ClosedCase:cc WHERE cc.outcome == "confirmed_fraud"
+        ACCUM c.@closed_fraud_cases += cc.case_id;
+  tmp = SELECT f FROM members:c -(CARD_FRAUD_CASE:e)-> FraudCase:f ACCUM c.@agent_cases += f.case_id;
+  PRINT members[members.card_id, members.ring_size, members.@n_txns, members.@max_model_score,
+        members.@closed_fraud_cases, members.@agent_cases];
+  PRINT devices[devices.device_id, devices.profile, devices.n_cards];
+}
+
+// Rings ranked by size, for monitoring and the dashboard.
+CREATE OR REPLACE QUERY top_rings(INT k = 20) FOR GRAPH RedThread {
+  MapAccum<INT, SumAccum<INT>> @@cards;
+  MapAccum<INT, SetAccum<STRING>> @@devices;
+  tmp = SELECT c FROM Card:c WHERE c.ring_id >= 0 ACCUM @@cards += (c.ring_id -> 1);
+  tmp = SELECT d FROM DeviceProfile:d WHERE d.ring_id >= 0 ACCUM @@devices += (d.ring_id -> d.device_id);
+  PRINT @@cards AS ring_cards, @@devices AS ring_devices;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Case memory write-back. delete_case first so a re-run does not leave stale edges.
+CREATE OR REPLACE QUERY delete_case(STRING case_id) FOR GRAPH RedThread {
+  cases = SELECT f FROM FraudCase:f WHERE f.case_id == case_id;
+  events = SELECT ev FROM cases:f -(HAS_EVENT:e)-> CaseEvent:ev;
+  DELETE ev FROM events:ev;
+  DELETE f FROM cases:f;
+  PRINT cases.size() AS deleted;
+}
+
+CREATE OR REPLACE QUERY write_case(STRING case_id, STRING alert_id, STRING trigger_type, STRING status,
+    STRING verdict, DOUBLE fraud_probability, STRING pattern, STRING pattern_description, DOUBLE exposure_usd,
+    STRING summary, DATETIME opened_at, BOOL sar_filed, STRING final_actions, STRING record_json,
+    VERTEX<Txn> flagged, SET<VERTEX<Txn>> affected, VERTEX<Card> card, SET<VERTEX<Card>> connected,
+    SET<VERTEX<DeviceProfile>> devices, SET<VERTEX<ClosedCase>> similar) FOR GRAPH RedThread {
+  INSERT INTO FraudCase VALUES (case_id, alert_id, trigger_type, status, verdict, fraud_probability, pattern,
+      pattern_description, exposure_usd, summary, opened_at, now(), sar_filed, final_actions, record_json);
+  INSERT INTO CASE_FLAGGED (FROM, TO) VALUES (case_id FraudCase, flagged Txn);
+  INSERT INTO CASE_ON_CARD (FROM, TO) VALUES (case_id FraudCase, card Card);
+  INSERT INTO CASE_PATTERN (FROM, TO) VALUES (case_id FraudCase, pattern Pattern);
+  FOREACH t IN affected DO INSERT INTO CASE_AFFECTS (FROM, TO) VALUES (case_id FraudCase, t Txn); END;
+  FOREACH c IN connected DO INSERT INTO CASE_CONNECTED_CARD (FROM, TO) VALUES (case_id FraudCase, c Card); END;
+  FOREACH d IN devices DO INSERT INTO CASE_DEVICE (FROM, TO) VALUES (case_id FraudCase, d DeviceProfile); END;
+  FOREACH s IN similar DO INSERT INTO SIMILAR_TO (FROM, TO, score) VALUES (case_id FraudCase, s ClosedCase, 1.0); END;
+  PRINT case_id AS written;
+}
+
+CREATE OR REPLACE QUERY add_case_event(STRING case_id, STRING event_id, INT step, STRING kind, STRING detail,
+    DATETIME occurred_at) FOR GRAPH RedThread {
+  INSERT INTO CaseEvent VALUES (event_id, case_id, step, kind, detail, occurred_at);
+  INSERT INTO HAS_EVENT (FROM, TO) VALUES (case_id FraudCase, event_id CaseEvent);
+  PRINT event_id AS written;
+}
+
+CREATE OR REPLACE QUERY case_timeline(STRING case_id) FOR GRAPH RedThread {
+  cases = SELECT f FROM FraudCase:f WHERE f.case_id == case_id;
+  events = SELECT ev FROM cases:f -(HAS_EVENT:e)-> CaseEvent:ev ORDER BY ev.step ASC;
+  PRINT cases;
+  PRINT events;
+}

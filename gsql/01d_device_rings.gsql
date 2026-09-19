@@ -1,0 +1,5 @@
+// Ring labels on devices too, so an alert on a ring device sees the ring directly.
+CREATE GLOBAL SCHEMA_CHANGE JOB add_device_ring_attrs {
+  ALTER VERTEX DeviceProfile ADD ATTRIBUTE (ring_id INT DEFAULT -1, ring_size INT DEFAULT 0);
+}
+RUN GLOBAL SCHEMA_CHANGE JOB add_device_ring_attrs

@@ -1,6 +1,6 @@
 """Create the schema, loading jobs and data in TigerGraph. Every step is safe to rerun.
 
-    python scripts/setup_graph.py all        # schema -> vectors -> jobs -> load
+    python scripts/setup_graph.py all        # schema -> schema_changes -> jobs -> load -> queries
     python scripts/setup_graph.py status     # vertex/edge counts
     python scripts/setup_graph.py load       # (re)load data; skips files already loaded
     python scripts/setup_graph.py load --force
@@ -92,11 +92,40 @@ def step_schema() -> None:
     run_idempotent(statements(paths.GSQL / "01_schema.gsql"), graph=None)
 
 
-def step_vectors() -> None:
-    if "emb(" in gsql("LS"):  # vector attributes appear in the vertex listing
-        log.info("vector attributes exist; skipping")
-        return
-    log.info("%s", gsql((paths.GSQL / "01b_vectors.gsql").read_text(), graph=None)[-400:])
+def _has_attribute(vertex: str, attribute: str) -> bool:
+    return any(a["AttributeName"] == attribute for a in connection().getVertexType(vertex)["Attributes"])
+
+
+# (file, check that returns True once applied). Global schema changes run once each.
+SCHEMA_CHANGES = [
+    ("01b_vectors.gsql", lambda: "emb(" in gsql("LS")),
+    ("01c_rings.gsql", lambda: _has_attribute("Card", "ring_id")),
+    ("01d_device_rings.gsql", lambda: _has_attribute("DeviceProfile", "ring_id")),
+]
+
+
+def step_schema_changes() -> None:
+    for name, applied in SCHEMA_CHANGES:
+        if applied():
+            log.info("schema change %s already applied", name)
+            continue
+        log.info("%s", gsql((paths.GSQL / name).read_text(), graph=None)[-300:])
+
+
+def step_queries(names: list[str] | None = None) -> None:
+    """Create (or replace) every query in 03_queries.gsql, then install them in one compile."""
+    stmts = [s for s in statements(paths.GSQL / "03_queries.gsql") if s.startswith("CREATE OR REPLACE QUERY")]
+    created = []
+    for stmt in stmts:
+        name = re.match(r"CREATE OR REPLACE QUERY (\w+)", stmt).group(1)
+        if names and name not in names:
+            continue
+        gsql(stmt)
+        created.append(name)
+        log.info("created query %s", name)
+    start = time.time()
+    out = gsql(f"INSTALL QUERY {', '.join(created)}")
+    log.info("installed %d queries in %.0fs: %s", len(created), time.time() - start, out[-300:])
 
 
 def header_for(job: str) -> list[str] | None:
@@ -205,13 +234,17 @@ def step_status() -> None:
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
     parser = argparse.ArgumentParser()
-    parser.add_argument("step", choices=["all", "schema", "vectors", "jobs", "load", "cleanup", "status"])
+    steps = ["all", "schema", "schema_changes", "jobs", "load", "cleanup", "queries", "status"]
+    parser.add_argument("step", choices=steps)
     parser.add_argument("--force", action="store_true", help="reload files already marked loaded")
+    parser.add_argument("--only", nargs="*", help="with `queries`: only these query names")
     args = parser.parse_args()
     steps = {
-        "schema": [step_schema], "vectors": [step_vectors], "jobs": [step_jobs],
+        "schema": [step_schema], "schema_changes": [step_schema_changes], "jobs": [step_jobs],
+        "queries": [lambda: step_queries(args.only)],
         "load": [lambda: step_load(args.force)], "cleanup": [step_cleanup], "status": [step_status],
-        "all": [step_schema, step_vectors, step_jobs, lambda: step_load(args.force), step_status],
+        "all": [step_schema, step_schema_changes, step_jobs, lambda: step_load(args.force),
+                lambda: step_queries(None), step_status],
     }
     for fn in steps[args.step]:
         fn()

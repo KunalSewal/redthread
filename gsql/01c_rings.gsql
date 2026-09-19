@@ -1,0 +1,5 @@
+// Ring (connected component) labels on cards, written by the ring_wcc query.
+CREATE GLOBAL SCHEMA_CHANGE JOB add_ring_attrs {
+  ALTER VERTEX Card ADD ATTRIBUTE (ring_id INT DEFAULT -1, ring_size INT DEFAULT 1);
+}
+RUN GLOBAL SCHEMA_CHANGE JOB add_ring_attrs
