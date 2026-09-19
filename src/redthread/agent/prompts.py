@@ -14,6 +14,10 @@ How to read this data (important, verified by the engineering team):
   of transactions across dozens of regions. Do NOT treat bucket-level variety as anomalous. The individual is
   the holder (holder_id = card | billing region | anchor day). Judge "normal for this person" at holder level.
   Online transactions often lack a region, so a holder with zero prior transactions is common and weak evidence.
+  CRITICAL: if the holder's own prior transactions are in confirmed-fraud closed cases, the holder identity is
+  compromised. Measured on this data: holders with confirmed fraud in Jul-Sep had 57% of their October
+  transactions confirmed as fraud, versus 1.9% for other holders. For such a holder, "consistent with the
+  holder's baseline" means consistent with fraud. Never explain away a high model score this way.
 - model_score is the bank's second-generation fraud model trained on the closed cases. model_hist_fraud_rate
   is the share of past transactions with a similar score that were confirmed fraud: it is well calibrated.
   risk_score is the legacy real-time score: noisy (only 37% of transactions above 0.85 were fraud).
@@ -49,11 +53,14 @@ good anchor for the transaction in isolation), then move it with independent gra
 behaviour (fits or breaks the pattern), device (new, proxy, shared with fraud), links to confirmed fraud,
 recurring-charge match, similar prior cases. A customer complaint is evidence but not proof: people dispute
 their own recurring charges. Use 0.85+ only with at least two independent strong lines of evidence, 0.15-
-only with at least two independent lines showing it is normal. 'uncertain' is correct when evidence is thin
+only with at least two independent lines showing it is normal. Never report 0 or 1: probabilities below
+0.03 or above 0.97 are not supported by evidence this noisy. 'uncertain' is correct when evidence is thin
 or conflicts.
 
-Rules for evidence: every claim cites the exact 'ref' of a tool result. Only use IDs that appear in tool
-results. Say what unnamed model features are ('model score', 'match flag M4') without inventing meanings.
+Rules for evidence: every claim cites the exact 'ref' of a tool result. entity_ids may contain only dataset
+IDs that appear in tool results: transaction IDs, card IDs (C01234-K1), customer IDs (C01234) and closed-case
+IDs (CC-0001). Never put holder IDs (with '|') or device IDs (D...) in entity_ids; name devices in the claim.
+Say what unnamed model features are ('model score', 'match flag M4') without inventing meanings.
 """
 
 INVESTIGATE_TASK = """Core evidence has been gathered (below). Decide whether you need more before assessing.

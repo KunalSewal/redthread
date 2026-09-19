@@ -21,6 +21,7 @@ from redthread.answer import Answer
 
 EXPOSURE_TOLERANCE = 0.01
 GRAPH_CASE_PREFIX = "CASE-"  # our own case vertices, written by the agent
+MONITOR_PREFIX = "MON-"  # alerts raised by scripts/monitor.py (cases_extra/)
 
 
 @dataclass
@@ -67,7 +68,7 @@ class Dataset:
 def dataset_errors(answer: Answer, data: Dataset) -> list[str]:
     errors = []
     c = answer.case
-    if answer.case_id not in data.case_pack:
+    if answer.case_id not in data.case_pack and not answer.case_id.startswith(MONITOR_PREFIX):
         errors.append(f"case_id {answer.case_id} is not in case_pack.csv")
     missing_tx = [t for t in c.affected_txn_ids if t not in data.amounts.index]
     if missing_tx:

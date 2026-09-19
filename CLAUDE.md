@@ -54,6 +54,17 @@ explains itself. Graded on 20 benchmark cases (`data/case_pack.csv`) against a h
 - A UI showing investigation, case progression, evidence, uncertainty, and next actions.
 - Agent framework and LLM are our choice (see `context/decisions.md`).
 
+## Gotchas learned the hard way (TigerGraph / Savanna)
+
+- Reserved words cannot be attribute or parameter names: `proxy`, `target`, `at` (renamed).
+- REST uploads ignore `HEADER="true"`: `load_file` strips the header; jobs use positional columns
+  generated from the CSV header (`$"name"` needs a fixed file path at job creation).
+- Empty `MaxAccum` prints -1.797e308, which breaks strict JSON parsers (the MCP server): initialise it.
+  `PRINT vertexSet` includes every vertex accumulator; project attributes instead.
+- Set-valued query parameters cannot be empty (arrive as NULL): write edges one call at a time.
+- Schema changes disable affected loading jobs: rerun `setup_graph.py jobs` after one.
+- Savanna free tier auto-suspends; everything is resumable. Stop the workspace when done (credits).
+
 ## Engineering practices
 
 - **Python 3.12** (already on this machine via miniconda). Pin dependencies in `requirements.txt`
@@ -72,18 +83,21 @@ explains itself. Graded on 20 benchmark cases (`data/case_pack.csv`) against a h
 - Small, focused commits with descriptive messages. Commit only when asked.
 - Match surrounding code style; no speculative abstractions.
 
-## Target repo layout (create as we go; update this section when it changes)
+## Repo layout (update this section when it changes)
 
 ```
 cases/                 # 20 graded answer files, <case_id>.json  (SUBMISSION)
 cases_extra/           # optional: self-monitored alerts beyond the 20 (Innovation credit)
 context/               # reference docs for Claude and the team
-data/                  # provided dataset (CSVs git-ignored, README tracked)
-docs/                  # regulatory PDFs / policy text for GraphRAG ingestion, blog draft
-gsql/                  # schema, loading jobs, installed queries (*.gsql)
-scripts/               # load_graph.py, install_queries.py, validate_answers.py, run_cases.py
-src/fraud_agent/       # agent package: tools, policy engine, memory, answer builder
-ui/                    # analyst dashboard
+data/                  # provided dataset (CSVs + data/processed git-ignored, README tracked)
+docs/regulatory/       # downloaded FinCEN/FFIEC/FATF docs for GraphRAG (git-ignored)
+gsql/                  # 01 schema, 01b-d schema changes, 02 loading jobs, 03 installed queries
+scripts/               # prepare_data, train_model, setup_graph, build_knowledge, run_cases
+src/redthread/agent/   # workflow (graph.py), MCP client, tools, prompts, simulator, memory, llm
+src/redthread/api/     # FastAPI dashboard backend
+src/redthread/         # policy.py, answer.py, validate.py, model/, rag/, data/
+runs/                  # investigation traces + approvals (git-ignored)
+ui/                    # React dashboard (Vite)
 tests/
 ```
 
@@ -92,10 +106,10 @@ tests/
 See `context/decisions.md` for the current decision log. Update the Status line below at the end of
 each work session.
 
-- **Status (2026-09-19):** Data prep, fraud model, policy engine, answer schema/validator done and
-  tested. GSQL schema + loading jobs written but untested. LLM is Gemini (key in `.env`, verified).
-  Waiting on Savanna credentials (`TG_HOST`, `TG_USERNAME`, `TG_PASSWORD`) in `.env`. Next: `scripts/setup_graph.py`, installed queries, embeddings, agent.
-  Build plan and progress: `context/plan.md`.
+- **Status (2026-09-20):** End to end working. Graph loaded on Savanna (counts verified), 17 installed
+  queries, ring detection, GraphRAG knowledge base, LangGraph agent over TigerGraph MCP with Gemini,
+  case memory write-back, FastAPI + React dashboard. Next: review the 20 answers, iterate on accuracy,
+  optional `cases_extra/`, demo video, blog. Progress: `context/plan.md`.
 
 ## Commands
 
@@ -108,4 +122,11 @@ python -m venv .venv && .venv/Scripts/pip install -e ".[dev]"   # setup
 .venv/Scripts/python -m pytest -q               # tests (data tests skip if data/ is absent)
 .venv/Scripts/ruff check src tests scripts      # lint
 .venv/Scripts/python -m redthread.validate cases   # validate answer files
+.venv/Scripts/python scripts/setup_graph.py all      # schema, jobs, load, queries (idempotent)
+.venv/Scripts/python scripts/setup_graph.py status   # vertex/edge counts
+.venv/Scripts/python scripts/setup_graph.py queries --only <name> ...   # reinstall edited queries
+.venv/Scripts/python scripts/build_knowledge.py --fetch   # GraphRAG chunks + embeddings -> graph
+.venv/Scripts/python scripts/run_cases.py [HHG-001 ...]   # investigate; writes cases/ and runs/
+.venv/Scripts/python -m uvicorn redthread.api.app:app --port 8000   # dashboard API
+cd ui && npx vite                                     # dashboard at http://localhost:5173
 ```

@@ -42,10 +42,10 @@ case_pack / live alert
 2b. [x] Transaction fraud model trained on closed cases (AUC 0.968 on October holdout); scores in graph.
 3. [x] Policy engine + answer schema + validator. Tests.
 4. [x] Hand investigation to design queries (findings in `context/data-dictionary.md`).
-5. [ ] GSQL schema + loading jobs (written, untested) → installed queries. **Needs Savanna.**
-6. [ ] Load graph; embeddings for closed cases + policy/pattern/regulatory docs. **Needs Savanna.**
-7. [ ] Agent (LangGraph + MCP + Gemini).
+5. [x] GSQL schema, loading jobs, 17 installed queries, ring detection (WCC over suspicious device use).
+6. [x] Graph loaded and verified; 464 doc chunks + 5,565 closed-case embeddings in TigerGraph vectors.
+7. [x] Agent (LangGraph + MCP + Gemini), case memory write-back.
 8. [ ] Run 20 cases → `cases/`; validate; iterate on accuracy.
 9. [ ] Optional: monitor Nov–Dec alerts → `cases_extra/`.
-10. [ ] UI.
+10. [x] UI: FastAPI + React dashboard with live investigations and approvals.
 11. [ ] Demo video, blog post, social post.

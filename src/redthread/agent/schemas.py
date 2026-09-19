@@ -24,8 +24,9 @@ class LlmSignals(BaseModel):
     linked_to_other_fraud: bool = Field(description="Connects to a shared device profile or another card's fraud")
     coordinated_undocumented: bool = Field(description="R9: coordinated abuse across customers, no known pattern")
     evidence_conflicts: bool = Field(description="R8: strong evidence points in opposite directions")
-    customer_cards_confirmed_fraud: int = Field(description="R10: how many of the customer's cards have fraud")
-    credentials_compromised: bool = Field(description="R10: credentials confirmed compromised")
+    customer_cards_confirmed_fraud: int = Field(
+        description="R10: how many of the customer's cards show fraud IN THIS EPISODE (not historical cases)")
+    credentials_compromised: bool = Field(description="R10: login credentials confirmed stolen (account takeover)")
 
 
 class LlmAssessment(BaseModel):

@@ -9,6 +9,7 @@ engine decides actions and routes; the simulator supplies the assumed reply to e
 
 import json
 import logging
+import re
 import time
 from collections.abc import Callable
 from dataclasses import asdict
@@ -29,6 +30,7 @@ from redthread.policy import Action, Assessment, evidence_request, recommend, sa
 log = logging.getLogger(__name__)
 FOLLOW_UP_BUDGET = 5
 STOP_HIGH, STOP_LOW = 0.85, 0.15
+P_FLOOR = 0.03  # calibration is scored: never claim certainty the evidence cannot support
 
 
 class CaseState(TypedDict, total=False):
@@ -82,6 +84,9 @@ class Investigation:
         alert = state["alert"]
         state["case_id"] = f"CASE-{alert['case_id']}"
         state["started"] = time.time()
+        # A re-investigation starts clean: memory should carry other cases' lessons, not an earlier answer
+        # to this same alert.
+        await self.graph.query("delete_case", {"case_id": state["case_id"]})
         self._event(state, "alert", f"{alert['trigger_type']}: {alert['trigger_text']}")
         return state
 
@@ -184,10 +189,11 @@ class Investigation:
             source = "document" if led.refs.get(ev.ref) == "policy" else ev.source if ev.ref.startswith(
                 ("trigger:", "evidence_request:")) else "graph"
             evidence.append(ev.model_copy(update={
-                "source": source, "entity_ids": [e for e in ev.entity_ids if led.entity_known(e)]}))
+                "source": source, "entity_ids": [e for e in ev.entity_ids if _dataset_id(e) and led.entity_known(e)]}))
         if dropped:
             self._event(state, "validation", f"Discarded unsupported IDs/refs from the assessment: {dropped[:12]}")
         return a.model_copy(update={
+            "fraud_probability": min(max(a.fraud_probability, P_FLOOR), 1 - P_FLOOR),
             "affected_txn_ids": affected, "first_suspicious_txn_id": affected[0] if affected else "",
             "connected_card_ids": cards, "connected_device_ids": devices, "similar_prior_cases": similar,
             "evidence": evidence,
@@ -207,8 +213,12 @@ class Investigation:
             recurring_match=s.recurring_match, shared_origin=s.shared_origin, shared_element=s.shared_element,
             linked_to_other_fraud=s.linked_to_other_fraud, coordinated_undocumented=s.coordinated_undocumented,
             connected_cards=tuple(a.connected_card_ids), evidence_conflicts=s.evidence_conflicts,
-            customer_cards_confirmed_fraud=s.customer_cards_confirmed_fraud,
-            credentials_compromised=s.credentials_compromised,
+            # R10 inputs come from the episode, not the model's judgement: cards of THIS customer caught in the
+            # fraud (the alert card if fraud, plus connected cards with the same customer prefix).
+            customer_cards_confirmed_fraud=_customer_cards_in_episode(state["alert"], a),
+            # R10 needs credentials *confirmed* compromised; no evidence available here confirms it (an inferred
+            # account takeover is not a confirmation), and analysts never blocked all cards in 5,565 closed cases.
+            credentials_compromised=False,
             online=led.txns[str(state["alert"]["flagged_txn_id"])]["channel"] == "online",
         )
 
@@ -237,7 +247,7 @@ class Investigation:
             state["final"], state["final_assessment"] = state["initial"], state["assessment"]
             return state
         a = dict(state["assessment"])
-        p = reply["posterior"]
+        p = min(max(reply["posterior"], P_FLOOR), 1 - P_FLOOR)
         a["probability"] = p
         a["verdict"] = "fraud" if p >= STOP_HIGH else "legitimate" if p <= STOP_LOW else "uncertain"
         a["independent_evidence"] = a["independent_evidence"] + 1
@@ -390,6 +400,19 @@ class Investigation:
             "initial_actions": state["initial"], "final_actions": state["final"],
             "customer_id": state["alert"]["customer_id"], "card_id": state["alert"]["card_id"],
         }
+
+
+def _dataset_id(entity_id: str) -> bool:
+    """IDs that exist in the dataset: transactions, cards, customers, closed cases. Holder and device IDs are
+    RedThread's own derived identifiers and must not appear where the answer format expects dataset IDs."""
+    return bool(re.fullmatch(r"\d+|C\d{5}(-K\d)?|CC-\d{4}", entity_id))
+
+
+def _customer_cards_in_episode(alert: dict, a: LlmAssessment) -> int:
+    if a.verdict != "fraud":
+        return 0
+    cards = {alert["card_id"], *(c for c in a.connected_card_ids if c.split("-")[0] == alert["customer_id"])}
+    return len(cards)
 
 
 def _sar_subjects(alert: dict, la: dict) -> list[str]:

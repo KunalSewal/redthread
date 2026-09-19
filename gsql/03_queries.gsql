@@ -45,6 +45,8 @@ CREATE OR REPLACE QUERY holder_history(VERTEX<Holder> holder, DATETIME before_ts
   MaxAccum<DOUBLE> @@amount_max = 0;  // default sentinel (-1.8e308) breaks JSON parsers when empty
   MinAccum<DATETIME> @@first_ts;
   SetAccum<STRING> @@devices;
+  SumAccum<INT> @@fraud_txns;
+  SetAccum<STRING> @@fraud_cases;
   start = {holder};
   txns = SELECT t FROM start:h -(HOLDER_TXN:e)-> Txn:t WHERE t.ts < before_ts
          ACCUM @@n += 1, @@amount_sum += t.amount, @@amount_max += t.amount, @@first_ts += t.ts,
@@ -52,9 +54,12 @@ CREATE OR REPLACE QUERY holder_history(VERTEX<Holder> holder, DATETIME before_ts
                @@channels += (t.channel -> 1), @@emails += (t.p_email -> 1)
          ORDER BY t.ts DESC LIMIT max_txns;
   tmp = SELECT d FROM txns:t -(FROM_DEVICE:e)-> DeviceProfile:d ACCUM @@devices += d.device_id;
+  // A holder whose own history is confirmed fraud is a compromised identity, not a clean baseline.
+  tmp = SELECT cc FROM txns:t -(IN_CLOSED_CASE:e)-> ClosedCase:cc WHERE cc.outcome == "confirmed_fraud"
+        ACCUM @@fraud_txns += 1, @@fraud_cases += cc.case_id;
   PRINT @@n AS n_txns, @@amount_sum AS amount_sum, @@amount_max AS amount_max, @@first_ts AS first_ts,
         @@regions AS regions, @@products AS products, @@channels AS channels, @@emails AS emails,
-        @@devices AS devices;
+        @@devices AS devices, @@fraud_txns AS confirmed_fraud_txns, @@fraud_cases AS confirmed_fraud_cases;
   PRINT txns[txns.tx_id, txns.ts, txns.amount, txns.product_cd, txns.channel, txns.region, txns.p_email,
         txns.model_score, txns.device_status];
 }
@@ -326,4 +331,26 @@ CREATE OR REPLACE QUERY case_timeline(STRING case_id) FOR GRAPH RedThread {
   events = SELECT ev FROM cases:f -(HAS_EVENT:e)-> CaseEvent:ev ORDER BY ev.step ASC;
   PRINT cases;
   PRINT events;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Monitoring (Innovation): alerts the bank's queue did not raise.
+// Transactions in a window on ring devices, new to the account: the ring signature the bank's model misses.
+CREATE OR REPLACE QUERY monitor_ring_activity(DATETIME from_ts, DATETIME to_ts) FOR GRAPH RedThread {
+  SumAccum<INT> @ring;
+  devs = SELECT d FROM DeviceProfile:d WHERE d.ring_id >= 0;
+  hits = SELECT t FROM devs:d -(DEVICE_TXN:e)-> Txn:t
+         WHERE t.ts >= from_ts AND t.ts <= to_ts AND t.device_status == "New"
+         ACCUM t.@ring += d.ring_id;
+  PRINT hits[hits.tx_id, hits.card_id, hits.ts, hits.amount, hits.risk_score, hits.model_score, hits.proxy_type,
+        hits.@ring AS ring_id];
+}
+
+// High second-generation model score where the legacy risk score stayed low: fraud the bank's queue missed.
+CREATE OR REPLACE QUERY monitor_model_misses(DATETIME from_ts, DATETIME to_ts, DOUBLE model_min = 0.9,
+    DOUBLE risk_max = 0.3, INT k = 50) FOR GRAPH RedThread {
+  hits = SELECT t FROM Txn:t
+         WHERE t.ts >= from_ts AND t.ts <= to_ts AND t.model_score >= model_min AND t.risk_score <= risk_max
+         ORDER BY t.model_score DESC LIMIT k;
+  PRINT hits[hits.tx_id, hits.card_id, hits.ts, hits.amount, hits.risk_score, hits.model_score, hits.channel];
 }

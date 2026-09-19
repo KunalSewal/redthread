@@ -198,6 +198,10 @@ class Tools:
                                             for r in sorted(similar, key=lambda r: r["ts"])][-8:],
             "days_between_similar_charges": gaps[-8:],
             "recurring_pattern": recurring,
+            "holder_prior_txns_in_confirmed_fraud_cases": summary.get("confirmed_fraud_txns", 0),
+            "holder_confirmed_fraud_cases": sorted(summary.get("confirmed_fraud_cases", [])),
+            "how_to_read": ("If the holder's own prior transactions are confirmed fraud, this holder identity is "
+                            "compromised: matching its baseline is evidence FOR fraud, not against it."),
             "recent_txns": rows[:15],
         }
 
