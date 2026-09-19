@@ -10,6 +10,7 @@ auto-suspend resumes where it stopped. Upserts are idempotent, so reloading a fi
 """
 
 import argparse
+import csv
 import json
 import logging
 import re
@@ -36,6 +37,8 @@ LOADS = [
     ("load_closed_case_involves", "closed_case_involves.csv"),
     ("load_closed_case_connected", "closed_case_connected.csv"),
 ]
+# Jobs whose files are produced later (GraphRAG ingestion) declare their columns here.
+FIXED_HEADERS = {"load_doc_chunks": ["chunk_id", "source", "section", "content"]}
 
 
 ERROR_MARKERS = ("semantic check fails", "syntax error", "failed", "error:", "encountered \"",
@@ -74,7 +77,12 @@ def run_idempotent(stmts: list[str], graph: str | None) -> None:
 
 
 def graph_exists() -> bool:
-    return GRAPH in gsql("SHOW GRAPH *", graph=None)
+    try:
+        return GRAPH in gsql("SHOW GRAPH *", graph=None)
+    except GsqlError as exc:
+        if "no graph available" in str(exc).lower():
+            return False
+        raise
 
 
 def step_schema() -> None:
@@ -91,8 +99,44 @@ def step_vectors() -> None:
     log.info("%s", gsql((paths.GSQL / "01b_vectors.gsql").read_text(), graph=None)[-400:])
 
 
+def header_for(job: str) -> list[str] | None:
+    """Column names of the file a job loads, read from the CSV itself."""
+    if job in FIXED_HEADERS:
+        return FIXED_HEADERS[job]
+    pattern = dict(LOADS).get(job)
+    files = sorted(paths.PROCESSED.glob(pattern)) if pattern else []
+    if not files:
+        return None
+    with files[0].open(encoding="utf-8") as fh:
+        return next(csv.reader(fh))
+
+
+def positional(stmt: str) -> str:
+    """Rewrite $"column" to $N. TigerGraph only resolves header names when the job's file path is
+    fixed at creation time; ours are posted at run time, so positions come from the CSV headers."""
+    job = re.match(r"CREATE LOADING JOB (\w+)", stmt).group(1)
+    names = re.findall(r'\$"(\w+)"', stmt)
+    if not names:
+        return stmt
+    header = header_for(job)
+    if header is None:
+        raise GsqlError(f"no header known for {job}")
+    missing = sorted(set(names) - set(header))
+    if missing:
+        raise GsqlError(f"{job}: columns {missing} not in file header {header}")
+    return re.sub(r'\$"(\w+)"', lambda m: f"${header.index(m.group(1))}", stmt)
+
+
 def step_jobs() -> None:
-    jobs = [s for s in statements(paths.GSQL / "02_loading.gsql") if s.startswith("CREATE LOADING JOB")]
+    """(Re)create every loading job. Jobs hold no data, so dropping and recreating is cheap and keeps
+    them in sync with 02_loading.gsql."""
+    jobs = [positional(s) for s in statements(paths.GSQL / "02_loading.gsql") if s.startswith("CREATE LOADING JOB")]
+    for job in jobs:
+        name = re.match(r"CREATE LOADING JOB (\w+)", job).group(1)
+        try:
+            gsql(f"DROP JOB {name}")
+        except GsqlError:
+            pass  # did not exist
     run_idempotent(jobs, graph=GRAPH)
 
 
@@ -100,33 +144,53 @@ def _state() -> dict:
     return json.loads(STATE.read_text()) if STATE.exists() else {}
 
 
+def load_file(job: str, path) -> dict:
+    """Post one CSV to a loading job, header stripped, and check every data line was accepted."""
+    header, _, body = path.read_text(encoding="utf-8").partition("\n")
+    expected = body.count("\n") + (0 if body.endswith("\n") or not body else 1)
+    result = connection().runLoadingJobWithData(body, "f", job, sep=",", eol="\n", timeout=0)
+    stats = _summarize(result)
+    stats["expected"] = expected
+    if stats.get("valid") != expected or stats.get("rejected"):
+        raise RuntimeError(f"{job} {path.name}: {stats}\n{json.dumps(result)[:1500]}")
+    return stats
+
+
 def step_load(force: bool = False) -> None:
-    conn = connection()
     state = {} if force else _state()
     for job, pattern in LOADS:
         for path in sorted(paths.PROCESSED.glob(pattern)):
             key = f"{job}:{path.name}"
             if key in state:
-                log.info("skip %-40s (loaded %s)", key, state[key]["at"])
+                log.info("skip %-44s (loaded %s)", key, state[key]["at"])
                 continue
             start = time.time()
-            result = conn.runLoadingJobWithFile(str(path), "f", job, sep=",", eol="\n", timeout=0)
-            stats = _summarize(result)
+            stats = load_file(job, path)
             state[key] = {"at": time.strftime("%Y-%m-%d %H:%M:%S"), "secs": round(time.time() - start, 1), **stats}
             STATE.write_text(json.dumps(state, indent=2))
-            log.info("loaded %-40s %s in %.0fs", key, stats, time.time() - start)
-            if stats.get("rejected"):
-                log.warning("rejected lines in %s: %s", path.name, json.dumps(result)[:600])
+            log.info("loaded %-44s %s in %.0fs", key, stats, time.time() - start)
 
 
 def _summarize(result) -> dict:
-    """Pull valid/rejected line counts out of the loading-job response."""
-    try:
-        stats = result[0]["statistics"]
-        return {"valid": stats.get("validLine", 0), "rejected": stats.get("rejectLine", 0)
-                + stats.get("invalidJson", 0) + stats.get("notEnoughToken", 0)}
-    except (KeyError, IndexError, TypeError):
-        return {"raw": str(result)[:300]}
+    """Valid/rejected line counts from a loading-job response (TigerGraph 4.x shape)."""
+    file_level = result[0]["statistics"]["parsingStatistics"]["fileLevel"]
+    rejected = sum(v for k, v in file_level.items() if k != "validLine" and isinstance(v, int))
+    return {"valid": file_level.get("validLine", 0), "rejected": rejected}
+
+
+# Vertices created from header rows by the first load (before headers were stripped).
+HEADER_JUNK = {
+    "Txn": ["tx_id", "from_tx", "to_tx"], "Card": ["card_id"], "Customer": ["customer_id"],
+    "Holder": ["holder_id"], "DeviceProfile": ["device_id"], "Pattern": ["name", "pattern"],
+    "ClosedCase": ["case_id"], "EmailDomain": ["p_email", "r_email"], "BillingRegion": ["region"],
+}
+
+
+def step_cleanup() -> None:
+    conn = connection()
+    for vtype, ids in HEADER_JUNK.items():
+        deleted = conn.delVerticesById(vtype, ids)
+        log.info("deleted %s header-row %s vertices", deleted, vtype)
 
 
 def step_status() -> None:
@@ -141,12 +205,12 @@ def step_status() -> None:
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
     parser = argparse.ArgumentParser()
-    parser.add_argument("step", choices=["all", "schema", "vectors", "jobs", "load", "status"])
+    parser.add_argument("step", choices=["all", "schema", "vectors", "jobs", "load", "cleanup", "status"])
     parser.add_argument("--force", action="store_true", help="reload files already marked loaded")
     args = parser.parse_args()
     steps = {
         "schema": [step_schema], "vectors": [step_vectors], "jobs": [step_jobs],
-        "load": [lambda: step_load(args.force)], "status": [step_status],
+        "load": [lambda: step_load(args.force)], "cleanup": [step_cleanup], "status": [step_status],
         "all": [step_schema, step_vectors, step_jobs, lambda: step_load(args.force), step_status],
     }
     for fn in steps[args.step]:
