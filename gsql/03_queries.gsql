@@ -290,18 +290,28 @@ CREATE OR REPLACE QUERY delete_case(STRING case_id) FOR GRAPH RedThread {
 CREATE OR REPLACE QUERY write_case(STRING case_id, STRING alert_id, STRING trigger_type, STRING status,
     STRING verdict, DOUBLE fraud_probability, STRING pattern, STRING pattern_description, DOUBLE exposure_usd,
     STRING summary, DATETIME opened_at, BOOL sar_filed, STRING final_actions, STRING record_json,
-    VERTEX<Txn> flagged, SET<VERTEX<Txn>> affected, VERTEX<Card> card, SET<VERTEX<Card>> connected,
-    SET<VERTEX<DeviceProfile>> devices, SET<VERTEX<ClosedCase>> similar) FOR GRAPH RedThread {
+    VERTEX<Txn> flagged, VERTEX<Card> card) FOR GRAPH RedThread {
   INSERT INTO FraudCase VALUES (case_id, alert_id, trigger_type, status, verdict, fraud_probability, pattern,
       pattern_description, exposure_usd, summary, opened_at, now(), sar_filed, final_actions, record_json);
   INSERT INTO CASE_FLAGGED (FROM, TO) VALUES (case_id FraudCase, flagged Txn);
   INSERT INTO CASE_ON_CARD (FROM, TO) VALUES (case_id FraudCase, card Card);
   INSERT INTO CASE_PATTERN (FROM, TO) VALUES (case_id FraudCase, pattern Pattern);
-  FOREACH t IN affected DO INSERT INTO CASE_AFFECTS (FROM, TO) VALUES (case_id FraudCase, t Txn); END;
-  FOREACH c IN connected DO INSERT INTO CASE_CONNECTED_CARD (FROM, TO) VALUES (case_id FraudCase, c Card); END;
-  FOREACH d IN devices DO INSERT INTO CASE_DEVICE (FROM, TO) VALUES (case_id FraudCase, d DeviceProfile); END;
-  FOREACH s IN similar DO INSERT INTO SIMILAR_TO (FROM, TO, score) VALUES (case_id FraudCase, s ClosedCase, 1.0); END;
   PRINT case_id AS written;
+}
+
+// One edge per call. Set-valued parameters cannot be empty in TigerGraph (an empty set arrives as
+// NULL), and a legitimate case has no affected transactions, so edges are written individually.
+CREATE OR REPLACE QUERY link_case(STRING case_id, STRING kind, STRING target_id) FOR GRAPH RedThread {
+  IF kind == "affects" THEN
+    INSERT INTO CASE_AFFECTS (FROM, TO) VALUES (case_id FraudCase, target_id Txn);
+  ELSE IF kind == "connected_card" THEN
+    INSERT INTO CASE_CONNECTED_CARD (FROM, TO) VALUES (case_id FraudCase, target_id Card);
+  ELSE IF kind == "device" THEN
+    INSERT INTO CASE_DEVICE (FROM, TO) VALUES (case_id FraudCase, target_id DeviceProfile);
+  ELSE IF kind == "similar" THEN
+    INSERT INTO SIMILAR_TO (FROM, TO, score) VALUES (case_id FraudCase, target_id ClosedCase, 1.0);
+  END;
+  PRINT kind AS linked;
 }
 
 CREATE OR REPLACE QUERY add_case_event(STRING case_id, STRING event_id, INT step, STRING kind, STRING detail,

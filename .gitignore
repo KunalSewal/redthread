@@ -40,3 +40,4 @@ TigerGraph Stack Engineering Briefing*.md
 *.docx
 docs/regulatory/
 runs/
+.playwright-mcp/

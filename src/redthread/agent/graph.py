@@ -10,6 +10,7 @@ engine decides actions and routes; the simulator supplies the assumed reply to e
 import json
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import asdict
 from typing import Any, TypedDict
 
@@ -52,15 +53,19 @@ class CaseState(TypedDict, total=False):
 class Investigation:
     """One alert's investigation. Holds the tools and LLM the graph nodes share."""
 
-    def __init__(self, graph: McpGraph, llm: Llm):
+    def __init__(self, graph: McpGraph, llm: Llm, on_event: Callable[[dict], None] | None = None):
         self.graph, self.llm = graph, llm
         self.tools = Tools(graph)
+        self.on_event = on_event  # e.g. the dashboard's live stream
 
     # ------------------------------------------------------------------ helpers
     def _event(self, state: CaseState, kind: str, detail: str) -> None:
         events = state.setdefault("events", [])
-        events.append({"step": len(events) + 1, "kind": kind, "detail": detail, "at": memory.now()})
+        event = {"step": len(events) + 1, "kind": kind, "detail": detail, "at": memory.now()}
+        events.append(event)
         log.info("[%s] %s: %s", state.get("case_id"), kind, detail[:160])
+        if self.on_event:
+            self.on_event({"case_id": state.get("case_id"), **event})
 
     async def _collect(self, state: CaseState, key: str, coro) -> dict | None:
         try:
@@ -451,9 +456,10 @@ def build(inv: Investigation):
     return g.compile()
 
 
-async def investigate_alert(graph: McpGraph, alert: dict[str, Any]) -> CaseState:
+async def investigate_alert(graph: McpGraph, alert: dict[str, Any],
+                            on_event: Callable[[dict], None] | None = None) -> CaseState:
     """Run one alert end to end on an open MCP session. Tool calls/tokens are counted per case."""
     graph.calls.clear()
-    inv = Investigation(graph, Llm())
+    inv = Investigation(graph, Llm(), on_event)
     workflow = build(inv)
     return await workflow.ainvoke({"alert": alert}, config={"recursion_limit": 40})

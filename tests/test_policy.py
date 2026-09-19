@@ -92,6 +92,13 @@ def test_r10_block_all_only_with_two_confirmed_cards():
     assert Action.BLOCK_ALL_CARDS not in actions(recommend(b))
 
 
+def test_disputed_but_evidence_says_legitimate_is_verified_not_closed():
+    a = base(verdict="legitimate", probability=0.05, independent_evidence=3, customer_disputed=True)
+    assert evidence_request(a) == "customer_validation"
+    assert actions(recommend(a)) == [Action.VERIFY_WITH_CUSTOMER, Action.CREATE_CASE]
+    assert actions(recommend(a, "confirmed")) == [Action.CLOSE_NO_FRAUD]
+
+
 def test_confident_legitimate_closes_without_request():
     a = base(verdict="legitimate", probability=0.08, independent_evidence=2)
     assert can_stop(a)

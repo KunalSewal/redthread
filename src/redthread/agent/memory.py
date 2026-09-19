@@ -26,10 +26,14 @@ async def write_case(graph: McpGraph, record: dict, events: list[dict]) -> None:
         "pattern_description": record["pattern_description"], "exposure_usd": record["exposure_usd"],
         "summary": record["summary"], "opened_at": record["opened_at"], "sar_filed": record["sar_filed"],
         "final_actions": "|".join(record["final_actions"]), "record_json": record["record_json"],
-        "flagged": record["flagged_txn_id"], "affected": record["affected_txn_ids"], "card": record["card_id"],
-        "connected": record["connected_card_ids"], "devices": record["device_ids"],
-        "similar": record["similar_prior_cases"],
+        "flagged": record["flagged_txn_id"], "card": record["card_id"],
     })
+    links = ([("affects", t) for t in record["affected_txn_ids"]]
+             + [("connected_card", c) for c in record["connected_card_ids"]]
+             + [("device", d) for d in record["device_ids"]]
+             + [("similar", c) for c in record["similar_prior_cases"]])
+    for kind, target in links:
+        await graph.query("link_case", {"case_id": cid, "kind": kind, "target_id": target})
     for ev in events:
         await graph.query("add_case_event", {
             "case_id": cid, "event_id": f"{cid}-E{ev['step']:02d}", "step": ev["step"], "kind": ev["kind"],

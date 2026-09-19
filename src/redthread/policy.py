@@ -134,7 +134,7 @@ def sar_required(a: Assessment, response: Response | None = None) -> tuple[bool,
 
 def evidence_request(a: Assessment) -> RequestType | None:
     """Which controlled evidence request the policy calls for before deciding, if any."""
-    if can_stop(a):
+    if can_stop(a) and not _dispute_looks_legitimate(a):
         return None
     if a.recurring_match:
         return "customer_validation"  # R7
@@ -143,6 +143,12 @@ def evidence_request(a: Assessment) -> RequestType | None:
     if a.card_testing:
         return "step_up_auth"  # R5
     return "customer_validation"  # R1 / 3b
+
+
+def _dispute_looks_legitimate(a: Assessment) -> bool:
+    """A customer says they did not make it, but the evidence says they did. R3 closes an alert when the
+    customer confirms, so the dispute is verified with them rather than closed over their objection."""
+    return a.customer_disputed and a.probability <= STOP_LOW
 
 
 def can_stop(a: Assessment) -> bool:
@@ -182,9 +188,12 @@ def _before_response(plan: _Plan, a: Assessment) -> None:
             plan.add(Action.BLOCK_CARD, "R5: a purchase over $100 has already cleared after the test sequence")
         plan.add(Action.CREATE_CASE, "3a: fraud probability at or above 0.30")
         return
+    if _dispute_looks_legitimate(a):
+        plan.add(Action.VERIFY_WITH_CUSTOMER, f"R3: evidence indicates the cardholder's own activity (probability "
+                                              f"{a.probability:.2f}); confirm with the customer before closing")
+        plan.add(Action.CREATE_CASE, "3a: a case is opened whenever a customer disputes a charge")
+        return
     if can_stop(a) and a.probability <= STOP_LOW:
-        if a.customer_disputed:
-            plan.add(Action.CREATE_CASE, "3a: a case is opened whenever a customer disputes a charge")
         plan.add(Action.CLOSE_NO_FRAUD, f"Section 6: probability {a.probability:.2f} <= 0.15 on "
                                         f"{a.independent_evidence} independent signals")
         return
