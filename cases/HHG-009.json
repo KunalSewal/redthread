@@ -1,0 +1,164 @@
+{
+  "case_id": "HHG-009",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.95,
+    "pattern": "card_not_present_fraud",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3576079",
+      "3581141",
+      "3586980",
+      "3587042",
+      "3587043"
+    ],
+    "first_suspicious_txn_id": "3576079",
+    "connected_card_ids": [
+      "C00750-K2"
+    ],
+    "connected_device_profiles": [
+      "Windows | Windows 10 | firefox 60.0 | 1600x900",
+      "Trident/7.0 | Windows 10 | ie 11.0 for desktop | 1366x768"
+    ],
+    "exposure_usd": 170.15,
+    "evidence": [
+      {
+        "claim": "Customer reported: Customer C08299 message: 'I never made this $30.02 purchase. Please check my card.' Refers to 3581141.",
+        "source": "customer",
+        "ref": "trigger:customer_report",
+        "entity_ids": [
+          "3581141"
+        ]
+      },
+      {
+        "claim": "The customer explicitly reported the flagged transaction as unrecognized.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3581141)",
+        "entity_ids": [
+          "3581141",
+          "C08299"
+        ]
+      },
+      {
+        "claim": "The flagged transaction is the first for this holder profile and has a high model score of 0.984, indicating a 92.1% historical fraud rate.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3581141)",
+        "entity_ids": [
+          "3581141"
+        ]
+      },
+      {
+        "claim": "Subsequent online transactions on the card also received high model scores and were made from a generic device profile.",
+        "source": "graph",
+        "ref": "query:card_window(card=C08299-K1, 2016-12-18..2016-12-31)",
+        "entity_ids": [
+          "3586980",
+          "3587042",
+          "3587043"
+        ]
+      },
+      {
+        "claim": "The device profile used for the subsequent transactions links this card to another card, C00750-K2, which used it behind a proxy and is part of a fraud ring.",
+        "source": "graph",
+        "ref": "query:device_neighbors(device=D009079, 2016-12-14..2016-12-31)",
+        "entity_ids": [
+          "C08299-K1",
+          "C00750-K2"
+        ]
+      },
+      {
+        "claim": "The recipient email domain is shared with multiple other cards experiencing high-scoring transactions, including C00750-K2.",
+        "source": "graph",
+        "ref": "query:shared_origin(tx=3581141, window=+/-7d)",
+        "entity_ids": [
+          "C00750-K2"
+        ]
+      },
+      {
+        "claim": "An earlier transaction in the window was made from another generic device profile linked to prior confirmed fraud cases.",
+        "source": "graph",
+        "ref": "query:device_neighbors(device=D000024, 2016-12-14..2016-12-31)",
+        "entity_ids": [
+          "3576079",
+          "CC-0364",
+          "CC-0241"
+        ]
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-0364",
+      "CC-0241"
+    ],
+    "summary": "Customer C08299 reported an unrecognized online transaction of $30.02, prompting an investigation. Graph analysis revealed a series of five anomalous online transactions totaling $170.15, characterized by high model scores and no prior history for the holder profile. The activity involved devices linked to prior confirmed fraud cases and another compromised card (C00750-K2) associated with a fraud ring. Given the direct customer report and strong network links to known fraud, the activity is confirmed as card-not-present fraud.",
+    "written_to_graph": true,
+    "graph_case_id": "CASE-HHG-009"
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "R2: customer states they did not make the transaction; exposure $170.15"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R2; R6: several cards show fraud from recipient_email:gmail.com"
+      },
+      {
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "3a and R6: fraud across several cards sharing recipient_email:gmail.com; R6: shared origin recipient_email:gmail.com"
+      },
+      {
+        "action": "MONITOR_CONNECTED_CARDS",
+        "route": "auto",
+        "reason": "R6: 1 connected card(s) share the same origin"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "R2: customer states they did not make the transaction; exposure $170.15"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R2; R6: several cards show fraud from recipient_email:gmail.com"
+      },
+      {
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "3a and R6: fraud across several cards sharing recipient_email:gmail.com; R6: shared origin recipient_email:gmail.com"
+      },
+      {
+        "action": "MONITOR_CONNECTED_CARDS",
+        "route": "auto",
+        "reason": "R6: 1 connected card(s) share the same origin"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": true,
+    "reason": "3a and R6: fraud across several cards sharing recipient_email:gmail.com",
+    "narrative": "This report details suspected card-not-present fraud involving customer C08299 and card C08299-K1. Between December 26 and December 30, 2016, five unauthorized online transactions totaling $170.15 were conducted across regions 330 and 203. The investigation was initiated after the customer explicitly reported a December 28 transaction of $30.02 as unrecognized. The illicit activity utilized two devices: D000024 (Trident/7.0 | Windows 10 | ie 11.0 for desktop | 1366x768) and D009079 (Windows | Windows 10 | firefox 60.0 | 1600x900). Device D000024 was used for the initial transaction and is linked to prior confirmed fraud cases. Device D009079 connects this activity to another compromised card, C00750-K2, which is associated with a known fraud ring and proxy usage. Furthermore, the transactions shared a recipient email domain with other cards experiencing anomalous, high-scoring activity. The combination of the customer's direct dispute, high model scores, and strong device links to known fraud rings confirms the unauthorized nature of these transactions.",
+    "subjects": [
+      "C08299",
+      "C08299-K1",
+      "C00750-K2"
+    ],
+    "total_amount_usd": 170.15,
+    "activity_dates": [
+      "2016-12-26",
+      "2016-12-30"
+    ]
+  },
+  "stop_reason": "The investigation stopped because the direct customer report combined with independent graph evidence linking the devices to known fraud cases provided decisive proof of fraud, satisfying policy section 6.",
+  "tool_calls": 10,
+  "tokens": 41912,
+  "latency_s": 84.7
+}

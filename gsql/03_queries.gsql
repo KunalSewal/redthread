@@ -3,15 +3,18 @@
 
 // ---------------------------------------------------------------------------------------------
 // Alert context: the flagged transaction and everything one or two hops away that frames it.
-CREATE OR REPLACE QUERY alert_context(VERTEX<Txn> tx) FOR GRAPH RedThread {
+CREATE OR REPLACE QUERY alert_context(VERTEX<Txn> tx, DATETIME as_of = to_datetime("2099-01-01 00:00:00"))
+    FOR GRAPH RedThread {
+  // as_of: point-in-time retrieval. An investigation never sees cases opened after its own alert.
   start = {tx};
   card = SELECT c FROM start:t -(MADE_BY:e)-> Card:c;
   holder = SELECT h FROM start:t -(BY_HOLDER:e)-> Holder:h;
   device = SELECT d FROM start:t -(FROM_DEVICE:e)-> DeviceProfile:d;
   customer = SELECT cu FROM card:c -(OWNED_BY:e)-> Customer:cu;
   customer_cards = SELECT c FROM customer:cu -(OWNS:e)-> Card:c;
-  prior_closed_cases = SELECT cc FROM customer_cards:c -(CARD_CLOSED_CASE:e)-> ClosedCase:cc;
-  prior_agent_cases = SELECT f FROM customer_cards:c -(CARD_FRAUD_CASE:e)-> FraudCase:f;
+  prior_closed_cases = SELECT cc FROM customer_cards:c -(CARD_CLOSED_CASE:e)-> ClosedCase:cc
+                       WHERE cc.opened_at < as_of;
+  prior_agent_cases = SELECT f FROM customer_cards:c -(CARD_FRAUD_CASE:e)-> FraudCase:f WHERE f.opened_at < as_of;
   PRINT start AS flagged, card, holder, device, customer, customer_cards;
   PRINT prior_closed_cases[prior_closed_cases.case_id, prior_closed_cases.card_id, prior_closed_cases.opened_at,
         prior_closed_cases.outcome, prior_closed_cases.pattern, prior_closed_cases.n_txns,
@@ -22,7 +25,8 @@ CREATE OR REPLACE QUERY alert_context(VERTEX<Txn> tx) FOR GRAPH RedThread {
 
 // ---------------------------------------------------------------------------------------------
 // Card activity in a window, each transaction annotated with its device and any closed case.
-CREATE OR REPLACE QUERY card_window(VERTEX<Card> card, DATETIME from_ts, DATETIME to_ts) FOR GRAPH RedThread {
+CREATE OR REPLACE QUERY card_window(VERTEX<Card> card, DATETIME from_ts, DATETIME to_ts,
+    DATETIME as_of = to_datetime("2099-01-01 00:00:00")) FOR GRAPH RedThread {
   SetAccum<STRING> @closed_cases;
   SetAccum<STRING> @agent_cases;
   SumAccum<STRING> @device_id;
@@ -31,8 +35,10 @@ CREATE OR REPLACE QUERY card_window(VERTEX<Card> card, DATETIME from_ts, DATETIM
   txns = SELECT t FROM start:c -(MADE:e)-> Txn:t WHERE t.ts >= from_ts AND t.ts <= to_ts;
   tmp = SELECT d FROM txns:t -(FROM_DEVICE:e)-> DeviceProfile:d
         ACCUM t.@device_id += d.device_id, t.@device_cards += d.n_cards;
-  tmp = SELECT cc FROM txns:t -(IN_CLOSED_CASE:e)-> ClosedCase:cc ACCUM t.@closed_cases += cc.case_id;
-  tmp = SELECT f FROM txns:t -(AFFECTED_IN_CASE:e)-> FraudCase:f ACCUM t.@agent_cases += f.case_id;
+  tmp = SELECT cc FROM txns:t -(IN_CLOSED_CASE:e)-> ClosedCase:cc WHERE cc.opened_at < as_of
+        ACCUM t.@closed_cases += cc.case_id;
+  tmp = SELECT f FROM txns:t -(AFFECTED_IN_CASE:e)-> FraudCase:f WHERE f.opened_at < as_of
+        ACCUM t.@agent_cases += f.case_id;
   PRINT txns;
 }
 
@@ -66,7 +72,8 @@ CREATE OR REPLACE QUERY holder_history(VERTEX<Holder> holder, DATETIME before_ts
 
 // ---------------------------------------------------------------------------------------------
 // Every card that used a device in a window, plus all-time closed and agent cases on the device.
-CREATE OR REPLACE QUERY device_neighbors(VERTEX<DeviceProfile> device, DATETIME from_ts, DATETIME to_ts) FOR GRAPH RedThread {
+CREATE OR REPLACE QUERY device_neighbors(VERTEX<DeviceProfile> device, DATETIME from_ts, DATETIME to_ts,
+    DATETIME as_of = to_datetime("2099-01-01 00:00:00")) FOR GRAPH RedThread {
   SumAccum<INT> @n_txns;
   SumAccum<DOUBLE> @amount;
   MaxAccum<DOUBLE> @max_model_score = -1;  // -1 = missing; the default sentinel breaks JSON parsers
@@ -83,10 +90,10 @@ CREATE OR REPLACE QUERY device_neighbors(VERTEX<DeviceProfile> device, DATETIME 
                 c.@first_ts += t.ts, c.@last_ts += t.ts, c.@tx_ids += t.tx_id,
                 c.@new_device += (t.device_status == "New"), c.@proxy += (t.proxy_type != "");
   all_txns = SELECT t FROM start:d -(DEVICE_TXN:e)-> Txn:t;
-  tmp = SELECT cc FROM all_txns:t -(IN_CLOSED_CASE:e)-> ClosedCase:cc
+  tmp = SELECT cc FROM all_txns:t -(IN_CLOSED_CASE:e)-> ClosedCase:cc WHERE cc.opened_at < as_of
         ACCUM @@case_summaries += cc.case_id + "|" + cc.card_id + "|" + cc.outcome + "|" + cc.pattern + "|"
                                   + datetime_format(cc.opened_at, "%Y-%m-%d");
-  agent_cases = SELECT f FROM start:d -(DEVICE_FRAUD_CASE:e)-> FraudCase:f;
+  agent_cases = SELECT f FROM start:d -(DEVICE_FRAUD_CASE:e)-> FraudCase:f WHERE f.opened_at < as_of;
   PRINT start[start.device_id, start.profile, start.device_info, start.os, start.browser, start.screen,
         start.device_type, start.first_seen, start.n_cards, start.ring_id, start.ring_size] AS device;
   PRINT cards[cards.card_id, cards.ring_id, cards.ring_size, cards.@n_txns, cards.@amount, cards.@max_model_score,
@@ -141,24 +148,32 @@ CREATE OR REPLACE QUERY shared_origin(VERTEX<Txn> tx, INT window_days = 7, DOUBL
 
 // ---------------------------------------------------------------------------------------------
 // Prior cases reachable from the alert: same card, same holder, same device, or listed as connected.
-CREATE OR REPLACE QUERY linked_cases(VERTEX<Txn> tx) FOR GRAPH RedThread {
+CREATE OR REPLACE QUERY linked_cases(VERTEX<Txn> tx, DATETIME as_of = to_datetime("2099-01-01 00:00:00"))
+    FOR GRAPH RedThread {
   SetAccum<STRING> @via;
   start = {tx};
   card = SELECT c FROM start:t -(MADE_BY:e)-> Card:c;
   holder = SELECT h FROM start:t -(BY_HOLDER:e)-> Holder:h;
   device = SELECT d FROM start:t -(FROM_DEVICE:e)-> DeviceProfile:d WHERE d.n_cards <= 200;
 
-  c1 = SELECT cc FROM card:c -(CARD_CLOSED_CASE:e)-> ClosedCase:cc ACCUM cc.@via += "same_card";
-  c2 = SELECT cc FROM card:c -(CONNECTED_CLOSED_CASE:e)-> ClosedCase:cc ACCUM cc.@via += "listed_as_connected_card";
+  c1 = SELECT cc FROM card:c -(CARD_CLOSED_CASE:e)-> ClosedCase:cc WHERE cc.opened_at < as_of
+       ACCUM cc.@via += "same_card";
+  c2 = SELECT cc FROM card:c -(CONNECTED_CLOSED_CASE:e)-> ClosedCase:cc WHERE cc.opened_at < as_of
+       ACCUM cc.@via += "listed_as_connected_card";
   htx = SELECT t FROM holder:h -(HOLDER_TXN:e)-> Txn:t;
-  c3 = SELECT cc FROM htx:t -(IN_CLOSED_CASE:e)-> ClosedCase:cc ACCUM cc.@via += "same_holder";
+  c3 = SELECT cc FROM htx:t -(IN_CLOSED_CASE:e)-> ClosedCase:cc WHERE cc.opened_at < as_of
+       ACCUM cc.@via += "same_holder";
   dtx = SELECT t FROM device:d -(DEVICE_TXN:e)-> Txn:t;
-  c4 = SELECT cc FROM dtx:t -(IN_CLOSED_CASE:e)-> ClosedCase:cc ACCUM cc.@via += "same_device";
+  c4 = SELECT cc FROM dtx:t -(IN_CLOSED_CASE:e)-> ClosedCase:cc WHERE cc.opened_at < as_of
+       ACCUM cc.@via += "same_device";
   closed = c1 UNION c2 UNION c3 UNION c4;
 
-  f1 = SELECT f FROM card:c -(CARD_FRAUD_CASE:e)-> FraudCase:f ACCUM f.@via += "same_card";
-  f2 = SELECT f FROM card:c -(CONNECTED_FRAUD_CASE:e)-> FraudCase:f ACCUM f.@via += "listed_as_connected_card";
-  f3 = SELECT f FROM device:d -(DEVICE_FRAUD_CASE:e)-> FraudCase:f ACCUM f.@via += "same_device";
+  f1 = SELECT f FROM card:c -(CARD_FRAUD_CASE:e)-> FraudCase:f WHERE f.opened_at < as_of
+       ACCUM f.@via += "same_card";
+  f2 = SELECT f FROM card:c -(CONNECTED_FRAUD_CASE:e)-> FraudCase:f WHERE f.opened_at < as_of
+       ACCUM f.@via += "listed_as_connected_card";
+  f3 = SELECT f FROM device:d -(DEVICE_FRAUD_CASE:e)-> FraudCase:f WHERE f.opened_at < as_of
+       ACCUM f.@via += "same_device";
   agent = f1 UNION f2 UNION f3;
   PRINT closed[closed.case_id, closed.card_id, closed.opened_at, closed.outcome, closed.pattern, closed.n_txns,
         closed.exposure_usd, closed.analyst_notes, closed.@via];
@@ -167,11 +182,13 @@ CREATE OR REPLACE QUERY linked_cases(VERTEX<Txn> tx) FOR GRAPH RedThread {
 
 // ---------------------------------------------------------------------------------------------
 // GraphRAG retrieval: vector search, then traverse from each hit to the entities it touched.
-CREATE OR REPLACE QUERY similar_closed_cases(LIST<FLOAT> qv, INT k = 8) FOR GRAPH RedThread {
+CREATE OR REPLACE QUERY similar_closed_cases(LIST<FLOAT> qv, INT k = 8,
+    DATETIME as_of = to_datetime("2099-01-01 00:00:00")) FOR GRAPH RedThread {
   MapAccum<VERTEX, FLOAT> @@distances;
   SetAccum<STRING> @cases;
   MapAccum<STRING, SetAccum<STRING>> @@case_devices;
   hits = vectorSearch({ClosedCase.emb}, qv, k, {distance_map: @@distances});
+  hits = SELECT cc FROM hits:cc WHERE cc.opened_at < as_of;
   tx = SELECT t FROM hits:cc -(INVOLVES:e)-> Txn:t ACCUM t.@cases += cc.case_id;
   tmp = SELECT d FROM tx:t -(FROM_DEVICE:e)-> DeviceProfile:d
         ACCUM FOREACH cid IN t.@cases DO @@case_devices += (cid -> d.device_id) END;
@@ -181,9 +198,11 @@ CREATE OR REPLACE QUERY similar_closed_cases(LIST<FLOAT> qv, INT k = 8) FOR GRAP
   PRINT @@distances AS distances;
 }
 
-CREATE OR REPLACE QUERY similar_fraud_cases(LIST<FLOAT> qv, INT k = 5) FOR GRAPH RedThread {
+CREATE OR REPLACE QUERY similar_fraud_cases(LIST<FLOAT> qv, INT k = 5,
+    DATETIME as_of = to_datetime("2099-01-01 00:00:00")) FOR GRAPH RedThread {
   MapAccum<VERTEX, FLOAT> @@distances;
   hits = vectorSearch({FraudCase.emb}, qv, k, {distance_map: @@distances});
+  hits = SELECT f FROM hits:f WHERE f.opened_at < as_of;
   PRINT hits[hits.case_id, hits.alert_id, hits.verdict, hits.pattern, hits.pattern_description,
         hits.exposure_usd, hits.final_actions, hits.summary];
   PRINT @@distances AS distances;

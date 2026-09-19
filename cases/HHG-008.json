@@ -1,0 +1,145 @@
+{
+  "case_id": "HHG-008",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.95,
+    "pattern": "card_not_present_fraud",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3539878",
+      "3555768",
+      "3556719",
+      "3557118",
+      "3558054",
+      "3566341"
+    ],
+    "first_suspicious_txn_id": "3539878",
+    "connected_card_ids": [],
+    "connected_device_profiles": [
+      "unknown | unknown | chrome 66.0 | unknown"
+    ],
+    "exposure_usd": 158.32,
+    "evidence": [
+      {
+        "claim": "Customer reported: Customer C13171 message: 'I never made this $55.68 purchase. Please check my card.' Refers to 3558054.",
+        "source": "customer",
+        "ref": "trigger:customer_report",
+        "entity_ids": [
+          "3558054"
+        ]
+      },
+      {
+        "claim": "Customer C13171 explicitly reported the $55.68 transaction as unrecognized.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3558054)",
+        "entity_ids": [
+          "3558054",
+          "C13171"
+        ]
+      },
+      {
+        "claim": "The flagged transaction is part of a cluster of 4 online transactions for a new holder profile created on the same day.",
+        "source": "graph",
+        "ref": "query:holder_history(holder=C13171-K2|NA|170, before=2016-12-19)",
+        "entity_ids": [
+          "3555768",
+          "3556719",
+          "3557118",
+          "3558054"
+        ]
+      },
+      {
+        "claim": "The device D008431 was used for the flagged transaction and is also linked to other suspicious transactions on this card routed through an anonymous proxy.",
+        "source": "graph",
+        "ref": "query:card_window(card=C13171-K2, 2016-12-09..2016-12-22)",
+        "entity_ids": [
+          "3539878",
+          "3566341"
+        ]
+      },
+      {
+        "claim": "The card C13171-K2 has a history of severe compromise, with 18 prior confirmed fraud cases.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3558054)",
+        "entity_ids": [
+          "C13171-K2",
+          "CC-5010",
+          "CC-4485"
+        ]
+      },
+      {
+        "claim": "The device D008431 is shared across 126 cards in the window, with a lift of 2.29 for high-scoring transactions, indicating a shared origin of suspicious activity.",
+        "source": "graph",
+        "ref": "query:shared_origin(tx=3558054, window=+/-7d)",
+        "entity_ids": []
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-5010",
+      "CC-4485",
+      "CC-4163",
+      "CC-3928",
+      "CC-3728"
+    ],
+    "summary": "Customer C13171 explicitly reported a $55.68 online transaction as unrecognized. Investigation revealed a cluster of four online purchases made under a new holder profile on December 19, 2016. The device used for the flagged transaction, D008431, was also used on this card for transactions routed through an anonymous proxy. Furthermore, the card has a severe history of compromise with 18 prior confirmed fraud cases, and the device shows a high lift for suspicious activity across multiple cards. Based on the direct customer report and corroborating device anomalies, the activity is confirmed as card-not-present fraud.",
+    "written_to_graph": true,
+    "graph_case_id": "CASE-HHG-008"
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "R2: customer states they did not make the transaction; exposure $158.32"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R2; R6: several cards show fraud from device:D008431"
+      },
+      {
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "3a and R6: fraud across several cards sharing device:D008431; R6: shared origin device:D008431"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "R2: customer states they did not make the transaction; exposure $158.32"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R2; R6: several cards show fraud from device:D008431"
+      },
+      {
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "3a and R6: fraud across several cards sharing device:D008431; R6: shared origin device:D008431"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": true,
+    "reason": "3a and R6: fraud across several cards sharing device:D008431",
+    "narrative": "This report details suspected card-not-present fraud involving customer C13171 and card C13171-K2. On December 19, 2016, the customer reported a $55.68 online transaction as unrecognized. A review of the account identified a total of six suspicious online transactions between December 13 and December 22, 2016, totaling $158.32. Four of these transactions occurred in a cluster on December 19 under a newly created holder profile. The flagged transaction and two others were conducted using device D008431 (profile: unknown | unknown | chrome 66.0 | unknown). Notably, the device was observed routing transactions through an anonymous IP proxy on December 13 and December 22. The card itself has a history of severe compromise, with 18 prior confirmed fraud cases. Furthermore, device D008431 is shared across 126 cards with a high lift for suspicious activity, indicating a broader pattern of abuse. The combination of the customer's direct dispute, the use of an anonymizing proxy, and the device's association with broader suspicious activity confirms the fraudulent nature of these transactions.",
+    "subjects": [
+      "C13171",
+      "C13171-K2"
+    ],
+    "total_amount_usd": 158.32,
+    "activity_dates": [
+      "2016-12-13",
+      "2016-12-22"
+    ]
+  },
+  "stop_reason": "The investigation stopped because the direct customer report combined with independent evidence of proxy usage and a severe history of card compromise provides decisive proof of fraud, satisfying policy section 6.",
+  "tool_calls": 9,
+  "tokens": 72174,
+  "latency_s": 100.2
+}

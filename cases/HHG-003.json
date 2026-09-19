@@ -1,0 +1,107 @@
+{
+  "case_id": "HHG-003",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.95,
+    "pattern": "out_of_region_use",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3530056",
+      "3530164"
+    ],
+    "first_suspicious_txn_id": "3530056",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 165.93,
+    "evidence": [
+      {
+        "claim": "Customer reported: Customer C08623 message: 'I never made this $49.00 purchase. Please check my card.' Refers to 3530164.",
+        "source": "customer",
+        "ref": "trigger:customer_report",
+        "entity_ids": [
+          "3530164"
+        ]
+      },
+      {
+        "claim": "Customer C08623 explicitly reported the flagged transaction 3530164 as unrecognized.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3530164)",
+        "entity_ids": [
+          "C08623",
+          "3530164"
+        ]
+      },
+      {
+        "claim": "The flagged transaction was preceded by an in-person transaction (3530056) in the same region that received a high model score of 0.622.",
+        "source": "graph",
+        "ref": "query:holder_history(holder=C08623-K2|330|161, before=2016-12-10)",
+        "entity_ids": [
+          "3530056"
+        ]
+      },
+      {
+        "claim": "The card C08623-K2 has a history of five prior confirmed fraud cases, four of which were for out-of-region use.",
+        "source": "graph",
+        "ref": "query:linked_cases(tx=3530164)",
+        "entity_ids": [
+          "C08623-K2",
+          "CC-4957",
+          "CC-3682",
+          "CC-3327",
+          "CC-2935",
+          "CC-2817"
+        ]
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-4957",
+      "CC-3682",
+      "CC-2935",
+      "CC-2817"
+    ],
+    "summary": "Customer C08623 reported an unrecognized in-person transaction of $49.00 in region 330. A review of the card's activity revealed a preceding in-person transaction of $116.93 in the same region with a high model score of 0.622. The card has a history of five prior confirmed fraud cases, four of which were for out-of-region use. Based on the customer's explicit report and the card's history of similar fraud, the activity is confirmed as out-of-region use fraud. The card is blocked and a case is created.",
+    "written_to_graph": true,
+    "graph_case_id": "CASE-HHG-003"
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "R2: customer states they did not make the transaction; exposure $165.93"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R2"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "R2: customer states they did not make the transaction; exposure $165.93"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R2"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": false,
+    "reason": "3a: fraud suspected but exposure $165.93 is at most $1,000 and there is no shared device, region cluster or link to other customers' fraud; case only",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0,
+    "activity_dates": []
+  },
+  "stop_reason": "The investigation stopped because the customer's explicit report and the card's history of confirmed out-of-region fraud provide two independent pieces of evidence yielding a decisive probability, satisfying policy section 6.",
+  "tool_calls": 8,
+  "tokens": 38793,
+  "latency_s": 75.5
+}

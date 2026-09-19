@@ -55,9 +55,10 @@ class CaseState(TypedDict, total=False):
 class Investigation:
     """One alert's investigation. Holds the tools and LLM the graph nodes share."""
 
-    def __init__(self, graph: McpGraph, llm: Llm, on_event: Callable[[dict], None] | None = None):
+    def __init__(self, graph: McpGraph, llm: Llm, on_event: Callable[[dict], None] | None = None,
+                 as_of: str | None = None):
         self.graph, self.llm = graph, llm
-        self.tools = Tools(graph)
+        self.tools = Tools(graph, as_of)
         self.on_event = on_event  # e.g. the dashboard's live stream
 
     # ------------------------------------------------------------------ helpers
@@ -480,9 +481,13 @@ def build(inv: Investigation):
 
 
 async def investigate_alert(graph: McpGraph, alert: dict[str, Any],
-                            on_event: Callable[[dict], None] | None = None) -> CaseState:
-    """Run one alert end to end on an open MCP session. Tool calls/tokens are counted per case."""
+                            on_event: Callable[[dict], None] | None = None,
+                            as_of: str | None = None) -> CaseState:
+    """Run one alert end to end on an open MCP session. Tool calls/tokens are counted per case.
+
+    ``as_of`` hides cases opened at or after that time (used by the backtest to replay a closed case
+    without letting the agent see its outcome)."""
     graph.calls.clear()
-    inv = Investigation(graph, Llm(), on_event)
+    inv = Investigation(graph, Llm(), on_event, as_of)
     workflow = build(inv)
     return await workflow.ainvoke({"alert": alert}, config={"recursion_limit": 40})

@@ -17,6 +17,8 @@ TS_FMT = "%Y-%m-%d %H:%M:%S"
 HOT_SCORE = 0.5
 SMALL_AUTH_USD = 10.0
 MAX_ROWS = 70
+AS_OF_QUERIES = {"alert_context", "card_window", "device_neighbors", "linked_cases", "similar_closed_cases",
+                 "similar_fraud_cases"}
 GENERIC_DEVICE_INFO = {"iOS Device", "MacOS", "Windows", "Trident/7.0", "Linux", "SAMSUNG", "unknown"}
 
 
@@ -61,11 +63,17 @@ def _score(value) -> float | None:
 
 
 class Tools:
-    def __init__(self, graph: McpGraph):
+    """``as_of`` is point-in-time retrieval: cases opened at or after it stay hidden, so an investigation
+    never sees its own future. For a live alert it is the alert's timestamp."""
+
+    def __init__(self, graph: McpGraph, as_of: str | None = None):
         self.g = graph
         self.ledger = Ledger()
+        self.as_of = as_of
 
     async def _q(self, name: str, **params) -> list[dict]:
+        if self.as_of and name in AS_OF_QUERIES:
+            params["as_of"] = self.as_of
         return await self.g.query(name, params)
 
     def _ref(self, tool: str, text: str) -> str:

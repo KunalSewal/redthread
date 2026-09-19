@@ -1,0 +1,145 @@
+{
+  "case_id": "HHG-007",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.95,
+    "pattern": "account_takeover",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3486038",
+      "3493040",
+      "3493319",
+      "3508487",
+      "3514573",
+      "3514948",
+      "3515777",
+      "3516867"
+    ],
+    "first_suspicious_txn_id": "3486038",
+    "connected_card_ids": [
+      "C01104-K2",
+      "C12942-K2"
+    ],
+    "connected_device_profiles": [
+      "Windows | Windows 7 | chrome 65.0 | 1920x1080",
+      "SM-G950U Build/R16NW | Android 8.0.0 | chrome generic for android | 2220x1080"
+    ],
+    "exposure_usd": 770.62,
+    "evidence": [
+      {
+        "claim": "The flagged transaction has a high model score of 0.943, which corresponds to a historical fraud rate of 92.1%.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3514948)",
+        "entity_ids": [
+          "3514948"
+        ]
+      },
+      {
+        "claim": "The holder's prior transactions are part of confirmed fraud cases (e.g., CC-5521, CC-2834), indicating the holder identity is compromised and matching its baseline is evidence of fraud.",
+        "source": "graph",
+        "ref": "query:holder_history(holder=C09933-K2|264|50, before=2016-12-05)",
+        "entity_ids": [
+          "CC-5521",
+          "CC-2834"
+        ]
+      },
+      {
+        "claim": "The card has 18 prior confirmed fraud cases, including recent account takeover cases like CC-5521 and CC-4787.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3514948)",
+        "entity_ids": [
+          "C09933-K2",
+          "CC-5521",
+          "CC-4787"
+        ]
+      },
+      {
+        "claim": "The card is a member of fraud ring 40894916, which links cards through specific devices that are new to each account.",
+        "source": "graph",
+        "ref": "query:ring_members(ring=40894916)",
+        "entity_ids": [
+          "C09933-K2"
+        ]
+      },
+      {
+        "claim": "The current episode features mixed-channel activity, including online transactions 3486038 and 3515777 using new devices and proxies.",
+        "source": "graph",
+        "ref": "query:card_window(card=C09933-K2, 2016-11-25..2016-12-08)",
+        "entity_ids": [
+          "3486038",
+          "3515777",
+          "C09933-K2"
+        ]
+      },
+      {
+        "claim": "The device used in the online transaction links this card to other cards active in the same window, including ring member C01104-K2 and card C12942-K2.",
+        "source": "graph",
+        "ref": "query:device_neighbors(device=D006706, 2016-11-21..2016-12-08)",
+        "entity_ids": [
+          "C01104-K2",
+          "C12942-K2"
+        ]
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-5521",
+      "CC-4787",
+      "CC-2834",
+      "CC-2565"
+    ],
+    "summary": "The flagged in-person transaction for $111.92 received a high model score of 0.943. Investigation revealed the card has a history of confirmed fraud cases and belongs to a known fraud ring. The holder's identity is compromised, as their prior transactions are part of confirmed fraud cases, meaning matching the baseline is evidence of fraud. The current episode features mixed-channel activity, including online transactions using new devices and proxies that link to other cards. Based on the compromised identity, ring membership, and cross-card links, the activity is confirmed as an account takeover.",
+    "written_to_graph": true,
+    "graph_case_id": "CASE-HHG-007"
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "Section 6: probability 0.95 >= 0.85 on 4 independent signals"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "3a: fraud probability at or above 0.30"
+      },
+      {
+        "action": "MONITOR_CONNECTED_CARDS",
+        "route": "auto",
+        "reason": "R6: 2 connected card(s) share the same origin"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "Section 6: probability 0.95 >= 0.85 on 4 independent signals"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "3a: fraud probability at or above 0.30"
+      },
+      {
+        "action": "MONITOR_CONNECTED_CARDS",
+        "route": "auto",
+        "reason": "R6: 2 connected card(s) share the same origin"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": false,
+    "reason": "3a and R2: activity connects to a shared device profile or another card's fraud",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0,
+    "activity_dates": []
+  },
+  "stop_reason": "The investigation was stopped under Section 6 because a decisive probability of 0.95 was reached using multiple independent pieces of evidence, including ring membership, compromised holder identity, and cross-card device links.",
+  "tool_calls": 11,
+  "tokens": 117505,
+  "latency_s": 78.4
+}

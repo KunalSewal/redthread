@@ -1,0 +1,93 @@
+{
+  "case_id": "HHG-020",
+  "case": {
+    "status": "closed_legitimate",
+    "verdict": "legitimate",
+    "fraud_probability": 0.03,
+    "pattern": "none",
+    "pattern_description": "",
+    "affected_txn_ids": [],
+    "first_suspicious_txn_id": "",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 0,
+    "evidence": [
+      {
+        "claim": "The flagged transaction 3509359 has a low model score of 0.006, which correlates with a 0.6% historical fraud rate.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3509359)",
+        "entity_ids": [
+          "3509359"
+        ]
+      },
+      {
+        "claim": "The device used has a generic profile shared by 253 cards all time and has no significant links to recent fraud.",
+        "source": "graph",
+        "ref": "query:device_neighbors(device=D000140, 2016-11-03..2016-12-06)",
+        "entity_ids": []
+      },
+      {
+        "claim": "Shared origin analysis for the device, region, and email shows no elevated fraud lift.",
+        "source": "graph",
+        "ref": "query:shared_origin(tx=3509359, window=+/-7d)",
+        "entity_ids": [
+          "3509359"
+        ]
+      },
+      {
+        "claim": "Similar past alerts driven by legacy risk scores have consistently been cleared as legitimate.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(\"risk score: Real-time model scored transaction 3509359 ($125...\", k=6)",
+        "entity_ids": [
+          "CC-1254",
+          "CC-2956",
+          "CC-5368",
+          "CC-0594",
+          "CC-3092",
+          "CC-0339"
+        ]
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-1254",
+      "CC-2956",
+      "CC-5368",
+      "CC-0594",
+      "CC-3092",
+      "CC-0339"
+    ],
+    "summary": "Alert HHG-020 was triggered by a noisy legacy risk score of 0.52 on an online transaction of $125.08. Investigation revealed a very low second-generation model score of 0.006, which historically correlates with a 0.6% fraud rate. The device used (D000140) has a generic profile shared by many unrelated cards and shows no significant links to recent fraud. Shared origin analysis confirmed no elevated fraud risk, and similar past alerts have consistently been cleared. The transaction is deemed legitimate and the case is closed as a false positive.",
+    "written_to_graph": true,
+    "graph_case_id": "CASE-HHG-020"
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "CLOSE_NO_FRAUD",
+        "route": "auto",
+        "reason": "Section 6: probability 0.03 <= 0.15 on 4 independent signals"
+      }
+    ],
+    "final": [
+      {
+        "action": "CLOSE_NO_FRAUD",
+        "route": "auto",
+        "reason": "Section 6: probability 0.03 <= 0.15 on 4 independent signals"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": false,
+    "reason": "3a: fraud is not confirmed or strongly suspected, so no report is required",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0,
+    "activity_dates": []
+  },
+  "stop_reason": "The investigation stopped because the probability of fraud is decisive (0.03 <= 0.15) with multiple independent pieces of evidence (low model score, generic device history, and no shared origin lift), satisfying policy section 6.",
+  "tool_calls": 9,
+  "tokens": 33957,
+  "latency_s": 43.9
+}

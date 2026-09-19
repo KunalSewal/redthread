@@ -1,0 +1,95 @@
+{
+  "case_id": "HHG-012",
+  "case": {
+    "status": "closed_legitimate",
+    "verdict": "legitimate",
+    "fraud_probability": 0.03,
+    "pattern": "none",
+    "pattern_description": "",
+    "affected_txn_ids": [],
+    "first_suspicious_txn_id": "",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 0,
+    "evidence": [
+      {
+        "claim": "The flagged transaction has a low second-generation model score of 0.008, which historically correlates with a 0.6% fraud rate.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3553342)",
+        "entity_ids": [
+          "3553342"
+        ]
+      },
+      {
+        "claim": "The card is a bucket card shared by 62 holders, meaning prior fraud cases on the card do not implicate this specific holder.",
+        "source": "graph",
+        "ref": "query:card_window(card=C05876-K2, 2016-12-08..2016-12-21)",
+        "entity_ids": [
+          "C05876-K2"
+        ]
+      },
+      {
+        "claim": "Shared origin analysis for the billing region 494 shows a low fraud lift of 0.3 across 89 cards, indicating no coordinated fraud activity.",
+        "source": "graph",
+        "ref": "query:shared_origin(tx=3553342, window=+/-7d)",
+        "entity_ids": [
+          "3553342"
+        ]
+      },
+      {
+        "claim": "Similar past alerts triggered by risk scores were consistently cleared as legitimate activity.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(\"risk score: Real-time model scored transaction 3553342 ($30....\", k=6)",
+        "entity_ids": [
+          "CC-5371",
+          "CC-0594",
+          "CC-0339",
+          "CC-5368",
+          "CC-3092",
+          "CC-5376"
+        ]
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-5371",
+      "CC-0594",
+      "CC-0339",
+      "CC-5368",
+      "CC-3092",
+      "CC-5376"
+    ],
+    "summary": "The alert was triggered by a noisy legacy risk score of 0.55 on an in-person transaction of $30.91. However, the second-generation model score is very low at 0.008, which correlates with a 0.6% historical fraud rate. Shared origin analysis for the billing region shows a low fraud lift of 0.3, indicating no coordinated fraud ring. Similar past alerts have consistently been cleared as legitimate, leading to the conclusion that this is a false positive.",
+    "written_to_graph": true,
+    "graph_case_id": "CASE-HHG-012"
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "CLOSE_NO_FRAUD",
+        "route": "auto",
+        "reason": "Section 6: probability 0.03 <= 0.15 on 3 independent signals"
+      }
+    ],
+    "final": [
+      {
+        "action": "CLOSE_NO_FRAUD",
+        "route": "auto",
+        "reason": "Section 6: probability 0.03 <= 0.15 on 3 independent signals"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": false,
+    "reason": "3a: fraud is not confirmed or strongly suspected, so no report is required",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0,
+    "activity_dates": []
+  },
+  "stop_reason": "The investigation stopped because the probability of fraud is decisively low at 0.03, supported by multiple independent pieces of evidence including a low model score, low shared origin fraud lift, and similar cleared cases, satisfying policy section 6.",
+  "tool_calls": 8,
+  "tokens": 28302,
+  "latency_s": 43.4
+}

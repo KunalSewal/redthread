@@ -1,0 +1,140 @@
+{
+  "case_id": "HHG-019",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.95,
+    "pattern": "card_not_present_new_device",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3503878"
+    ],
+    "first_suspicious_txn_id": "3503878",
+    "connected_card_ids": [
+      "C01104-K2",
+      "C01983-K1",
+      "C06224-K2",
+      "C11309-K1"
+    ],
+    "connected_device_profiles": [
+      "Windows | other | chrome 61.0 | 1280x720"
+    ],
+    "exposure_usd": 99.92,
+    "evidence": [
+      {
+        "claim": "The flagged transaction 3503878 is an online purchase with a high model score of 0.784 (historical fraud rate 78%) and is the first transaction for this holder identity.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3503878)",
+        "entity_ids": [
+          "3503878"
+        ]
+      },
+      {
+        "claim": "The transaction was made using device D008254, which is new to the card and was used by 5 different cards in the past week, all generating suspicious transactions (model score > 0.5), resulting in a fraud lift of 48.43.",
+        "source": "graph",
+        "ref": "query:shared_origin(tx=3503878, window=+/-7d)",
+        "entity_ids": [
+          "3503878",
+          "C01104-K2",
+          "C01983-K1",
+          "C06224-K2",
+          "C11309-K1"
+        ]
+      },
+      {
+        "claim": "Device D008254 directly links this transaction to cards C11309-K1 and C06224-K2, which are members of known fraud rings 34603052 and 37749036 with extensive confirmed fraud histories.",
+        "source": "graph",
+        "ref": "query:device_neighbors(device=D008254, 2016-11-01..2016-12-04)",
+        "entity_ids": [
+          "C11309-K1",
+          "C06224-K2"
+        ]
+      },
+      {
+        "claim": "Card C07987-K2 has a history of confirmed fraud, including a prior card-not-present fraud case CC-2860.",
+        "source": "graph",
+        "ref": "query:linked_cases(tx=3503878)",
+        "entity_ids": [
+          "C07987-K2",
+          "CC-2860"
+        ]
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-2860"
+    ],
+    "summary": "On December 1, 2016, an online transaction for $99.92 was flagged due to a high real-time risk score. The transaction was made using a new device (D008254) that was shared across five different cards in the past week, generating a high fraud lift. This device directly links the transaction to known fraud rings, and the subject card itself has a history of confirmed card-not-present fraud. Given the strong device links to known fraud and the high model score, the transaction is confirmed as card-not-present fraud.",
+    "written_to_graph": true,
+    "graph_case_id": "CASE-HHG-019"
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "Section 6: probability 0.95 >= 0.85 on 4 independent signals"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "3a: fraud probability at or above 0.30; R6: several cards show fraud from device:D008254"
+      },
+      {
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "R6: shared origin device:D008254"
+      },
+      {
+        "action": "MONITOR_CONNECTED_CARDS",
+        "route": "auto",
+        "reason": "R6: 4 connected card(s) share the same origin"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "Section 6: probability 0.95 >= 0.85 on 4 independent signals"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "3a: fraud probability at or above 0.30; R6: several cards show fraud from device:D008254"
+      },
+      {
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "R6: shared origin device:D008254"
+      },
+      {
+        "action": "MONITOR_CONNECTED_CARDS",
+        "route": "auto",
+        "reason": "R6: 4 connected card(s) share the same origin"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": true,
+    "reason": "3a and R6: fraud across several cards sharing device:D008254",
+    "narrative": "This report details suspected card-not-present fraud involving customer C07987 and card C07987-K2. On December 1, 2016, an online transaction totaling $99.92 was attempted in region 264. The transaction was conducted using device D008254, identified as a Windows system running Chrome 61.0. This device was new to the account and has been linked to five different cards within a one-week window, generating highly suspicious activity. Furthermore, device D008254 directly connects this activity to cards C11309-K1 and C06224-K2, which are associated with known fraud rings. The subject card, C07987-K2, also has a history of confirmed card-not-present fraud. The use of a shared device connected to established fraud rings, combined with the high model score of the transaction, indicates a coordinated effort to exploit compromised card details. The total exposure for this episode is $99.92.",
+    "subjects": [
+      "C07987",
+      "C07987-K2",
+      "C01104-K2",
+      "C01983-K1",
+      "C06224-K2",
+      "C11309-K1"
+    ],
+    "total_amount_usd": 99.92,
+    "activity_dates": [
+      "2016-12-01",
+      "2016-12-01"
+    ]
+  },
+  "stop_reason": "The investigation was stopped because the probability of fraud reached 0.95, exceeding the decisive threshold of 0.85 under Section 6, supported by multiple independent pieces of evidence including a shared device linked to known fraud rings and a prior confirmed fraud case on the card.",
+  "tool_calls": 11,
+  "tokens": 43352,
+  "latency_s": 55.8
+}

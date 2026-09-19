@@ -1,0 +1,104 @@
+{
+  "case_id": "HHG-004",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.95,
+    "pattern": "card_not_present_new_device",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3583227",
+      "3584017"
+    ],
+    "first_suspicious_txn_id": "3583227",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 134.81,
+    "evidence": [
+      {
+        "claim": "Customer reported: Customer C08106 message: 'I never made this $128.33 purchase. Please check my card.' Refers to 3583227.",
+        "source": "customer",
+        "ref": "trigger:customer_report",
+        "entity_ids": [
+          "3583227"
+        ]
+      },
+      {
+        "claim": "The customer explicitly reported the $128.33 transaction as unrecognized.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3583227)",
+        "entity_ids": [
+          "3583227",
+          "C08106"
+        ]
+      },
+      {
+        "claim": "The flagged transaction was made online using a device that is New to the account.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3583227)",
+        "entity_ids": [
+          "3583227"
+        ]
+      },
+      {
+        "claim": "The card has a history of compromise, with 3 prior confirmed fraud cases for card-not-present fraud.",
+        "source": "graph",
+        "ref": "query:linked_cases(tx=3583227)",
+        "entity_ids": [
+          "C08106-K1",
+          "CC-3778",
+          "CC-2121",
+          "CC-1736"
+        ]
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-3778",
+      "CC-2121",
+      "CC-1736"
+    ],
+    "summary": "Customer C08106 explicitly reported a $128.33 online transaction as unrecognized. The transaction was made using a device that is new to the account. Furthermore, the card has a severe history of compromise with three prior confirmed fraud cases. A subsequent small online transaction on the same day is included in the episode. The case is confirmed as card-not-present fraud.",
+    "written_to_graph": true,
+    "graph_case_id": "CASE-HHG-004"
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "R2: customer states they did not make the transaction; exposure $134.81"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R2"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "R2: customer states they did not make the transaction; exposure $134.81"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R2"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": false,
+    "reason": "3a: fraud suspected but exposure $134.81 is at most $1,000 and there is no shared device, region cluster or link to other customers' fraud; case only",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0,
+    "activity_dates": []
+  },
+  "stop_reason": "The investigation stopped per policy section 6 because the customer's direct report of fraud and the use of a new device provided decisive probability with two independent pieces of evidence, meaning further steps would not change the decision.",
+  "tool_calls": 9,
+  "tokens": 30136,
+  "latency_s": 55.3
+}

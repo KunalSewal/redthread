@@ -1,0 +1,159 @@
+{
+  "case_id": "HHG-016",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.97,
+    "pattern": "card_not_present_new_device",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3534820"
+    ],
+    "first_suspicious_txn_id": "3534820",
+    "connected_card_ids": [
+      "C04965-K2",
+      "C07196-K2",
+      "C08374-K1",
+      "C09616-K1"
+    ],
+    "connected_device_profiles": [
+      "Windows | unknown | edge 16.0 | unknown"
+    ],
+    "exposure_usd": 59.67,
+    "evidence": [
+      {
+        "claim": "Customer reported: Customer C09988 message: 'I never made this $59.67 purchase. Please check my card.' Refers to 3534820.",
+        "source": "customer",
+        "ref": "trigger:customer_report",
+        "entity_ids": [
+          "3534820"
+        ]
+      },
+      {
+        "claim": "Customer C09988 explicitly reported the $59.67 transaction 3534820 as unrecognized.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3534820)",
+        "entity_ids": [
+          "C09988",
+          "3534820"
+        ]
+      },
+      {
+        "claim": "The transaction was the first for this holder profile, ruling out a recurring charge dispute.",
+        "source": "graph",
+        "ref": "query:holder_history(holder=C09988-K1|NA|162, before=2016-12-11)",
+        "entity_ids": [
+          "3534820"
+        ]
+      },
+      {
+        "claim": "The transaction was made from device D000431, which is new to the account and has been linked to 10 prior confirmed fraud cases.",
+        "source": "graph",
+        "ref": "query:linked_cases(tx=3534820)",
+        "entity_ids": [
+          "CC-5057",
+          "CC-3580",
+          "CC-3491",
+          "CC-2898",
+          "CC-2765",
+          "CC-2732",
+          "CC-2694",
+          "CC-2675",
+          "CC-2540",
+          "CC-0497"
+        ]
+      },
+      {
+        "claim": "In the current window, device D000431 is shared by 35 cards and shows a high lift (6.46) for suspicious activity, connecting to four other cards with model scores over 0.99.",
+        "source": "graph",
+        "ref": "query:shared_origin(tx=3534820, window=+/-7d)",
+        "entity_ids": [
+          "C04965-K2",
+          "C07196-K2",
+          "C08374-K1",
+          "C09616-K1"
+        ]
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-5057",
+      "CC-3580",
+      "CC-3491",
+      "CC-2898",
+      "CC-2765"
+    ],
+    "summary": "Customer C09988 reported an unrecognized online transaction of $59.67. Graph analysis confirmed the transaction was made from a new device (D000431) that is linked to 10 prior confirmed fraud cases. Furthermore, this device was used across 35 different cards in the current window, connecting to four other cards with highly suspicious activity. Given the direct customer report and the strong device links to known fraud, the transaction is confirmed as card-not-present fraud. The card will be blocked and a report filed.",
+    "written_to_graph": true,
+    "graph_case_id": "CASE-HHG-016"
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "R2: customer states they did not make the transaction; exposure $59.67"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R2; R6: several cards show fraud from device:D000431"
+      },
+      {
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "3a and R6: fraud across several cards sharing device:D000431; R6: shared origin device:D000431"
+      },
+      {
+        "action": "MONITOR_CONNECTED_CARDS",
+        "route": "auto",
+        "reason": "R6: 4 connected card(s) share the same origin"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "R2: customer states they did not make the transaction; exposure $59.67"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R2; R6: several cards show fraud from device:D000431"
+      },
+      {
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "3a and R6: fraud across several cards sharing device:D000431; R6: shared origin device:D000431"
+      },
+      {
+        "action": "MONITOR_CONNECTED_CARDS",
+        "route": "auto",
+        "reason": "R6: 4 connected card(s) share the same origin"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": true,
+    "reason": "3a and R6: fraud across several cards sharing device:D000431",
+    "narrative": "This report details suspected card-not-present fraud involving customer C09988 and card C09988-K1. On December 11, 2016, an unauthorized online transaction of $59.67 was conducted using the customer's card. The customer explicitly reported this transaction as unrecognized. The transaction was initiated from device D000431, profiled as a Windows system running Edge 16.0, which was new to the account. Graph analysis revealed that this specific device has been linked to 10 prior confirmed fraud cases. Additionally, during the same time period, device D000431 was used across 35 different cards, including four cards (C04965-K2, C07196-K2, C08374-K1, C09616-K1) that exhibited highly suspicious activity. The use of a known fraudulent device across multiple unrelated accounts indicates a coordinated effort to exploit compromised card information. The total exposure for this customer is $59.67.",
+    "subjects": [
+      "C09988",
+      "C09988-K1",
+      "C04965-K2",
+      "C07196-K2",
+      "C08374-K1",
+      "C09616-K1"
+    ],
+    "total_amount_usd": 59.67,
+    "activity_dates": [
+      "2016-12-11",
+      "2016-12-11"
+    ]
+  },
+  "stop_reason": "The investigation stopped because the direct customer report combined with independent graph evidence of a known fraudulent device provided a decisive probability of fraud, satisfying policy section 6.",
+  "tool_calls": 9,
+  "tokens": 36152,
+  "latency_s": 58.6
+}
