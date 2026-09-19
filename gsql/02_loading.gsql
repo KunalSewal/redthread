@@ -1,6 +1,6 @@
 // Loading jobs for data/processed/*.csv (written by scripts/prepare_data.py).
 // Files are posted by scripts/setup_graph.py; numeric "missing" is -1 (see prepare_data.py).
-USE GRAPH RedThread
+
 
 CREATE LOADING JOB load_customers FOR GRAPH RedThread {
   DEFINE FILENAME f;

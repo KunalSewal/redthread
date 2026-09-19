@@ -9,7 +9,7 @@ CREATE VERTEX Holder (PRIMARY_ID holder_id STRING, card_id STRING, region STRING
     n_txns INT, first_ts DATETIME, last_ts DATETIME, amount_mean DOUBLE) WITH primary_id_as_attribute="true"
 CREATE VERTEX Txn (PRIMARY_ID tx_id STRING, card_id STRING, holder_id STRING, ts DATETIME, amount DOUBLE,
     product_cd STRING, channel STRING, risk_score DOUBLE, model_score DOUBLE, region STRING, country STRING,
-    dist1 DOUBLE, p_email STRING, r_email STRING, device_status STRING, proxy STRING, match_status STRING,
+    dist1 DOUBLE, p_email STRING, r_email STRING, device_status STRING, proxy_type STRING, match_status STRING,
     c1 DOUBLE, c13 DOUBLE, c14 DOUBLE, d1 DOUBLE, d15 DOUBLE,
     m1 STRING, m2 STRING, m3 STRING, m4 STRING, m5 STRING, m6 STRING) WITH primary_id_as_attribute="true"
 CREATE VERTEX DeviceProfile (PRIMARY_ID device_id STRING, profile STRING, device_info STRING, os STRING,
@@ -27,7 +27,7 @@ CREATE VERTEX FraudCase (PRIMARY_ID case_id STRING, alert_id STRING, trigger_typ
     exposure_usd DOUBLE, summary STRING, opened_at DATETIME, updated_at DATETIME, sar_filed BOOL,
     final_actions STRING, record_json STRING) WITH primary_id_as_attribute="true"
 CREATE VERTEX CaseEvent (PRIMARY_ID event_id STRING, case_id STRING, step INT, kind STRING, detail STRING,
-    at DATETIME) WITH primary_id_as_attribute="true"
+    occurred_at DATETIME) WITH primary_id_as_attribute="true"
 CREATE VERTEX DocChunk (PRIMARY_ID chunk_id STRING, source STRING, section STRING, content STRING) WITH primary_id_as_attribute="true"
 
 // ---- Relationships -----------------------------------------------------------------------
