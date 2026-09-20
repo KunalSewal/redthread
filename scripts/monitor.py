@@ -75,7 +75,7 @@ async def main(max_alerts: int) -> None:
         alerts = await raise_alerts(graph, max_alerts)
         (OUT / "alerts.json").write_text(json.dumps(alerts, indent=2), encoding="utf-8")
         for alert in alerts:
-            state = await investigate_alert(graph, alert)
+            state = await investigate_alert(graph, alert, as_of=alert["opened_at"])
             (OUT / f"{alert['case_id']}.json").write_text(json.dumps(state["answer"], indent=2), encoding="utf-8")
             trace = {k: state.get(k) for k in ("alert", "events", "evidence", "llm_assessment", "final")}
             (TRACES / f"{alert['case_id']}.trace.json").write_text(json.dumps(trace, indent=1, default=str),

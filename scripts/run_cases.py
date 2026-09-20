@@ -43,7 +43,9 @@ async def main(ids: list[str]) -> int:
         for alert in load_alerts(ids):
             start = time.time()
             try:
-                state = await investigate_alert(graph, alert)
+                # as_of: an alert may only draw on cases opened before it, so a rerun cannot feed a later
+                # case's memory backwards into an earlier alert.
+                state = await investigate_alert(graph, alert, as_of=alert["opened_at"])
             except Exception:
                 log.exception("case %s failed", alert["case_id"])
                 failures += 1

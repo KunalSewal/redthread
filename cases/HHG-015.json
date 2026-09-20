@@ -3,7 +3,7 @@
   "case": {
     "status": "closed_legitimate",
     "verdict": "legitimate",
-    "fraud_probability": 0.01,
+    "fraud_probability": 0.03,
     "pattern": "none",
     "pattern_description": "",
     "affected_txn_ids": [],
@@ -13,7 +13,7 @@
     "exposure_usd": 0,
     "evidence": [
       {
-        "claim": "The flagged transaction has a low model score of 0.016, which historically correlates with a 0.6% fraud rate.",
+        "claim": "The flagged transaction has a low second-generation model score of 0.016, which historically correlates with a 0.6% fraud rate.",
         "source": "graph",
         "ref": "query:alert_context(tx=3464869)",
         "entity_ids": [
@@ -21,15 +21,15 @@
         ]
       },
       {
-        "claim": "The device used has a generic profile and is not linked to any other cards in the current window.",
+        "claim": "The device used for the transaction has a generic profile shared by multiple cards and has no history of closed fraud cases.",
         "source": "graph",
         "ref": "query:device_neighbors(device=D001825, 2016-10-18..2016-11-20)",
         "entity_ids": [
-          "D001825"
+          "C03042-K1"
         ]
       },
       {
-        "claim": "Shared origin analysis shows no significant fraud lift for the region or email domain.",
+        "claim": "There is no evidence of a shared origin, as the email and region have low fraud lift (0.64 and 0.6 respectively).",
         "source": "graph",
         "ref": "query:shared_origin(tx=3464869, window=+/-7d)",
         "entity_ids": [
@@ -37,15 +37,15 @@
         ]
       },
       {
-        "claim": "Similar past cases triggered by high legacy risk scores were consistently cleared as legitimate.",
+        "claim": "Similar past alerts triggered by high legacy risk scores but with low model scores were consistently cleared as legitimate.",
         "source": "graph",
         "ref": "query:similar_closed_cases(\"risk score: Real-time model scored transaction 3464869 ($599...\", k=6)",
         "entity_ids": [
           "CC-5371",
           "CC-2037",
           "CC-5368",
-          "CC-3092",
           "CC-4237",
+          "CC-3092",
           "CC-0339"
         ]
       }
@@ -54,13 +54,13 @@
       "CC-5371",
       "CC-2037",
       "CC-5368",
-      "CC-3092",
       "CC-4237",
+      "CC-3092",
       "CC-0339"
     ],
-    "summary": "Alert HHG-015 was triggered by a legacy risk score of 0.77 on an online transaction of $599.94. However, the second-generation model score is very low at 0.016, which historically correlates with a 0.6% fraud rate. The device used (D001825) has a generic profile and shows no links to other cards or fraud rings in the current window. Shared origin analysis and similar past cases further confirm this is normal activity. The alert is a false positive and the case is closed as legitimate.",
-    "written_to_graph": false,
-    "graph_case_id": ""
+    "summary": "The alert was triggered on an online transaction of $599.94 due to a legacy risk score of 0.77. However, the second-generation model score is very low at 0.016, which corresponds to a historical fraud rate of just 0.6%. The device used has a generic profile with no history of fraud, and there are no significant shared origin links via email or region. Furthermore, similar past alerts driven by the legacy risk score have consistently been cleared as legitimate. Based on this evidence, the transaction is deemed legitimate and the case is closed.",
+    "written_to_graph": true,
+    "graph_case_id": "CASE-HHG-015"
   },
   "evidence_requests": [],
   "next_best_actions": {
@@ -68,14 +68,14 @@
       {
         "action": "CLOSE_NO_FRAUD",
         "route": "auto",
-        "reason": "Section 6: probability 0.01 <= 0.15 on 3 independent signals"
+        "reason": "Section 6: probability 0.03 <= 0.15 on 4 independent signals"
       }
     ],
     "final": [
       {
         "action": "CLOSE_NO_FRAUD",
         "route": "auto",
-        "reason": "Section 6: probability 0.01 <= 0.15 on 3 independent signals"
+        "reason": "Section 6: probability 0.03 <= 0.15 on 4 independent signals"
       }
     ],
     "what_changed": "nothing"
@@ -88,8 +88,8 @@
     "total_amount_usd": 0,
     "activity_dates": []
   },
-  "stop_reason": "The investigation stopped because the probability of fraud is decisive (0.01 <= 0.15) based on three independent signals (low model score, lack of cross-card device links, and no shared origin fraud lift), satisfying policy section 6.",
-  "tool_calls": 8,
-  "tokens": 24309,
-  "latency_s": 48.4
+  "stop_reason": "The investigation stopped because the probability of fraud is decisive (0.03), supported by multiple independent pieces of evidence including a low model score, a generic device with no fraud history, and similar cleared past cases, satisfying policy section 6.",
+  "tool_calls": 9,
+  "tokens": 24830,
+  "latency_s": 46.0
 }
