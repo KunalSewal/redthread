@@ -3,7 +3,7 @@
   "case": {
     "status": "closed_legitimate",
     "verdict": "legitimate",
-    "fraud_probability": 0.03,
+    "fraud_probability": 0.04,
     "pattern": "none",
     "pattern_description": "",
     "affected_txn_ids": [],
@@ -13,15 +13,36 @@
     "exposure_usd": 0,
     "evidence": [
       {
-        "claim": "The flagged transaction 3506725 has a low second-generation model score of 0.019, which historically correlates with a 0.6% fraud rate.",
+        "claim": "Flagged online transaction 3506725 for $1,000.03 on card C10434-K1 of customer C10434 was triggered by a legacy risk score of 0.90, but the calibrated fraud model score is very low at 0.019 with a historical fraud rate of 0.006.",
         "source": "graph",
         "ref": "query:alert_context(tx=3506725)",
         "entity_ids": [
+          "3506725",
+          "C10434-K1",
+          "C10434"
+        ]
+      },
+      {
+        "claim": "Card C10434-K1 has an established history of 33 prior transactions, with region 469 being the card's dominant location (24 transactions) and category R being an established product type (9 transactions), directly matching transaction 3506725.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3506725)",
+        "entity_ids": [
+          "C10434-K1",
           "3506725"
         ]
       },
       {
-        "claim": "The device used for the transaction has a generic profile shared by 208 cards all time, indicating it is not a unique identifier for a fraud ring.",
+        "claim": "Card activity on C10434-K1 between 2016-11-22 and 2016-12-05 shows no card testing sequences, fraud patterns, or velocity bursts, containing only regular purchases including transaction 3492086 and transaction 3506725.",
+        "source": "graph",
+        "ref": "query:card_window(card=C10434-K1, 2016-11-22..2016-12-05)",
+        "entity_ids": [
+          "C10434-K1",
+          "3492086",
+          "3506725"
+        ]
+      },
+      {
+        "claim": "Device D000126 is a generic desktop profile (Windows 10 Edge) seen on 208 cards all-time, not linked to any fraud ring (ring_id -1), and was used with no proxy for transaction 3506725.",
         "source": "graph",
         "ref": "query:device_neighbors(device=D000126, 2016-11-02..2016-12-05)",
         "entity_ids": [
@@ -30,34 +51,31 @@
         ]
       },
       {
-        "claim": "A previous alert on this card, CC-0873, was investigated and cleared as legitimate.",
+        "claim": "Card C10434-K1 has one prior closed case CC-0873, which was also triggered by an elevated legacy model score of 0.93 and was cleared as legitimate cardholder activity.",
         "source": "graph",
         "ref": "query:linked_cases(tx=3506725)",
         "entity_ids": [
           "CC-0873",
-          "C10434-K1"
+          "C10434-K1",
+          "3506725"
         ]
       },
       {
-        "claim": "Similar past cases triggered by high legacy risk scores, such as CC-5371 and CC-0362, were cleared as legitimate.",
+        "claim": "Shared origin analysis for transaction 3506725 indicates no agent fraud cases associated with device D000126, recipient email anonymous.com, or region 469.",
         "source": "graph",
-        "ref": "query:similar_closed_cases(\"risk score: Real-time model scored transaction 3506725 ($1,0...\", k=6)",
+        "ref": "query:shared_origin(tx=3506725, window=+/-7d)",
         "entity_ids": [
-          "CC-5371",
-          "CC-0362"
+          "3506725"
         ]
       }
     ],
     "similar_prior_cases": [
       "CC-0873",
       "CC-5371",
-      "CC-0362",
-      "CC-5368",
-      "CC-3092",
-      "CC-0339",
-      "CC-2444"
+      "CC-2444",
+      "CC-2695"
     ],
-    "summary": "The alert was triggered by a noisy legacy risk score of 0.90 on a $1,000.03 online transaction. However, the second-generation model score is very low at 0.019, which corresponds to a historical fraud rate of just 0.6%. The device used has a generic profile shared by hundreds of cards, providing no strong link to fraud. Furthermore, a prior case on this card was cleared as legitimate, and similar alerts driven by the legacy risk score have consistently been false positives. The evidence strongly points to this being normal activity.",
+    "summary": "Transaction 3506725 ($1,000.03, online) on card C10434-K1 was flagged by an uncalibrated legacy risk score of 0.90. The bank's calibrated fraud model scored the transaction at 0.019 with an expected historical fraud rate of only 0.006. Graph analysis confirmed the purchase aligns with the cardholder's established history of 33 prior transactions, matching primary billing region 469 and merchant category R. Furthermore, device D000126 is a common generic profile operating without a proxy and has no ties to fraud rings or past compromise. The alert was determined to be a false alarm, and the transaction is cleared as legitimate.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHG-010"
   },
@@ -67,14 +85,14 @@
       {
         "action": "CLOSE_NO_FRAUD",
         "route": "auto",
-        "reason": "Section 6: probability 0.03 <= 0.15 on 4 independent signals"
+        "reason": "Section 6: probability 0.04 <= 0.15 on 3 independent signals"
       }
     ],
     "final": [
       {
         "action": "CLOSE_NO_FRAUD",
         "route": "auto",
-        "reason": "Section 6: probability 0.03 <= 0.15 on 4 independent signals"
+        "reason": "Section 6: probability 0.04 <= 0.15 on 3 independent signals"
       }
     ],
     "what_changed": "nothing"
@@ -87,8 +105,8 @@
     "total_amount_usd": 0,
     "activity_dates": []
   },
-  "stop_reason": "The investigation stopped because the probability of fraud is decisive (0.03 <= 0.15) based on multiple independent pieces of evidence, including a low model score, a generic device profile, and a history of cleared cases, satisfying policy section 6.",
-  "tool_calls": 9,
-  "tokens": 29228,
-  "latency_s": 44.6
+  "stop_reason": "Investigation concluded pursuant to policy section 6 due to a decisive fraud probability of 0.04 (below the 0.15 threshold) substantiated by multiple independent lines of evidence showing legitimate cardholder spend.",
+  "tool_calls": 16,
+  "tokens": 129658,
+  "latency_s": 64.3
 }

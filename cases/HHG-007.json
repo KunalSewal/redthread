@@ -3,92 +3,74 @@
   "case": {
     "status": "closed_fraud",
     "verdict": "fraud",
-    "fraud_probability": 0.95,
+    "fraud_probability": 0.94,
     "pattern": "account_takeover",
     "pattern_description": "",
     "affected_txn_ids": [
-      "3486038",
-      "3493040",
-      "3493319",
       "3508487",
-      "3514573",
-      "3514948",
-      "3515777",
-      "3516867"
+      "3514948"
     ],
-    "first_suspicious_txn_id": "3486038",
-    "connected_card_ids": [
-      "C01104-K2",
-      "C12942-K2"
-    ],
-    "connected_device_profiles": [
-      "Windows | Windows 7 | chrome 65.0 | 1920x1080",
-      "SM-G950U Build/R16NW | Android 8.0.0 | chrome generic for android | 2220x1080"
-    ],
-    "exposure_usd": 770.62,
+    "first_suspicious_txn_id": "3508487",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 228.88,
     "evidence": [
       {
-        "claim": "The flagged transaction has a high model score of 0.943, which corresponds to a historical fraud rate of 92.1%.",
+        "claim": "Flagged transaction 3514948 for $111.92 on card C09933-K2 was an in-person purchase in region 264 flagged with a model score of 0.943 and a legacy risk score of 0.87, with a calibrated historical fraud rate of 0.921 and match flags M4 M1 and M6 F.",
         "source": "graph",
         "ref": "query:alert_context(tx=3514948)",
         "entity_ids": [
-          "3514948"
+          "3514948",
+          "C09933-K2",
+          "C09933"
         ]
       },
       {
-        "claim": "The holder's prior transactions are part of confirmed fraud cases (e.g., CC-5521, CC-2834), indicating the holder identity is compromised and matching its baseline is evidence of fraud.",
+        "claim": "The specific holder identity for card C09933-K2 in region 264 has 5 of its 11 prior transactions confirmed fraudulent across closed cases CC-2565, CC-2834, and CC-5521, confirming the holder identity is compromised.",
         "source": "graph",
         "ref": "query:holder_history(holder=C09933-K2|264|50, before=2016-12-05)",
         "entity_ids": [
-          "CC-5521",
-          "CC-2834"
+          "C09933-K2",
+          "CC-2565",
+          "CC-2834",
+          "CC-5521"
         ]
       },
       {
-        "claim": "The card has 18 prior confirmed fraud cases, including recent account takeover cases like CC-5521 and CC-4787.",
+        "claim": "Prior transaction 3508487 on 2016-12-02 23:10:43 on card C09933-K2 was an in-person purchase of $116.96 under the same holder identity with model score 0.929 and identical match flags M4 M1 and M6 F, forming a 49-hour fraudulent card-present burst.",
+        "source": "graph",
+        "ref": "query:card_window(card=C09933-K2, 2016-11-25..2016-12-08)",
+        "entity_ids": [
+          "3508487",
+          "C09933-K2"
+        ]
+      },
+      {
+        "claim": "Card C09933-K2 has 18 confirmed fraud closed cases out of 19 total historical cases, with 10 confirmed cases of out-of-region use including CC-2565 and CC-5092.",
         "source": "graph",
         "ref": "query:alert_context(tx=3514948)",
         "entity_ids": [
           "C09933-K2",
-          "CC-5521",
-          "CC-4787"
+          "CC-5092",
+          "CC-5521"
         ]
       },
       {
-        "claim": "The card is a member of fraud ring 40894916, which links cards through specific devices that are new to each account.",
+        "claim": "Holder history shows fewer than two prior similar charges and recurring pattern evaluation confirmed the transaction does not match a recurring cadence.",
         "source": "graph",
-        "ref": "query:ring_members(ring=40894916)",
+        "ref": "query:holder_history(holder=C09933-K2|264|50, before=2016-12-05)",
         "entity_ids": [
           "C09933-K2"
-        ]
-      },
-      {
-        "claim": "The current episode features mixed-channel activity, including online transactions 3486038 and 3515777 using new devices and proxies.",
-        "source": "graph",
-        "ref": "query:card_window(card=C09933-K2, 2016-11-25..2016-12-08)",
-        "entity_ids": [
-          "3486038",
-          "3515777",
-          "C09933-K2"
-        ]
-      },
-      {
-        "claim": "The device used in the online transaction links this card to other cards active in the same window, including ring member C01104-K2 and card C12942-K2.",
-        "source": "graph",
-        "ref": "query:device_neighbors(device=D006706, 2016-11-21..2016-12-08)",
-        "entity_ids": [
-          "C01104-K2",
-          "C12942-K2"
         ]
       }
     ],
     "similar_prior_cases": [
-      "CC-5521",
-      "CC-4787",
+      "CC-2565",
       "CC-2834",
-      "CC-2565"
+      "CC-5521",
+      "CC-5092"
     ],
-    "summary": "The flagged in-person transaction for $111.92 received a high model score of 0.943. Investigation revealed the card has a history of confirmed fraud cases and belongs to a known fraud ring. The holder's identity is compromised, as their prior transactions are part of confirmed fraud cases, meaning matching the baseline is evidence of fraud. The current episode features mixed-channel activity, including online transactions using new devices and proxies that link to other cards. Based on the compromised identity, ring membership, and cross-card links, the activity is confirmed as an account takeover.",
+    "summary": "Flagged transaction 3514948 ($111.92) on card C09933-K2 was an in-person transaction in billing region 264 triggered by an elevated risk score of 0.87 and a calibrated model score of 0.943. An analysis of the specific holder profile revealed a compromised identity, with 5 of 11 prior transactions confirmed as fraud across closed cases CC-2565, CC-2834, and CC-5521. Examination of recent card activity identified an earlier correlated transaction, 3508487 ($116.96), displaying a high model score of 0.929 and identical match flags M4 M1 and M6 F. Card C09933-K2 has a extensive history of confirmed fraud (18 of 19 closed cases confirmed), and checks for a recurring charge pattern were negative. The transactions were confirmed as unauthorized fraud totaling $228.88, resulting in a card block and case creation.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHG-007"
   },
@@ -98,48 +80,38 @@
       {
         "action": "BLOCK_CARD",
         "route": "L1",
-        "reason": "Section 6: probability 0.95 >= 0.85 on 4 independent signals"
+        "reason": "Section 6: probability 0.94 >= 0.85 on 3 independent signals"
       },
       {
         "action": "CREATE_CASE",
         "route": "auto",
         "reason": "3a: fraud probability at or above 0.30"
-      },
-      {
-        "action": "MONITOR_CONNECTED_CARDS",
-        "route": "auto",
-        "reason": "R6: 2 connected card(s) share the same origin"
       }
     ],
     "final": [
       {
         "action": "BLOCK_CARD",
         "route": "L1",
-        "reason": "Section 6: probability 0.95 >= 0.85 on 4 independent signals"
+        "reason": "Section 6: probability 0.94 >= 0.85 on 3 independent signals"
       },
       {
         "action": "CREATE_CASE",
         "route": "auto",
         "reason": "3a: fraud probability at or above 0.30"
-      },
-      {
-        "action": "MONITOR_CONNECTED_CARDS",
-        "route": "auto",
-        "reason": "R6: 2 connected card(s) share the same origin"
       }
     ],
     "what_changed": "nothing"
   },
   "sar": {
     "file": false,
-    "reason": "3a and R2: activity connects to a shared device profile or another card's fraud",
+    "reason": "3a: fraud suspected but exposure $228.88 is at most $1,000 and there is no shared device, region cluster or link to other customers' fraud; case only",
     "narrative": "",
     "subjects": [],
     "total_amount_usd": 0,
     "activity_dates": []
   },
-  "stop_reason": "The investigation was stopped under Section 6 because a decisive probability of 0.95 was reached using multiple independent pieces of evidence, including ring membership, compromised holder identity, and cross-card device links.",
-  "tool_calls": 11,
-  "tokens": 117505,
-  "latency_s": 78.4
+  "stop_reason": "The investigation stopped under policy section 6 because the fraud probability reached 0.94, surpassing the 0.85 decisive threshold with three independent lines of corroborating evidence: calibrated model scores with historical fraud rates above 0.92, confirmed fraud history on the specific holder identity across multiple closed cases, and an uncharacteristic card-present burst sharing identical match flags. Further evidence collection would not alter the outcome.",
+  "tool_calls": 15,
+  "tokens": 233832,
+  "latency_s": 111.6
 }

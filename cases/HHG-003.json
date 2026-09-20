@@ -3,7 +3,7 @@
   "case": {
     "status": "closed_fraud",
     "verdict": "fraud",
-    "fraud_probability": 0.95,
+    "fraud_probability": 0.92,
     "pattern": "out_of_region_use",
     "pattern_description": "",
     "affected_txn_ids": [
@@ -24,42 +24,55 @@
         ]
       },
       {
-        "claim": "Customer C08623 explicitly reported the flagged transaction 3530164 as unrecognized.",
+        "claim": "Customer C08623 submitted a report disputing transaction 3530164 ($49.00) on card C08623-K2, stating they never made the purchase.",
         "source": "graph",
         "ref": "query:alert_context(tx=3530164)",
         "entity_ids": [
           "C08623",
+          "C08623-K2",
           "3530164"
         ]
       },
       {
-        "claim": "The flagged transaction was preceded 49 minutes earlier by transaction 3530056 by the same holder, which received a high model score of 0.622 (historical fraud rate 64.5%).",
+        "claim": "Transaction 3530056 occurred 49 minutes prior to the flagged transaction on card C08623-K2 in region 330 for $116.93, generating a model score of 0.622 (historical fraud rate 0.6449) and a risk score of 0.88.",
+        "source": "graph",
+        "ref": "query:card_window(card=C08623-K2, 2016-11-30..2016-12-13)",
+        "entity_ids": [
+          "3530056",
+          "C08623-K2"
+        ]
+      },
+      {
+        "claim": "The holder identity for transactions 3530056 and 3530164 was first observed on 2016-12-10 with no prior transaction history, and the disputed charge matches no recurring billing pattern.",
         "source": "graph",
         "ref": "query:holder_history(holder=C08623-K2|330|161, before=2016-12-10)",
         "entity_ids": [
           "3530056",
-          "3530164"
+          "3530164",
+          "C08623-K2"
         ]
       },
       {
-        "claim": "Card C08623-K2 has a severe history of compromise, with 5 prior confirmed fraud cases including CC-4957 and CC-3682.",
+        "claim": "Card C08623-K2 has multiple prior confirmed fraud closed cases (CC-4957, CC-3682, CC-2935, and CC-2817) involving unauthorized card-present out-of-region transactions reported by customer C08623.",
         "source": "graph",
         "ref": "query:linked_cases(tx=3530164)",
         "entity_ids": [
           "C08623-K2",
+          "C08623",
           "CC-4957",
-          "CC-3682"
+          "CC-3682",
+          "CC-2935",
+          "CC-2817"
         ]
       }
     ],
     "similar_prior_cases": [
       "CC-4957",
       "CC-3682",
-      "CC-3327",
       "CC-2935",
       "CC-2817"
     ],
-    "summary": "Customer C08623 explicitly reported a $49.00 in-person transaction as unrecognized. A review of the card's activity identified a preceding in-person transaction for $116.93 in the same region that received a high model score indicating a 64.5% historical fraud rate. Furthermore, the card has a severe history of compromise with five prior confirmed fraud cases. Given the direct customer report and the highly suspicious preceding transaction, the activity is confirmed as out-of-region fraud.",
+    "summary": "Customer C08623 reported transaction 3530164 ($49.00) on card C08623-K2 as unauthorized. Investigation revealed transaction 3530056 ($116.93) occurred 49 minutes prior in the same billing region 330 under the identical newly observed holder identity, generating a high model score of 0.622. Furthermore, card C08623-K2 has an extensive record of confirmed out-of-region card-present fraud in closed cases CC-4957, CC-3682, CC-2935, and CC-2817. Lacking any positive baseline history or recurring billing profile to overturn the customer's report, both transactions were confirmed as an out-of-region card cloning episode totaling $165.93.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHG-003"
   },
@@ -99,8 +112,8 @@
     "total_amount_usd": 0,
     "activity_dates": []
   },
-  "stop_reason": "The investigation stopped because the probability reached a decisive 0.95 supported by two independent pieces of evidence: a direct customer report of unrecognized activity and a preceding high-risk transaction on a card with an extensive history of confirmed fraud.",
-  "tool_calls": 8,
-  "tokens": 39240,
-  "latency_s": 95.1
+  "stop_reason": "The investigation reached a decisive fraud probability of 0.92 under Policy Section 6 based on multiple independent lines of evidence: the direct customer dispute, an unestablished holder history, a closely preceding high-scoring transaction in region 330, and multiple prior confirmed fraud closed cases on card C08623-K2.",
+  "tool_calls": 14,
+  "tokens": 145591,
+  "latency_s": 64.6
 }

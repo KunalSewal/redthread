@@ -21,9 +21,11 @@ class Llm:
     async def generate(self, contents: list[types.Content], *, system: str, model: str | None = None,
                        tools: list[types.Tool] | None = None, response_schema: dict | None = None,
                        temperature: float = 0.2, attempts: int = 6) -> types.GenerateContentResponse:
+        thinking = types.ThinkingConfig(thinking_level=config.THINKING_LEVEL) if config.THINKING_LEVEL else None
         cfg = types.GenerateContentConfig(
             system_instruction=system,
             temperature=temperature,
+            thinking_config=thinking,
             tools=tools,
             automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True) if tools else None,
             response_mime_type="application/json" if response_schema else None,

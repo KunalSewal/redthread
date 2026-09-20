@@ -13,7 +13,27 @@
     "exposure_usd": 0.0,
     "evidence": [
       {
-        "claim": "The flagged transaction perfectly matches the holder's established baseline and is part of a weekly recurring pattern with a median of 7.55 days between charges.",
+        "claim": "Flagged transaction 3514030 ($77.07, in-person, region 444) was triggered by a legacy real-time risk score of 0.61, while the bank's calibrated second-generation model scored it low at 0.071 with a historical fraud rate of 0.1138.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3514030)",
+        "entity_ids": [
+          "3514030",
+          "C12382-K1",
+          "C12382"
+        ]
+      },
+      {
+        "claim": "Transaction 3514030 matches the holder's established weekly recurring purchase pattern in region 444 for product W, following prior transactions 3490282 ($77.08 on 2016-11-26) and 3471020 ($76.94 on 2016-11-19) with a median interval of 7.55 days.",
+        "source": "graph",
+        "ref": "query:holder_history(holder=C12382-K1|444|73, before=2016-12-04)",
+        "entity_ids": [
+          "3514030",
+          "3490282",
+          "3471020"
+        ]
+      },
+      {
+        "claim": "The holder has 10 prior in-person transactions in region 444 averaging $66.42 with zero prior transactions linked to confirmed fraud cases.",
         "source": "graph",
         "ref": "query:holder_history(holder=C12382-K1|444|73, before=2016-12-04)",
         "entity_ids": [
@@ -21,15 +41,15 @@
         ]
       },
       {
-        "claim": "The second-generation model score is low at 0.071, which corresponds to a historical fraud rate of 11.38%, indicating the legacy risk score is likely a false alarm.",
+        "claim": "Card activity in the surrounding two-week window shows 33 in-person transactions across 27 holders with zero suspicious transactions and no card-testing sequences.",
         "source": "graph",
-        "ref": "query:alert_context(tx=3514030)",
+        "ref": "query:card_window(card=C12382-K1, 2016-11-24..2016-12-07)",
         "entity_ids": [
-          "3514030"
+          "C12382-K1"
         ]
       },
       {
-        "claim": "Shared origin analysis for billing region 444 shows no coordinated fraud activity, with a hot share and lift of 0.0.",
+        "claim": "Shared origin analysis for region 444 shows 130 transactions across 71 cards in the window with 0 transactions scoring over 0.5 and a lift of 0.0 vs baseline.",
         "source": "graph",
         "ref": "query:shared_origin(tx=3514030, window=+/-7d)",
         "entity_ids": [
@@ -37,7 +57,20 @@
         ]
       },
       {
-        "claim": "On review the customer recognised the charge as their own recurring payment and withdrew the dispute. (Assumed: the reply most consistent with the evidence before asking, probability 0.05.)",
+        "claim": "Prior confirmed fraud cases CC-3587, CC-2964, CC-1673, and CC-1066 on card C12382-K1 occurred under separate holder identities within the shared issuer bucket and did not compromise this holder's baseline.",
+        "source": "graph",
+        "ref": "query:linked_cases(tx=3514030)",
+        "entity_ids": [
+          "3514030",
+          "C12382-K1",
+          "CC-3587",
+          "CC-2964",
+          "CC-1673",
+          "CC-1066"
+        ]
+      },
+      {
+        "claim": "The customer recognised the charge as their own recurring payment. (Assumed: the reply most consistent with the evidence before asking, probability 0.04.)",
         "source": "customer",
         "ref": "evidence_request:1",
         "entity_ids": [
@@ -45,16 +78,23 @@
         ]
       }
     ],
-    "similar_prior_cases": [],
-    "summary": "The alert was triggered by a noisy legacy risk score of 0.61 on a $77.07 transaction. Investigation revealed the transaction perfectly matches the cardholder's established baseline for in-person purchases in region 444 and is part of a weekly recurring pattern. The second-generation model score was low at 0.071, and there was no evidence of shared origin fraud. The customer confirmed the transaction as their own recurring payment, leading to a final decision of legitimate.",
+    "similar_prior_cases": [
+      "CC-1464",
+      "CC-5371",
+      "CC-3587",
+      "CC-2964",
+      "CC-1673",
+      "CC-1066"
+    ],
+    "summary": "Transaction 3514030 for $77.07 in region 444 was flagged by a legacy risk score of 0.61, though the bank's calibrated fraud model scored it low at 0.071. Investigation showed the transaction matched the holder's established weekly recurring purchase cadence of approximately $77 in region 444, where the holder has 10 prior legitimate in-person transactions and no link to confirmed fraud. Regional analysis showed no abnormal fraud lift, and prior closed cases on the card belonged to other unrelated holder identities within the shared issuer bucket. Customer validation confirmed the charge as a legitimate recurring payment, and the alert was ruled a false alarm.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHG-001"
   },
   "evidence_requests": [
     {
       "type": "customer_validation",
-      "asked_after_step": 11,
-      "assumed_response": "On review the customer recognised the charge as their own recurring payment and withdrew the dispute. (Assumed: the reply most consistent with the evidence before asking, probability 0.05.)"
+      "asked_after_step": 13,
+      "assumed_response": "The customer recognised the charge as their own recurring payment. (Assumed: the reply most consistent with the evidence before asking, probability 0.04.)"
     }
   ],
   "next_best_actions": {
@@ -62,7 +102,7 @@
       {
         "action": "VERIFY_WITH_CUSTOMER",
         "route": "auto",
-        "reason": "R1: probability 0.05 below 0.70 on the available signals; verify before any block"
+        "reason": "R1: probability 0.04 below 0.70 on the available signals; verify before any block"
       },
       {
         "action": "CREATE_CASE",
@@ -82,7 +122,7 @@
         "reason": "R3: cardholder confirmed the transaction; confirmation noted in the case"
       }
     ],
-    "what_changed": "The initial actions requested customer verification to confirm the recurring charge; the final actions reflect the customer's confirmation, resulting in closing the case as no fraud and sending a recurring-charge reminder."
+    "what_changed": "Following customer validation where the cardholder confirmed the charge as their own recurring payment, initial verification actions shifted to closing the case as no fraud and issuing a recurring-charge reminder."
   },
   "sar": {
     "file": false,
@@ -92,8 +132,8 @@
     "total_amount_usd": 0,
     "activity_dates": []
   },
-  "stop_reason": "The investigation stopped because the customer verification reply decisively settled the case, confirming the transaction was legitimate and rendering further steps unnecessary per policy section 6.",
-  "tool_calls": 8,
-  "tokens": 38584,
-  "latency_s": 55.7
+  "stop_reason": "Investigation concluded pursuant to policy section 6 based on a customer verification response that settled the inquiry, reinforced by decisive low fraud probability supported by two independent lines of evidence: an established weekly recurring transaction pattern and clean holder baseline history.",
+  "tool_calls": 10,
+  "tokens": 84103,
+  "latency_s": 41.7
 }

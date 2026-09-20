@@ -3,7 +3,7 @@
   "case": {
     "status": "closed_fraud",
     "verdict": "fraud",
-    "fraud_probability": 0.97,
+    "fraud_probability": 0.91,
     "pattern": "card_not_present_new_device",
     "pattern_description": "",
     "affected_txn_ids": [
@@ -30,44 +30,52 @@
         ]
       },
       {
-        "claim": "Customer C09988 explicitly reported the $59.67 transaction 3534820 as unrecognized.",
+        "claim": "Customer C09988 explicitly disputed transaction 3534820 for $59.67, reporting that they never authorized the charge.",
         "source": "graph",
         "ref": "query:alert_context(tx=3534820)",
         "entity_ids": [
           "C09988",
+          "C09988-K1",
           "3534820"
         ]
       },
       {
-        "claim": "The transaction was the first for this holder profile, ruling out a recurring charge dispute.",
+        "claim": "Flagged transaction 3534820 on card C09988-K1 was an online purchase for $59.67 with device status New and match flag M4 M1, associated with a model historical fraud rate of 0.4983.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3534820)",
+        "entity_ids": [
+          "C09988-K1",
+          "3534820"
+        ]
+      },
+      {
+        "claim": "The holder baseline shows zero prior transactions and no recurring payment pattern, confirming an absence of established legitimate activity for this charge.",
         "source": "graph",
         "ref": "query:holder_history(holder=C09988-K1|NA|162, before=2016-12-11)",
         "entity_ids": [
-          "3534820"
+          "C09988-K1"
         ]
       },
       {
-        "claim": "The transaction was made from device D000431, which is new to the account and has been linked to 10 prior confirmed fraud cases.",
+        "claim": "Device D000431 was previously utilized in 10 confirmed fraud closed cases, including CC-5057, CC-3580, CC-2765, CC-2732, CC-2675, and CC-2540.",
         "source": "graph",
         "ref": "query:linked_cases(tx=3534820)",
         "entity_ids": [
+          "3534820",
           "CC-5057",
           "CC-3580",
-          "CC-3491",
-          "CC-2898",
           "CC-2765",
           "CC-2732",
-          "CC-2694",
           "CC-2675",
-          "CC-2540",
-          "CC-0497"
+          "CC-2540"
         ]
       },
       {
-        "claim": "In the current window, device D000431 is shared by 35 cards and shows a high lift (6.46) for suspicious activity, connecting to four other cards with model scores over 0.99.",
+        "claim": "Device D000431 demonstrated a 6.46 lift for transactions scoring over 0.5 in the +/- 7-day alert window, linking active cards C04965-K2, C07196-K2, C08374-K1, and C09616-K1.",
         "source": "graph",
         "ref": "query:shared_origin(tx=3534820, window=+/-7d)",
         "entity_ids": [
+          "3534820",
           "C04965-K2",
           "C07196-K2",
           "C08374-K1",
@@ -78,11 +86,16 @@
     "similar_prior_cases": [
       "CC-5057",
       "CC-3580",
-      "CC-3491",
+      "CC-2765",
+      "CC-2732",
+      "CC-2675",
+      "CC-2540",
+      "CC-2694",
       "CC-2898",
-      "CC-2765"
+      "CC-3491",
+      "CC-0497"
     ],
-    "summary": "Customer C09988 reported an unrecognized online transaction of $59.67. Graph analysis confirmed the transaction was made from a new device (D000431) that is linked to 10 prior confirmed fraud cases. Furthermore, this device was used across 35 different cards in the current window, connecting to four other cards with highly suspicious activity. Given the direct customer report and the strong device links to known fraud, the transaction is confirmed as card-not-present fraud. The card will be blocked and a report filed.",
+    "summary": "Customer C09988 disputed an unauthorized online transaction of $59.67 on card C09988-K1 occurring on December 11, 2016. The purchase was conducted via device D000431 (Windows | unknown | edge 16.0 | unknown), which was new to the account and presented match flag M4 M1. Account review showed an absence of prior legitimate baseline or recurring payment history, while graph intelligence linked device D000431 to ten prior confirmed fraud cases and four connected cards within the alert window. The alert was confirmed as card-not-present fraud from a new device with a 0.91 probability, prompting card blocking and suspicious activity reporting.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHG-016"
   },
@@ -137,7 +150,7 @@
   "sar": {
     "file": true,
     "reason": "3a and R6: fraud across several cards sharing device:D000431",
-    "narrative": "This report details suspected card-not-present fraud involving customer C09988 and card C09988-K1. On December 11, 2016, an unauthorized online transaction of $59.67 was conducted using the customer's card. The customer explicitly reported this transaction as unrecognized. The transaction was initiated from device D000431, profiled as a Windows system running Edge 16.0, which was new to the account. Graph analysis revealed that this specific device has been linked to 10 prior confirmed fraud cases. Additionally, during the same time period, device D000431 was used across 35 different cards, including four cards (C04965-K2, C07196-K2, C08374-K1, C09616-K1) that exhibited highly suspicious activity. The use of a known fraudulent device across multiple unrelated accounts indicates a coordinated effort to exploit compromised card information. The total exposure for this customer is $59.67.",
+    "narrative": "This Suspicious Activity Report details unauthorized card-not-present activity involving customer C09988 and credit card C09988-K1. On December 11, 2016, at 22:39:08 UTC, an unauthorized online transaction (ID 3534820) in the amount of $59.67 was conducted on card C09988-K1. Customer C09988 contacted the institution on December 12, 2016, explicitly disavowing the transaction as unauthorized. An examination of the cardholder baseline revealed zero prior transactions and no recurring payment profile to support the charge. The transaction was processed online from an unverified geographic location using device D000431, displaying a browser profile of Windows, unknown vendor, Edge 16.0, unknown hardware. The device was designated as New for the account and generated a mismatch flag M4 indicating M1. Graph analysis established that device D000431 was previously utilized in ten confirmed fraud cases, including CC-5057, CC-3580, CC-2765, CC-2732, CC-2675, and CC-2540. In the seven-day period surrounding the alert, device D000431 displayed an elevated risk lift of 6.46 across four additional cards: C04965-K2, C07196-K2, C08374-K1, and C09616-K1. Total confirmed suspicious exposure on card C09988-K1 is $59.67. The institution has blocked card C09988-K1 and initiated monitoring on all connected card accounts.",
     "subjects": [
       "C09988",
       "C09988-K1",
@@ -152,8 +165,8 @@
       "2016-12-11"
     ]
   },
-  "stop_reason": "The investigation stopped because the direct customer report combined with independent graph evidence of a known fraudulent device provided a decisive probability of fraud, satisfying policy section 6.",
-  "tool_calls": 9,
-  "tokens": 36152,
-  "latency_s": 58.6
+  "stop_reason": "Investigation closed under policy section 6 because decisive fraud probability of 0.91 was established with multiple independent lines of evidence, including direct cardholder denial, device novelty, and corroborated graph links to ten confirmed fraud cases and four connected cards.",
+  "tool_calls": 15,
+  "tokens": 170969,
+  "latency_s": 81.3
 }

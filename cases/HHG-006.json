@@ -3,7 +3,7 @@
   "case": {
     "status": "closed_fraud",
     "verdict": "fraud",
-    "fraud_probability": 0.97,
+    "fraud_probability": 0.95,
     "pattern": "card_not_present_new_device",
     "pattern_description": "",
     "affected_txn_ids": [
@@ -14,9 +14,7 @@
     ],
     "first_suspicious_txn_id": "3476602",
     "connected_card_ids": [],
-    "connected_device_profiles": [
-      "iOS Device | iOS 11.2.1 | mobile safari 11.0 | 2208x1242"
-    ],
+    "connected_device_profiles": [],
     "exposure_usd": 1906.07,
     "evidence": [
       {
@@ -28,28 +26,37 @@
         ]
       },
       {
-        "claim": "The customer explicitly reported the flagged transaction 3476682 as unrecognized.",
+        "claim": "Customer C07297 reported unrecognized activity on card C07297-K1 regarding transaction 3476682 for $482.12.",
         "source": "graph",
         "ref": "query:alert_context(tx=3476682)",
         "entity_ids": [
-          "3476682",
-          "C07297"
+          "C07297",
+          "C07297-K1",
+          "3476682"
         ]
       },
       {
-        "claim": "The flagged transaction is part of a burst of four online transactions within 30 minutes, totaling over $1,900, all from devices new to the account.",
+        "claim": "Card C07297-K1 history shows 194 of 199 prior transactions were in-person and 194 of 199 were product W, making the sudden burst of online product C transactions highly anomalous.",
         "source": "graph",
-        "ref": "query:card_window(card=C07297-K1, 2016-11-11..2016-11-24)",
+        "ref": "query:alert_context(tx=3476682)",
         "entity_ids": [
-          "3476602",
-          "3476633",
-          "3476665",
-          "3476682",
           "C07297-K1"
         ]
       },
       {
-        "claim": "Two transactions in this burst (3476633 and 3476665) were made from a device behind a transparent proxy and received high model scores of 0.845 and 0.792.",
+        "claim": "Within a 30-minute window on 2016-11-21, a burst of four online product C transactions occurred on card C07297-K1: 3476602 ($478.95), 3476633 ($456.96), 3476665 ($488.04), and 3476682 ($482.12), totaling $1,906.07.",
+        "source": "graph",
+        "ref": "query:card_window(card=C07297-K1, 2016-11-11..2016-11-24)",
+        "entity_ids": [
+          "C07297-K1",
+          "3476602",
+          "3476633",
+          "3476665",
+          "3476682"
+        ]
+      },
+      {
+        "claim": "Transactions 3476633 and 3476665 in the same burst had high model scores of 0.845 and 0.792 with a historical fraud rate of 0.7796, routed through IP_PROXY:TRANSPARENT from device D001723, marked as New.",
         "source": "graph",
         "ref": "query:card_window(card=C07297-K1, 2016-11-11..2016-11-24)",
         "entity_ids": [
@@ -58,21 +65,28 @@
         ]
       },
       {
-        "claim": "The proxy device used for the highly scored transactions has a strong history of fraud, with 19 prior closed cases for card-not-present fraud with a new device.",
+        "claim": "Flagged transaction 3476682 and preceding transaction 3476602 were conducted from device D000033, which was also marked with device status New for this account.",
         "source": "graph",
-        "ref": "query:device_neighbors(device=D001723, 2016-10-22..2016-11-24)",
+        "ref": "query:card_window(card=C07297-K1, 2016-11-11..2016-11-24)",
         "entity_ids": [
-          "CC-1331",
-          "CC-1500"
+          "3476682",
+          "3476602"
+        ]
+      },
+      {
+        "claim": "Prior closed case CC-2623 confirmed card-not-present new device fraud following a customer report of unrecognized online transactions from a new desktop browser device.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(\"customer report: Customer C07297 message: 'I never made this...\", k=6)",
+        "entity_ids": [
+          "CC-2623"
         ]
       }
     ],
     "similar_prior_cases": [
       "CC-2623",
-      "CC-1331",
-      "CC-1500"
+      "CC-5111"
     ],
-    "summary": "Customer C07297 reported an unrecognized online transaction of $482.12. Graph analysis revealed this was part of a burst of four high-value online purchases totaling $1,906.07 made within 30 minutes from devices new to the account. Two of these transactions were conducted from an iOS device (D001723) operating behind a transparent proxy, which has been linked to 19 prior confirmed fraud cases. The combination of the customer's explicit report, the anomalous burst of activity, and the use of a known fraudulent proxy device confirms this is card-not-present fraud.",
+    "summary": "Customer C07297 reported an unrecognized online transaction of $482.12 on card C07297-K1. Graph analysis uncovered an anomalous burst of four rapid online product C transactions totaling $1,906.07 on November 21, 2016, sharply diverging from the customer's baseline of 97.5% in-person product W transactions. Two transactions utilized transparent proxies and scored high on the fraud model, while all four originated from two new devices (D000033 and D001723). The alert was confirmed as card-not-present fraud via new devices, warranting a card block and regulatory filing.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHG-006"
   },
@@ -92,7 +106,7 @@
       {
         "action": "FILE_REPORT",
         "route": "L2",
-        "reason": "3a and R2: activity connects to a shared device profile or another card's fraud"
+        "reason": "3a: exposure $1,906.07 exceeds $1,000"
       }
     ],
     "final": [
@@ -109,15 +123,15 @@
       {
         "action": "FILE_REPORT",
         "route": "L2",
-        "reason": "3a and R2: activity connects to a shared device profile or another card's fraud"
+        "reason": "3a: exposure $1,906.07 exceeds $1,000"
       }
     ],
     "what_changed": "nothing"
   },
   "sar": {
     "file": true,
-    "reason": "3a and R2: activity connects to a shared device profile or another card's fraud",
-    "narrative": "On November 21, 2016, customer C07297's card C07297-K1 was subjected to card-not-present fraud. The suspect executed a burst of four online purchases totaling $1,906.07 within a 30-minute window across regions 264 and 476. These transactions were conducted using devices new to the account, including D000033 and D001723 (an iOS device). Notably, two of the transactions were routed through a transparent proxy using device D001723. The activity is highly suspicious because the customer explicitly reported the flagged transaction as unrecognized. Furthermore, device D001723 has a significant history of fraudulent activity, having been linked to 19 prior closed cases for card-not-present fraud. The rapid succession of high-value online purchases from new, proxy-obscured devices with known fraud links confirms the unauthorized nature of the activity. The total exposure for this episode is $1,906.07.",
+    "reason": "3a: exposure $1,906.07 exceeds $1,000",
+    "narrative": "This Suspicious Activity Report details an unauthorized card-not-present compromise involving customer C07297 and card C07297-K1. On November 22, 2016, customer C07297 contacted the financial institution to dispute transaction 3476682 for $482.12, stating they did not authorize the purchase. A subsequent review identified a rapid burst of four unauthorized online product C authorizations totaling $1,906.07 conducted between 20:00:00 and 20:30:00 UTC on November 21, 2016. The affected transactions comprise 3476602 ($478.95), 3476633 ($456.96), 3476665 ($488.04), and 3476682 ($482.12). Historical account activity reflects that 194 of 199 prior transactions were conducted in-person and for product W, establishing that this sudden online activity represents an uncharacteristic deviation. Transactions 3476602 and 3476682 were processed from device D000033 associated with billing region 264 under a device status of New. Transactions 3476633 and 3476665 were executed from device D001723 associated with billing region 476, also flagged as New, utilizing transparent IP proxies and generating elevated fraud model scores of 0.845 and 0.792. The unauthorized party alternated devices and regions within 30 minutes to conduct multiple high-value card-not-present transactions without cardholder consent. Card C07297-K1 was blocked to mitigate ongoing exposure, and the full compromised amount of $1,906.07 is subject to dispute resolution.",
     "subjects": [
       "C07297",
       "C07297-K1"
@@ -128,8 +142,8 @@
       "2016-11-21"
     ]
   },
-  "stop_reason": "The investigation stopped because the customer's explicit report of fraud and the use of a known fraudulent proxy device linked to 19 prior closed cases provide decisive, independent evidence of card-not-present fraud, satisfying policy section 6.",
-  "tool_calls": 10,
-  "tokens": 59394,
-  "latency_s": 60.7
+  "stop_reason": "The investigation was concluded under policy section 6 because a decisive fraud probability of 0.95 was reached based on two independent lines of evidence: the customer's direct denial of authorization and graph evidence confirming an anomalous 30-minute burst of card-not-present transactions from new devices and transparent proxies.",
+  "tool_calls": 14,
+  "tokens": 169397,
+  "latency_s": 74.4
 }

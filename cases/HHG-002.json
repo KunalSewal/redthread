@@ -3,7 +3,7 @@
   "case": {
     "status": "closed_legitimate",
     "verdict": "legitimate",
-    "fraud_probability": 0.1,
+    "fraud_probability": 0.11,
     "pattern": "none",
     "pattern_description": "",
     "affected_txn_ids": [],
@@ -13,53 +13,67 @@
     "exposure_usd": 0,
     "evidence": [
       {
-        "claim": "The transaction was flagged by a legacy risk score of 0.79, but the second-generation model score is low at 0.115, corresponding to a historical fraud rate of 21.17%.",
+        "claim": "Flagged transaction 3478782 on card C11891-K1 was triggered solely by a legacy risk score of 0.79, whereas the calibrated second-generation fraud model score is low at 0.115 with a historical fraud rate of 0.2117.",
         "source": "graph",
         "ref": "query:alert_context(tx=3478782)",
+        "entity_ids": [
+          "3478782",
+          "C11891-K1",
+          "C11891"
+        ]
+      },
+      {
+        "claim": "Transaction 3478782 aligns with the holder baseline, matching online channel, product C, and hotmail.com email from prior transaction 3043555 ($121.32), with zero confirmed fraud cases on this holder.",
+        "source": "graph",
+        "ref": "query:holder_history(holder=C11891-K1|NA|-305, before=2016-11-22)",
+        "entity_ids": [
+          "3043555",
+          "3478782"
+        ]
+      },
+      {
+        "claim": "Card activity in the 14-day window around transaction 3478782 contains only 1 transaction, showing no card testing sequences, no burst velocity, and no other suspicious transactions.",
+        "source": "graph",
+        "ref": "query:card_window(card=C11891-K1, 2016-11-12..2016-11-25)",
+        "entity_ids": [
+          "3478782",
+          "C11891-K1"
+        ]
+      },
+      {
+        "claim": "Shared origin analysis for recipient email hotmail.com shows 1,396 transactions across 251 cards with a lift of 0.97, showing no anomalous concentration of fraud.",
+        "source": "graph",
+        "ref": "query:shared_origin(tx=3478782, window=+/-7d)",
         "entity_ids": [
           "3478782"
         ]
       },
       {
-        "claim": "The transaction matches the holder's baseline for product, channel, and email domain, with the only anomaly being an amount higher than their single prior transaction.",
+        "claim": "Prior closed case CC-4160 on card C11891-K1 occurred on 2016-09-30 under a different holder identity and device D000594, with no link to the current holder or transaction.",
         "source": "graph",
-        "ref": "query:holder_history(holder=C11891-K1|NA|-305, before=2016-11-22)",
+        "ref": "query:linked_cases(tx=3478782)",
         "entity_ids": [
-          "3478782",
-          "3043555"
+          "CC-4160",
+          "C11891-K1"
         ]
       },
       {
-        "claim": "While there is a prior confirmed fraud case on this card, the holder's own prior transactions were not part of that fraud, indicating the holder identity is not compromised.",
-        "source": "graph",
-        "ref": "query:alert_context(tx=3478782)",
-        "entity_ids": [
-          "CC-4160"
-        ]
-      },
-      {
-        "claim": "The shared email domain (hotmail.com) shows a lift of 0.97, indicating it is a common domain with no significant link to fraud.",
-        "source": "graph",
-        "ref": "query:shared_origin(tx=3478782, window=+/-7d)",
-        "entity_ids": []
-      },
-      {
-        "claim": "Similar past cases triggered by high legacy risk scores with low model scores were consistently cleared as legitimate.",
+        "claim": "Closed cases CC-4158 and CC-2037 show that transactions flagged by high legacy risk scores without model or graph corroboration were confirmed legitimate and cleared.",
         "source": "graph",
         "ref": "query:similar_closed_cases(\"risk score: Real-time model scored transaction 3478782 ($292...\", k=6)",
         "entity_ids": [
-          "CC-4237",
-          "CC-2037",
-          "CC-3639"
+          "CC-4158",
+          "CC-2037"
         ]
       }
     ],
     "similar_prior_cases": [
-      "CC-4237",
+      "CC-4158",
       "CC-2037",
-      "CC-3639"
+      "CC-3639",
+      "CC-4160"
     ],
-    "summary": "The alert was triggered by a noisy legacy risk score of 0.79 on a $292.36 online transaction, but the second-generation model score is low at 0.115. The transaction aligns with the cardholder's baseline for product, channel, and email domain, with the only deviation being a higher amount than their single prior transaction. Although there is a prior fraud case on this card, the holder's own history was not involved, indicating the identity is not compromised. Similar past cases have been consistently cleared, leading to the conclusion that this activity is legitimate.",
+    "summary": "Transaction 3478782 ($292.36, online) on card C11891-K1 was flagged solely by an uncalibrated legacy risk score of 0.79. The calibrated second-generation model scored the transaction low at 0.115, and the purchase aligns with the cardholder's established history for product type, channel, and email domain. Graph analysis confirmed no velocity bursts, testing sequences, or fraud ring connections, and an earlier fraud case on the card involved an unrelated holder identity. The transaction is determined to be legitimate.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHG-002"
   },
@@ -69,14 +83,14 @@
       {
         "action": "CLOSE_NO_FRAUD",
         "route": "auto",
-        "reason": "Section 6: probability 0.10 <= 0.15 on 4 independent signals"
+        "reason": "Section 6: probability 0.11 <= 0.15 on 2 independent signals"
       }
     ],
     "final": [
       {
         "action": "CLOSE_NO_FRAUD",
         "route": "auto",
-        "reason": "Section 6: probability 0.10 <= 0.15 on 4 independent signals"
+        "reason": "Section 6: probability 0.11 <= 0.15 on 2 independent signals"
       }
     ],
     "what_changed": "nothing"
@@ -89,8 +103,8 @@
     "total_amount_usd": 0,
     "activity_dates": []
   },
-  "stop_reason": "The investigation stopped because the probability of fraud is decisive (0.10 <= 0.15) based on multiple independent pieces of evidence, including a low model score, alignment with the holder's baseline, and similar cleared past cases, satisfying policy section 6.",
-  "tool_calls": 8,
-  "tokens": 21121,
-  "latency_s": 48.5
+  "stop_reason": "The investigation stopped under Policy Section 6 because the fraud probability reached a decisive level of 0.11 (<= 0.15), supported by at least two independent lines of evidence including a low calibrated model score and cardholder behavioral consistency.",
+  "tool_calls": 14,
+  "tokens": 105505,
+  "latency_s": 50.9
 }

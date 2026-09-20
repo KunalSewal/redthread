@@ -18,12 +18,11 @@ import random
 
 import pandas as pd
 
-from redthread import paths
+from redthread import config, paths
 from redthread.agent.graph import investigate_alert
 from redthread.agent.mcp_graph import McpGraph
 
 log = logging.getLogger("backtest")
-OUT = paths.ROOT / "runs" / "backtest.json"
 
 
 def build_alerts(n: int, month: int, seed: int) -> list[dict]:
@@ -87,8 +86,9 @@ def report(rows: list[dict]) -> dict:
     }
 
 
-async def main(n: int, month: int, seed: int) -> None:
+async def main(n: int, month: int, seed: int, out: str) -> None:
     alerts = build_alerts(n, month, seed)
+    log.info("model=%s thinking=%s", config.REASONING_MODEL, config.THINKING_LEVEL or "default")
     rows = []
     async with McpGraph() as graph:
         for alert in alerts:
@@ -107,8 +107,8 @@ async def main(n: int, month: int, seed: int) -> None:
         # Backtest cases are scratch: remove them so they cannot pollute the memory real cases retrieve.
         for alert in alerts:
             await graph.query("delete_case", {"case_id": f"CASE-{alert['case_id']}"})
-    summary = report(rows)
-    OUT.write_text(json.dumps({"summary": summary, "cases": rows}, indent=2), encoding="utf-8")
+    summary = report(rows) | {"model": config.REASONING_MODEL, "thinking": config.THINKING_LEVEL or "default"}
+    (paths.ROOT / "runs" / out).write_text(json.dumps({"summary": summary, "cases": rows}, indent=2), encoding="utf-8")
     log.info("summary: %s", json.dumps(summary))
 
 
@@ -120,6 +120,12 @@ if __name__ == "__main__":
     parser.add_argument("--n", type=int, default=12)
     parser.add_argument("--month", type=int, default=10)
     parser.add_argument("--seed", type=int, default=7)
-    random.seed(parser.parse_args().seed)
+    parser.add_argument("--model", help="override the reasoning model for this run")
+    parser.add_argument("--thinking", default="", help="Gemini 3 thinking level: low | high")
+    parser.add_argument("--out", default="backtest.json", help="file under runs/")
     args = parser.parse_args()
-    asyncio.run(main(args.n, args.month, args.seed))
+    random.seed(args.seed)
+    if args.model:
+        config.REASONING_MODEL = args.model
+    config.THINKING_LEVEL = args.thinking
+    asyncio.run(main(args.n, args.month, args.seed, args.out))

@@ -1,95 +1,69 @@
 {
   "case_id": "HHG-017",
   "case": {
-    "status": "escalated",
-    "verdict": "fraud",
-    "fraud_probability": 0.95,
-    "pattern": "card_not_present_fraud",
+    "status": "closed_legitimate",
+    "verdict": "legitimate",
+    "fraud_probability": 0.05,
+    "pattern": "none",
     "pattern_description": "",
-    "affected_txn_ids": [
-      "3450436",
-      "3450503",
-      "3450629"
-    ],
-    "first_suspicious_txn_id": "3450436",
-    "connected_card_ids": [
-      "C04327-K1",
-      "C11204-K1",
-      "C07594-K1",
-      "C13370-K1",
-      "C02975-K1",
-      "C06279-K1",
-      "C04230-K1",
-      "C09873-K1",
-      "C08412-K1",
-      "C02180-K1",
-      "C07466-K2"
-    ],
-    "connected_device_profiles": [
-      "Windows | Windows 10 | chrome 65.0 | 1920x1080"
-    ],
-    "exposure_usd": 300.14,
+    "affected_txn_ids": [],
+    "first_suspicious_txn_id": "",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 0,
     "evidence": [
       {
-        "claim": "The flagged transaction and two others on the same day were made online using device D006670, with the flagged one behind a hidden IP proxy.",
+        "claim": "Flagged transaction 3450629 ($100.09, online, product R, region 204) has a low second-generation model score of 0.014 with a historical fraud rate of 0.006, despite an elevated legacy risk score of 0.57.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3450629)",
+        "entity_ids": [
+          "3450629",
+          "C04570-K1",
+          "C04570"
+        ]
+      },
+      {
+        "claim": "Card C04570-K1 shows consistent history with product R (29 of 52 prior transactions), online purchases (35 of 52 transactions), and region 204 (5 transactions), with similar amounts appearing in recent transactions 3450436 ($100.09) and 3450503 ($99.96).",
         "source": "graph",
         "ref": "query:card_window(card=C04570-K1, 2016-11-01..2016-11-14)",
         "entity_ids": [
           "3450436",
           "3450503",
-          "3450629"
+          "3450629",
+          "C04570-K1"
         ]
       },
       {
-        "claim": "Device D006670 is linked to 7 confirmed fraud cases in the past few weeks, mostly for card-not-present fraud on new devices.",
+        "claim": "Holder history indicates transaction 3450629 is not new in region, product, amount, or device, and the holder has zero prior transactions in confirmed fraud cases.",
         "source": "graph",
-        "ref": "query:device_neighbors(device=D006670, 2016-10-12..2016-11-14)",
+        "ref": "query:holder_history(holder=C04570-K1|204|132, before=2016-11-11)",
         "entity_ids": [
-          "CC-5481",
-          "CC-5181",
-          "CC-5345",
-          "CC-5455",
-          "CC-5172",
-          "CC-5217",
-          "CC-5446"
+          "3450436",
+          "3450503"
         ]
       },
       {
-        "claim": "Multiple other cards used device D006670 recently with very high model scores, indicating a coordinated fraud ring.",
+        "claim": "Device D006670 is a generic Windows 10 Chrome desktop profile shared by 299 cards with ring ID -1; in the 7-day window around transaction 3450629, its fraud lift versus baseline is only 0.21, well below 1.0.",
         "source": "graph",
-        "ref": "query:device_neighbors(device=D006670, 2016-10-12..2016-11-14)",
-        "entity_ids": [
-          "C04327-K1",
-          "C11204-K1",
-          "C07594-K1",
-          "C13370-K1",
-          "C02975-K1",
-          "C04230-K1",
-          "C09873-K1",
-          "C08412-K1",
-          "C02180-K1",
-          "C07466-K2"
-        ]
-      },
-      {
-        "claim": "The model score for the flagged transaction is very low (0.014), which conflicts with the strong graph evidence of fraud.",
-        "source": "graph",
-        "ref": "query:alert_context(tx=3450629)",
+        "ref": "query:shared_origin(tx=3450629, window=+/-7d)",
         "entity_ids": [
           "3450629"
+        ]
+      },
+      {
+        "claim": "Prior closed case CC-1383 on card C04570-K1 involved a high model score of 0.91 on a $99.98 transaction that was confirmed legitimate by the cardholder and cleared.",
+        "source": "graph",
+        "ref": "query:linked_cases(tx=3450629)",
+        "entity_ids": [
+          "CC-1383",
+          "C04570-K1"
         ]
       }
     ],
     "similar_prior_cases": [
-      "CC-5481",
-      "CC-5181",
-      "CC-5345",
-      "CC-5455",
-      "CC-5172",
-      "CC-5217",
-      "CC-5446"
+      "CC-1383"
     ],
-    "summary": "The alert was triggered by a real-time risk score on a $100.09 online transaction. This transaction was part of a burst of three online purchases totaling $300.14 made within an hour. While the model scores for these transactions were unusually low, graph analysis revealed the flagged transaction was routed through a hidden IP proxy on device D006670. This device is heavily compromised, linking to 7 recent confirmed fraud cases and 11 other cards, indicating a coordinated fraud ring. Due to the strong cross-card links to known fraud, the activity is confirmed as card-not-present fraud.",
+    "summary": "Transaction 3450629 for $100.09 on card C04570-K1 was flagged due to an elevated legacy risk score of 0.57 caused by an IP proxy flag. However, the calibrated second-generation fraud model scored the transaction at 0.014 with an expected historical fraud rate of only 0.006. The transaction aligns completely with the cardholder baseline across product type, online channel, billing region, and recurring purchase amounts, mirroring two other transactions completed earlier that evening. Furthermore, device D006670 has prior recognized history on this card and carries no association with fraud rings. The alert is confirmed to be a false alarm and closed as legitimate.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHG-017"
   },
@@ -97,87 +71,30 @@
   "next_best_actions": {
     "initial": [
       {
-        "action": "BLOCK_CARD",
-        "route": "L1",
-        "reason": "Section 6: probability 0.95 >= 0.85 on 3 independent signals"
-      },
-      {
-        "action": "CREATE_CASE",
+        "action": "CLOSE_NO_FRAUD",
         "route": "auto",
-        "reason": "3a: fraud probability at or above 0.30; R6: several cards show fraud from device:D006670"
-      },
-      {
-        "action": "FILE_REPORT",
-        "route": "L2",
-        "reason": "R6: shared origin device:D006670"
-      },
-      {
-        "action": "MONITOR_CONNECTED_CARDS",
-        "route": "auto",
-        "reason": "R6: 11 connected card(s) share the same origin"
-      },
-      {
-        "action": "ESCALATE_TO_ANALYST",
-        "route": "auto",
-        "reason": "R8: evidence conflicts"
+        "reason": "Section 6: probability 0.05 <= 0.15 on 3 independent signals"
       }
     ],
     "final": [
       {
-        "action": "BLOCK_CARD",
-        "route": "L1",
-        "reason": "Section 6: probability 0.95 >= 0.85 on 3 independent signals"
-      },
-      {
-        "action": "CREATE_CASE",
+        "action": "CLOSE_NO_FRAUD",
         "route": "auto",
-        "reason": "3a: fraud probability at or above 0.30; R6: several cards show fraud from device:D006670"
-      },
-      {
-        "action": "FILE_REPORT",
-        "route": "L2",
-        "reason": "R6: shared origin device:D006670"
-      },
-      {
-        "action": "MONITOR_CONNECTED_CARDS",
-        "route": "auto",
-        "reason": "R6: 11 connected card(s) share the same origin"
-      },
-      {
-        "action": "ESCALATE_TO_ANALYST",
-        "route": "auto",
-        "reason": "R8: evidence conflicts"
+        "reason": "Section 6: probability 0.05 <= 0.15 on 3 independent signals"
       }
     ],
     "what_changed": "nothing"
   },
   "sar": {
-    "file": true,
-    "reason": "3a and R6: fraud across several cards sharing device:D006670",
-    "narrative": "This report details suspected card-not-present fraud involving customer C04570 and card C04570-K1. On November 11, 2016, a burst of three online transactions totaling $300.14 was attempted on the card in region 204. The final transaction in this sequence was conducted using device D006670 (Windows | Windows 10 | chrome 65.0 | 1920x1080) and routed through a hidden IP proxy. The activity is highly suspicious because device D006670 is heavily compromised and linked to a coordinated fraud ring. Specifically, the device is connected to 7 recent confirmed fraud cases and 11 other connected cards exhibiting high-risk behavior. Despite low individual model scores on the transactions, the shared device origin and proxy usage strongly indicate the cardholder's information was compromised and used by the fraud ring. The total exposure for this episode is $300.14.",
-    "subjects": [
-      "C04570",
-      "C04570-K1",
-      "C04327-K1",
-      "C11204-K1",
-      "C07594-K1",
-      "C13370-K1",
-      "C02975-K1",
-      "C06279-K1",
-      "C04230-K1",
-      "C09873-K1",
-      "C08412-K1",
-      "C02180-K1",
-      "C07466-K2"
-    ],
-    "total_amount_usd": 300.14,
-    "activity_dates": [
-      "2016-11-11",
-      "2016-11-11"
-    ]
+    "file": false,
+    "reason": "3a: fraud is not confirmed or strongly suspected, so no report is required",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0,
+    "activity_dates": []
   },
-  "stop_reason": "The investigation stopped under Section 6 because the probability of fraud reached 0.95, supported by independent strong signals: the use of a hidden IP proxy and the device's direct links to 7 confirmed fraud cases and multiple other compromised cards.",
-  "tool_calls": 9,
-  "tokens": 36365,
-  "latency_s": 86.7
+  "stop_reason": "The investigation stopped pursuant to policy section 6 because the fraud probability of 0.05 is decisively below the 0.15 threshold, supported by three independent lines of evidence confirming normal cardholder activity.",
+  "tool_calls": 13,
+  "tokens": 112113,
+  "latency_s": 116.0
 }

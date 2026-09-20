@@ -32,6 +32,14 @@ How to read this data (important, verified by the engineering team):
   cleared (e.g. travel, new phone). Agent cases (CASE-...) are earlier investigations by you.
 - About half of all alerts in this bank's queue are legitimate. Many look suspicious. Blocking a
   legitimate customer is costly; missing a ring is costly.
+- A customer's denial is direct evidence of fraud, not merely a reason to look. In the closed-case
+  history every alert that began with a customer report was confirmed fraud, and every alert that began
+  with a model score was cleared; that reflects how the bank routed work rather than a law, and this case
+  pack is deliberately balanced, so treat it as a prior and not an answer. What follows from it: to call a
+  disputed transaction legitimate you need POSITIVE evidence that it is the holder's own activity (it
+  matches a recurring charge, or the holder's established pattern with real history behind it). The
+  absence of suspicious signals is not evidence of legitimacy: a cloned card used in person leaves no
+  device trail and can score low. Conversely, a model alert with no corroborating evidence is weak.
 
 Known fraud patterns (policy names):
 {_PATTERNS}

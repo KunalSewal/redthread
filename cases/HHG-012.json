@@ -3,7 +3,7 @@
   "case": {
     "status": "closed_legitimate",
     "verdict": "legitimate",
-    "fraud_probability": 0.01,
+    "fraud_probability": 0.04,
     "pattern": "none",
     "pattern_description": "",
     "affected_txn_ids": [],
@@ -13,15 +13,34 @@
     "exposure_usd": 0,
     "evidence": [
       {
-        "claim": "The flagged transaction has a low model score of 0.008, which correlates with a 0.6% historical fraud rate.",
+        "claim": "Transaction 3553342 was flagged by a legacy risk score of 0.55, but the bank's calibrated model scored it at 0.008 with a historical fraud rate of 0.006.",
         "source": "graph",
         "ref": "query:alert_context(tx=3553342)",
         "entity_ids": [
-          "3553342"
+          "3553342",
+          "C05876-K2",
+          "C05876"
         ]
       },
       {
-        "claim": "Shared origin analysis for the billing region 494 shows a low fraud lift of 0.3, indicating no coordinated fraud ring.",
+        "claim": "The transaction was an in-person charge of $30.91 in region 494, a region where card C05876-K2 has accumulated 21 prior transactions.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3553342)",
+        "entity_ids": [
+          "3553342",
+          "C05876-K2"
+        ]
+      },
+      {
+        "claim": "The card window between 2016-12-08 and 2016-12-21 shows 106 transactions with zero suspicious transactions and no card testing sequences.",
+        "source": "graph",
+        "ref": "query:card_window(card=C05876-K2, 2016-12-08..2016-12-21)",
+        "entity_ids": [
+          "C05876-K2"
+        ]
+      },
+      {
+        "claim": "Regional shared origin analysis for region 494 shows 319 transactions across 89 cards with a cold fraud lift of 0.3 and no agent fraud cases.",
         "source": "graph",
         "ref": "query:shared_origin(tx=3553342, window=+/-7d)",
         "entity_ids": [
@@ -29,30 +48,35 @@
         ]
       },
       {
-        "claim": "Similar past alerts triggered by legacy risk scores have consistently been cleared as legitimate.",
+        "claim": "Card C05876-K2 has a prior confirmed fraud case CC-2370 from August 2016 involving online desktop IE 11 fraud and reissue, whereas the current holder identity has zero prior fraud associations.",
+        "source": "graph",
+        "ref": "query:linked_cases(tx=3553342)",
+        "entity_ids": [
+          "C05876-K2",
+          "CC-2370",
+          "3553342"
+        ]
+      },
+      {
+        "claim": "Similar model-flagged alerts with travel or regional use such as CC-0003, CC-5371, and CC-0594 were cleared as legitimate cardholder activity.",
         "source": "graph",
         "ref": "query:similar_closed_cases(\"risk score: Real-time model scored transaction 3553342 ($30....\", k=6)",
         "entity_ids": [
+          "CC-0003",
           "CC-5371",
-          "CC-5368",
-          "CC-0594",
-          "CC-3092",
-          "CC-0339",
-          "CC-5376"
+          "CC-0594"
         ]
       }
     ],
     "similar_prior_cases": [
+      "CC-0003",
+      "CC-2370",
       "CC-5371",
-      "CC-5368",
-      "CC-0594",
-      "CC-3092",
-      "CC-0339",
-      "CC-5376"
+      "CC-0594"
     ],
-    "summary": "The alert was triggered by a legacy risk score of 0.55 on a $30.91 in-person transaction. However, the second-generation model score is very low at 0.008, which correlates with a 0.6% historical fraud rate. Shared origin analysis for the billing region shows a low fraud lift of 0.3, indicating no coordinated fraud ring. Furthermore, similar past alerts triggered by legacy risk scores have consistently been cleared as legitimate. The transaction is confirmed as normal customer activity and the case is closed as a false positive.",
-    "written_to_graph": false,
-    "graph_case_id": ""
+    "summary": "Transaction 3553342 ($30.91) on card C05876-K2 was flagged by a legacy real-time risk score of 0.55, but the bank's calibrated model scored it at 0.008 with a historical fraud rate of 0.6%. The purchase was an in-person transaction in region 494, where the cardholder already has an established history of 21 prior transactions. Analysis of 106 transactions across the two-week card window revealed no suspicious activity, card testing, or device anomalies. Regional shared origin analysis confirmed a low fraud lift of 0.3 with no associated fraud rings or customer disputes. The alert is confirmed to be a false alarm, and the transaction is cleared as legitimate.",
+    "written_to_graph": true,
+    "graph_case_id": "CASE-HHG-012"
   },
   "evidence_requests": [],
   "next_best_actions": {
@@ -60,14 +84,14 @@
       {
         "action": "CLOSE_NO_FRAUD",
         "route": "auto",
-        "reason": "Section 6: probability 0.01 <= 0.15 on 3 independent signals"
+        "reason": "Section 6: probability 0.04 <= 0.15 on 4 independent signals"
       }
     ],
     "final": [
       {
         "action": "CLOSE_NO_FRAUD",
         "route": "auto",
-        "reason": "Section 6: probability 0.01 <= 0.15 on 3 independent signals"
+        "reason": "Section 6: probability 0.04 <= 0.15 on 4 independent signals"
       }
     ],
     "what_changed": "nothing"
@@ -80,8 +104,8 @@
     "total_amount_usd": 0,
     "activity_dates": []
   },
-  "stop_reason": "The investigation stopped because the probability of fraud is decisive (0.01 <= 0.15) based on three independent pieces of evidence (low model score, low regional fraud lift, and similar cleared cases), satisfying policy section 6.",
-  "tool_calls": 7,
-  "tokens": 27649,
-  "latency_s": 57.9
+  "stop_reason": "The investigation concluded under policy section 6 because the assessed fraud probability of 0.04 is decisively below the 0.15 threshold, supported by multiple independent lines of evidence including the calibrated model score, extensive regional transaction history, clean card window, and lack of fraud ring association.",
+  "tool_calls": 12,
+  "tokens": 102743,
+  "latency_s": 47.1
 }

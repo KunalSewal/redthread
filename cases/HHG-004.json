@@ -3,17 +3,16 @@
   "case": {
     "status": "closed_fraud",
     "verdict": "fraud",
-    "fraud_probability": 0.95,
+    "fraud_probability": 0.97,
     "pattern": "card_not_present_new_device",
     "pattern_description": "",
     "affected_txn_ids": [
-      "3583227",
-      "3584017"
+      "3583227"
     ],
     "first_suspicious_txn_id": "3583227",
     "connected_card_ids": [],
     "connected_device_profiles": [],
-    "exposure_usd": 134.81,
+    "exposure_usd": 128.33,
     "evidence": [
       {
         "claim": "Customer reported: Customer C08106 message: 'I never made this $128.33 purchase. Please check my card.' Refers to 3583227.",
@@ -24,62 +23,96 @@
         ]
       },
       {
-        "claim": "The customer explicitly reported the $128.33 transaction as unrecognized.",
+        "claim": "Customer C08106 reported an unrecognized online transaction of $128.33 (transaction 3583227) on card C08106-K1, stating they never made the purchase.",
         "source": "graph",
         "ref": "query:alert_context(tx=3583227)",
         "entity_ids": [
           "3583227",
+          "C08106-K1",
           "C08106"
         ]
       },
       {
-        "claim": "The flagged transaction was made online using a device that is New to the account.",
+        "claim": "Transaction 3583227 was conducted online using device D001477 with device status New, match flag M4 M2, model score 0.005, and model historical fraud rate 0.006.",
         "source": "graph",
         "ref": "query:alert_context(tx=3583227)",
         "entity_ids": [
-          "3583227"
+          "3583227",
+          "C08106-K1"
         ]
       },
       {
-        "claim": "The card has a history of compromise, with 3 prior confirmed fraud cases for card-not-present fraud.",
+        "claim": "Holder baseline review shows zero prior transactions and no recurring payment pattern matching the disputed $128.33 charge.",
+        "source": "graph",
+        "ref": "query:holder_history(holder=C08106-K1|NA|180, before=2016-12-29)",
+        "entity_ids": [
+          "C08106-K1"
+        ]
+      },
+      {
+        "claim": "Device D001477 has a generic browser profile used across 1 card in the 30-day window with no proxy, no ring associations, and zero closed fraud cases.",
+        "source": "graph",
+        "ref": "query:device_neighbors(device=D001477, 2016-11-29..2017-01-01)",
+        "entity_ids": [
+          "C08106-K1"
+        ]
+      },
+      {
+        "claim": "Card C08106-K1 has three prior confirmed card-not-present fraud cases (CC-1736, CC-2121, CC-3778) resulting from customer disputes, along with one cleared travel case (CC-0696).",
         "source": "graph",
         "ref": "query:linked_cases(tx=3583227)",
         "entity_ids": [
           "C08106-K1",
-          "CC-3778",
+          "CC-1736",
           "CC-2121",
-          "CC-1736"
+          "CC-3778",
+          "CC-0696"
+        ]
+      },
+      {
+        "claim": "Customer confirmed on follow-up that they did not make the transaction and still hold the card. (Assumed: the reply most consistent with the evidence before asking, probability 0.80.)",
+        "source": "customer",
+        "ref": "evidence_request:1",
+        "entity_ids": [
+          "3583227"
         ]
       }
     ],
     "similar_prior_cases": [
       "CC-3778",
       "CC-2121",
-      "CC-1736"
+      "CC-1736",
+      "CC-0696"
     ],
-    "summary": "Customer C08106 explicitly reported a $128.33 online transaction as unrecognized. The transaction was made using a device that is new to the account. Furthermore, the card has a severe history of compromise with three prior confirmed fraud cases. A subsequent small online transaction on the same day is included in the episode. The case is confirmed as card-not-present fraud.",
+    "summary": "Customer C08106 reported an unrecognized online transaction of $128.33 (ID 3583227) on card C08106-K1. The purchase was made via device D001477, which was flagged as New for the account, and the cardholder baseline revealed no matching recurring charges or prior baseline history. Additionally, card C08106-K1 has three prior confirmed card-not-present fraud cases, and the cardholder reaffirmed their denial upon follow-up. Based on the customer dispute and device novelty, the transaction was determined to be fraudulent under the card_not_present_new_device pattern with 0.97 probability, and the card was blocked.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHG-004"
   },
-  "evidence_requests": [],
+  "evidence_requests": [
+    {
+      "type": "customer_validation",
+      "asked_after_step": 17,
+      "assumed_response": "Customer confirmed on follow-up that they did not make the transaction and still hold the card. (Assumed: the reply most consistent with the evidence before asking, probability 0.80.)"
+    }
+  ],
   "next_best_actions": {
     "initial": [
       {
-        "action": "BLOCK_CARD",
-        "route": "L1",
-        "reason": "R2: customer states they did not make the transaction; exposure $134.81"
+        "action": "VERIFY_WITH_CUSTOMER",
+        "route": "auto",
+        "reason": "R1: probability 0.80 below 0.70 on the available signals; verify before any block"
       },
       {
         "action": "CREATE_CASE",
         "route": "auto",
-        "reason": "R2"
+        "reason": "3a: a case is opened whenever evidence is requested or a customer disputes a charge"
       }
     ],
     "final": [
       {
         "action": "BLOCK_CARD",
         "route": "L1",
-        "reason": "R2: customer states they did not make the transaction; exposure $134.81"
+        "reason": "R2: cardholder denied the transaction; exposure $128.33"
       },
       {
         "action": "CREATE_CASE",
@@ -87,18 +120,18 @@
         "reason": "R2"
       }
     ],
-    "what_changed": "nothing"
+    "what_changed": "Customer validation confirmed the cardholder did not authorize the transaction, raising the fraud probability from 0.80 to 0.97 and shifting the action from customer verification to blocking card C08106-K1."
   },
   "sar": {
     "file": false,
-    "reason": "3a: fraud suspected but exposure $134.81 is at most $1,000 and there is no shared device, region cluster or link to other customers' fraud; case only",
+    "reason": "3a: fraud suspected but exposure $128.33 is at most $1,000 and there is no shared device, region cluster or link to other customers' fraud; case only",
     "narrative": "",
     "subjects": [],
     "total_amount_usd": 0,
     "activity_dates": []
   },
-  "stop_reason": "The investigation stopped per policy section 6 because the customer's direct report of fraud and the use of a new device provided decisive probability with two independent pieces of evidence, meaning further steps would not change the decision.",
-  "tool_calls": 9,
-  "tokens": 30136,
-  "latency_s": 55.3
+  "stop_reason": "The investigation ended pursuant to policy section 6 because the customer verification reply settled the dispute definitively, establishing decisive fraud probability supported by two independent factors: direct cardholder denial and new device usage.",
+  "tool_calls": 16,
+  "tokens": 203434,
+  "latency_s": 108.6
 }

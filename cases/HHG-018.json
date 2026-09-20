@@ -3,7 +3,7 @@
   "case": {
     "status": "closed_fraud",
     "verdict": "fraud",
-    "fraud_probability": 0.97,
+    "fraud_probability": 0.95,
     "pattern": "out_of_region_use",
     "pattern_description": "",
     "affected_txn_ids": [
@@ -25,42 +25,68 @@
         ]
       },
       {
-        "claim": "The customer explicitly reported the $39.08 transaction as unrecognized.",
+        "claim": "Customer C02354 reported unrecognized in-person transaction 3491361 for $39.08 in region 126, stating they never made the purchase.",
         "source": "graph",
         "ref": "query:alert_context(tx=3491361)",
         "entity_ids": [
+          "C02354",
+          "C02354-K2",
           "3491361"
         ]
       },
       {
-        "claim": "The holder profile for this transaction has 11 prior transactions that were part of confirmed fraud cases, showing this holder identity is entirely compromised.",
+        "claim": "Holder C02354-K2|126|-185 has 11 of 13 prior transactions confirmed fraudulent across closed cases CC-0631, CC-1450, CC-2589, CC-3537, CC-4436, CC-4721, and CC-4942, establishing that this holder identity represents a compromised counterfeit card clone.",
         "source": "graph",
         "ref": "query:holder_history(holder=C02354-K2|126|-185, before=2016-11-27)",
         "entity_ids": [
-          "CC-4942",
-          "CC-4436",
+          "C02354-K2",
+          "CC-0631",
+          "CC-1450",
+          "CC-2589",
           "CC-3537",
-          "CC-2589"
+          "CC-4436",
+          "CC-4721",
+          "CC-4942"
         ]
       },
       {
-        "claim": "The flagged transaction is part of a recent sequence of in-person transactions by this compromised holder, including one that received a high model score of 0.953.",
+        "claim": "In the current burst between 2016-11-24 and 2016-11-27, holder C02354-K2|126|-185 executed three in-person transactions in region 126 totaling $124.08: transaction 3484403 for $44.04, transaction 3485990 for $40.96 with a 0.953 model score, and flagged transaction 3491361 for $39.08.",
         "source": "graph",
         "ref": "query:card_window(card=C02354-K2, 2016-11-17..2016-11-30)",
         "entity_ids": [
+          "C02354-K2",
           "3484403",
           "3485990",
           "3491361"
+        ]
+      },
+      {
+        "claim": "Prior closed cases on card C02354-K2, including CC-4942, CC-4721, and CC-4436, confirmed fraud under pattern out_of_region_use where the cardholder retained the card while cloned in-person purchases occurred in region 126.",
+        "source": "graph",
+        "ref": "query:linked_cases(tx=3491361)",
+        "entity_ids": [
+          "C02354-K2",
+          "CC-4942",
+          "CC-4721",
+          "CC-4436"
+        ]
+      },
+      {
+        "claim": "The flagged transaction does not match any recurring charge schedule for holder C02354-K2|126|-185, with fewer than two prior similar charges.",
+        "source": "graph",
+        "ref": "query:holder_history(holder=C02354-K2|126|-185, before=2016-11-27)",
+        "entity_ids": [
+          "3485990"
         ]
       }
     ],
     "similar_prior_cases": [
       "CC-4942",
+      "CC-4721",
       "CC-4436",
-      "CC-3537",
-      "CC-2589"
+      "CC-5441"
     ],
-    "summary": "The alert was triggered by a customer reporting a $39.08 transaction as unrecognized. Graph analysis revealed that the holder profile associated with this transaction has a history of 11 prior transactions confirmed as fraud in previous closed cases, indicating the holder identity is compromised. In the current window, this compromised holder made three in-person transactions in region 126, totaling $124.08, with one receiving a high model score of 0.953. Given the customer's explicit denial and the direct link to prior confirmed fraud, the activity is confirmed as out-of-region fraud.",
+    "summary": "Customer C02354 reported an unauthorized in-person transaction of $39.08 (3491361) on card C02354-K2 in billing region 126. Historical analysis confirms that holder identity C02354-K2|126|-185 is compromised, with 11 of 13 past transactions confirmed fraudulent across seven closed cases (including CC-4436, CC-4721, and CC-4942) under an out-of-region card cloning pattern. Between November 24 and November 27, 2016, a burst of three card-present transactions totaling $124.08 was executed in region 126, including transaction 3485990 with a high model score of 0.953. The alert was confirmed as out_of_region_use fraud with a 0.95 probability, leading to the card being blocked and a fraud case created.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHG-018"
   },
@@ -76,11 +102,6 @@
         "action": "CREATE_CASE",
         "route": "auto",
         "reason": "R2"
-      },
-      {
-        "action": "FILE_REPORT",
-        "route": "L2",
-        "reason": "3a and R2: activity connects to a shared device profile or another card's fraud"
       }
     ],
     "final": [
@@ -93,31 +114,20 @@
         "action": "CREATE_CASE",
         "route": "auto",
         "reason": "R2"
-      },
-      {
-        "action": "FILE_REPORT",
-        "route": "L2",
-        "reason": "3a and R2: activity connects to a shared device profile or another card's fraud"
       }
     ],
     "what_changed": "nothing"
   },
   "sar": {
-    "file": true,
-    "reason": "3a and R2: activity connects to a shared device profile or another card's fraud",
-    "narrative": "This report details suspected out-of-region fraud involving customer C02354 and card C02354-K2. Between November 24, 2016, and November 27, 2016, three unauthorized in-person transactions were conducted in region 126, totaling $124.08. The investigation was initiated when the customer explicitly reported a $39.08 transaction on November 27 as unrecognized. Graph analysis revealed that the specific holder profile associated with these transactions has a history of 11 prior transactions confirmed as fraud in previous closed cases, such as CC-4942 and CC-4436. This extensive history indicates that the holder identity itself is compromised and represents the fraudster's ongoing activity. Furthermore, one of the transactions in the current sequence received a high fraud model score of 0.953, corroborating the suspicious nature of the activity. The combination of the customer's direct dispute and the direct link to prior confirmed fraud confirms this as an out-of-region fraud scheme. The total exposure for this episode is $124.08.",
-    "subjects": [
-      "C02354",
-      "C02354-K2"
-    ],
-    "total_amount_usd": 124.08,
-    "activity_dates": [
-      "2016-11-24",
-      "2016-11-27"
-    ]
+    "file": false,
+    "reason": "3a: fraud suspected but exposure $124.08 is at most $1,000 and there is no shared device, region cluster or link to other customers' fraud; case only",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0,
+    "activity_dates": []
   },
-  "stop_reason": "The investigation stopped because the probability of fraud reached a decisive 0.97, supported by two independent pieces of strong evidence: the customer's explicit report of unrecognized activity and the holder profile's direct link to extensive prior confirmed fraud cases.",
-  "tool_calls": 8,
-  "tokens": 81783,
-  "latency_s": 63.3
+  "stop_reason": "The investigation concluded under policy section 6 because decisive probability (0.95) was reached with multiple independent lines of evidence, including the customer's direct denial of the charge, a burst of out-of-region card-present activity with model scores up to 0.953, and extensive confirmation of fraud on the same holder identity across seven prior closed cases. Further investigative steps would not alter the outcome.",
+  "tool_calls": 15,
+  "tokens": 380425,
+  "latency_s": 153.6
 }

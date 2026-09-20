@@ -3,7 +3,7 @@
   "case": {
     "status": "closed_legitimate",
     "verdict": "legitimate",
-    "fraud_probability": 0.03,
+    "fraud_probability": 0.04,
     "pattern": "none",
     "pattern_description": "",
     "affected_txn_ids": [],
@@ -13,23 +13,34 @@
     "exposure_usd": 0,
     "evidence": [
       {
-        "claim": "The flagged transaction has a low second-generation model score of 0.016, which historically correlates with a 0.6% fraud rate.",
+        "claim": "Transaction 3464869 on card C03042-K1 triggered a legacy risk score of 0.77, but the second-generation model score is 0.016 with a calibrated historical fraud rate of 0.006.",
         "source": "graph",
         "ref": "query:alert_context(tx=3464869)",
         "entity_ids": [
+          "3464869",
+          "C03042-K1",
+          "C03042"
+        ]
+      },
+      {
+        "claim": "Device D001825 has a generic desktop profile with zero confirmed fraud cases all-time, no proxy usage, and ring_id -1, with only card C03042-K1 active on it in the 30-day window.",
+        "source": "graph",
+        "ref": "query:device_neighbors(device=D001825, 2016-10-18..2016-11-20)",
+        "entity_ids": [
+          "C03042-K1",
           "3464869"
         ]
       },
       {
-        "claim": "The device used for the transaction has a generic profile shared by multiple cards and has no history of closed fraud cases.",
+        "claim": "Card C03042-K1 has extensive online transaction history (56 of 68 prior transactions) and frequent activity in product category R (23 transactions), consistent with transaction 3464869.",
         "source": "graph",
-        "ref": "query:device_neighbors(device=D001825, 2016-10-18..2016-11-20)",
+        "ref": "query:alert_context(tx=3464869)",
         "entity_ids": [
           "C03042-K1"
         ]
       },
       {
-        "claim": "There is no evidence of a shared origin, as the email and region have low fraud lift (0.64 and 0.6 respectively).",
+        "claim": "Shared origin analysis for transaction 3464869 demonstrates no fraud clustering, with email anonymous.com showing a lift of 0.64 and region 327 showing a lift of 0.60 against baseline.",
         "source": "graph",
         "ref": "query:shared_origin(tx=3464869, window=+/-7d)",
         "entity_ids": [
@@ -37,28 +48,34 @@
         ]
       },
       {
-        "claim": "Similar past alerts triggered by high legacy risk scores but with low model scores were consistently cleared as legitimate.",
+        "claim": "Historical closed cases on card C03042-K1 include cleared travel alert CC-1313, while previous confirmed fraud cases CC-3886 and CC-0615 were customer-reported disputes from mobile safari iOS devices months earlier.",
+        "source": "graph",
+        "ref": "query:linked_cases(tx=3464869)",
+        "entity_ids": [
+          "CC-3886",
+          "CC-1313",
+          "CC-0615",
+          "C03042-K1"
+        ]
+      },
+      {
+        "claim": "Similar closed cases triggered by high model or risk scores without customer dispute, such as CC-5371, CC-2037, and CC-5368, were cleared with no fraud found.",
         "source": "graph",
         "ref": "query:similar_closed_cases(\"risk score: Real-time model scored transaction 3464869 ($599...\", k=6)",
         "entity_ids": [
           "CC-5371",
           "CC-2037",
-          "CC-5368",
-          "CC-4237",
-          "CC-3092",
-          "CC-0339"
+          "CC-5368"
         ]
       }
     ],
     "similar_prior_cases": [
+      "CC-1313",
       "CC-5371",
       "CC-2037",
-      "CC-5368",
-      "CC-4237",
-      "CC-3092",
-      "CC-0339"
+      "CC-5368"
     ],
-    "summary": "The alert was triggered on an online transaction of $599.94 due to a legacy risk score of 0.77. However, the second-generation model score is very low at 0.016, which corresponds to a historical fraud rate of just 0.6%. The device used has a generic profile with no history of fraud, and there are no significant shared origin links via email or region. Furthermore, similar past alerts driven by the legacy risk score have consistently been cleared as legitimate. Based on this evidence, the transaction is deemed legitimate and the case is closed.",
+    "summary": "Transaction 3464869 for $599.94 on card C03042-K1 was flagged by an elevated legacy risk score of 0.77. The bank's calibrated second-generation fraud model scored the transaction at 0.016 with a historical fraud rate of only 0.006, reflecting very low risk. The purchase matches the cardholder's established pattern of online shopping and category R purchases. Additionally, device D001825 shows no proxy usage or link to suspicious device rings, and shared origin indicators showed no fraud clustering. The transaction is determined to be legitimate cardholder activity.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHG-015"
   },
@@ -68,14 +85,14 @@
       {
         "action": "CLOSE_NO_FRAUD",
         "route": "auto",
-        "reason": "Section 6: probability 0.03 <= 0.15 on 4 independent signals"
+        "reason": "Section 6: probability 0.04 <= 0.15 on 4 independent signals"
       }
     ],
     "final": [
       {
         "action": "CLOSE_NO_FRAUD",
         "route": "auto",
-        "reason": "Section 6: probability 0.03 <= 0.15 on 4 independent signals"
+        "reason": "Section 6: probability 0.04 <= 0.15 on 4 independent signals"
       }
     ],
     "what_changed": "nothing"
@@ -88,8 +105,8 @@
     "total_amount_usd": 0,
     "activity_dates": []
   },
-  "stop_reason": "The investigation stopped because the probability of fraud is decisive (0.03), supported by multiple independent pieces of evidence including a low model score, a generic device with no fraud history, and similar cleared past cases, satisfying policy section 6.",
-  "tool_calls": 9,
-  "tokens": 24830,
-  "latency_s": 46.0
+  "stop_reason": "The investigation concluded under policy section 6 because the assessed fraud probability of 0.04 is decisively below the 0.15 threshold, supported by multiple independent lines of evidence demonstrating normal account behavior.",
+  "tool_calls": 13,
+  "tokens": 112447,
+  "latency_s": 68.2
 }

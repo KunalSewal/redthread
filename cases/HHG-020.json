@@ -13,21 +13,45 @@
     "exposure_usd": 0,
     "evidence": [
       {
-        "claim": "The flagged transaction 3509359 has a low model score of 0.006, which correlates with a 0.6% historical fraud rate.",
+        "claim": "Transaction 3509359 on card C12265-K2 was flagged solely by an uncalibrated legacy risk score of 0.52, while the bank's calibrated model score was 0.006 with an expected historical fraud rate of 0.006.",
         "source": "graph",
         "ref": "query:alert_context(tx=3509359)",
         "entity_ids": [
-          "3509359"
+          "3509359",
+          "C12265-K2",
+          "C12265"
         ]
       },
       {
-        "claim": "The device used has a generic profile shared by 253 cards all time and has no significant links to recent fraud.",
+        "claim": "Device D000140 is a generic desktop browser profile shared across 253 cards with no proxy and ring_id -1; its only two prior closed cases (CC-1447 and CC-0487) were both cleared as non-fraud.",
         "source": "graph",
         "ref": "query:device_neighbors(device=D000140, 2016-11-03..2016-12-06)",
-        "entity_ids": []
+        "entity_ids": [
+          "CC-1447",
+          "CC-0487"
+        ]
       },
       {
-        "claim": "Shared origin analysis for the device, region, and email shows no elevated fraud lift.",
+        "claim": "Card C12265-K2 displays consistent in-person usage in region 264 before and after the online transaction, including transactions 3510096 and 3510577 later on 2016-12-03, with no card testing sequences or suspicious bursts.",
+        "source": "graph",
+        "ref": "query:card_window(card=C12265-K2, 2016-11-03..2016-12-06)",
+        "entity_ids": [
+          "C12265-K2",
+          "3509359",
+          "3510096",
+          "3510577"
+        ]
+      },
+      {
+        "claim": "The current holder identity on card C12265-K2 has zero prior transactions in confirmed fraud cases.",
+        "source": "graph",
+        "ref": "query:holder_history(holder=C12265-K2|264|154, before=2016-12-03)",
+        "entity_ids": [
+          "C12265-K2"
+        ]
+      },
+      {
+        "claim": "Shared origin analysis for transaction 3509359 shows a lift of 0.0 for device D000140 and recipient email domain cox.net, and a low lift of 0.4 for region 264, showing no fraud clustering.",
         "source": "graph",
         "ref": "query:shared_origin(tx=3509359, window=+/-7d)",
         "entity_ids": [
@@ -35,28 +59,23 @@
         ]
       },
       {
-        "claim": "Similar past alerts driven by legacy risk scores have consistently been cleared as legitimate.",
+        "claim": "Prior closed fraud cases on card C12265-K2 (CC-2447 and CC-2277) occurred over three months prior in August 2016 under account takeover, resulting in card reissuance, and do not compromise the current holder baseline.",
         "source": "graph",
-        "ref": "query:similar_closed_cases(\"risk score: Real-time model scored transaction 3509359 ($125...\", k=6)",
+        "ref": "query:linked_cases(tx=3509359)",
         "entity_ids": [
-          "CC-1254",
-          "CC-2956",
-          "CC-5368",
-          "CC-0594",
-          "CC-3092",
-          "CC-0339"
+          "C12265-K2",
+          "CC-2447",
+          "CC-2277"
         ]
       }
     ],
     "similar_prior_cases": [
+      "CC-1447",
+      "CC-0487",
       "CC-1254",
-      "CC-2956",
-      "CC-5368",
-      "CC-0594",
-      "CC-3092",
-      "CC-0339"
+      "CC-0594"
     ],
-    "summary": "Alert HHG-020 was triggered by a noisy legacy risk score of 0.52 on an online transaction of $125.08. Investigation revealed a very low second-generation model score of 0.006, which historically correlates with a 0.6% fraud rate. The device used (D000140) has a generic profile shared by many unrelated cards and shows no significant links to recent fraud. Shared origin analysis confirmed no elevated fraud risk, and similar past alerts have consistently been cleared. The transaction is deemed legitimate and the case is closed as a false positive.",
+    "summary": "Online transaction 3509359 ($125.08) on card C12265-K2 was flagged due to an uncalibrated legacy risk score of 0.52. The calibrated second-generation fraud model scored the transaction at 0.006 with an expected historical fraud rate of 0.006. Device D000140 is a generic browser profile without proxy use or ring affiliation, and its prior associated cases were cleared as non-fraud. Additionally, the cardholder maintained regular in-person transactions in region 264 immediately before and after this transaction on the same day. The transaction is determined to be legitimate cardholder activity, and the alert is closed as a false alarm.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHG-020"
   },
@@ -86,8 +105,8 @@
     "total_amount_usd": 0,
     "activity_dates": []
   },
-  "stop_reason": "The investigation stopped because the probability of fraud is decisive (0.03 <= 0.15) with multiple independent pieces of evidence (low model score, generic device history, and no shared origin lift), satisfying policy section 6.",
-  "tool_calls": 9,
-  "tokens": 33957,
-  "latency_s": 43.9
+  "stop_reason": "The investigation concluded under Policy Section 6 because the assessed fraud probability of 0.03 is well below the 0.15 threshold, supported by multiple independent lines of evidence showing normal cardholder behavior and a low-risk calibrated model score.",
+  "tool_calls": 12,
+  "tokens": 116069,
+  "latency_s": 65.3
 }
