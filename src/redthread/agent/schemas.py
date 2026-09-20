@@ -5,6 +5,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from redthread.answer import Pattern
+from redthread.belief import BASES
 
 
 class LlmEvidence(BaseModel):
@@ -12,6 +13,13 @@ class LlmEvidence(BaseModel):
     source: Literal["graph", "document", "customer", "external"]
     ref: str = Field(description="The exact 'ref' string of the tool result this claim rests on")
     entity_ids: list[str] = Field(description="IDs from tool results: transactions, cards, devices, cases")
+    direction: Literal["incriminating", "exculpatory"] = Field(
+        description="Does this finding point towards fraud, or towards the holder's own activity?")
+    strength: Literal["weak", "moderate", "strong", "decisive"] = Field(
+        description="How much this one finding should move a fraud investigator's belief, on its own")
+    basis: Literal[BASES] = Field(  # type: ignore[valid-type]
+        description="The underlying fact this rests on. Findings sharing a basis are one piece of "
+                    "evidence, not several: only the strongest in each basis is counted.")
 
 
 class LlmSignals(BaseModel):
@@ -30,9 +38,11 @@ class LlmSignals(BaseModel):
 
 
 class LlmAssessment(BaseModel):
+    """What the investigator concluded. The probability and verdict are NOT asked for: they are
+    computed from the evidence ledger below (see redthread.belief), so that the arithmetic is
+    auditable and the same evidence always yields the same number."""
+
     reasoning: str = Field(description="Your analysis: what each piece of evidence shows and how it combines")
-    verdict: Literal["fraud", "legitimate", "uncertain"]
-    fraud_probability: float = Field(ge=0, le=1, description="Calibrated probability the flagged activity is fraud")
     pattern: Pattern
     pattern_description: str = Field(description="2-3 sentences if pattern is 'undocumented', else ''")
     affected_txn_ids: list[str] = Field(description="Every transaction in the fraud episode incl. the flagged one")
@@ -40,8 +50,9 @@ class LlmAssessment(BaseModel):
     connected_card_ids: list[str] = Field(description="Other cards caught in the same compromise, ring or device")
     connected_device_ids: list[str] = Field(description="Device IDs (D...) linking this case to other cards")
     similar_prior_cases: list[str] = Field(description="Closed-case IDs (CC-...) that informed the assessment")
-    evidence: list[LlmEvidence]
-    independent_evidence: int = Field(description="Number of independent evidence lines supporting the verdict")
+    evidence: list[LlmEvidence] = Field(
+        description="Every finding that bears on the verdict, incriminating or exculpatory. Include the "
+                    "exculpatory ones: a case with nothing against it is a case that should be closed.")
     signals: LlmSignals
     uncertainty: str = Field(description="What remains uncertain and what evidence would resolve it")
 

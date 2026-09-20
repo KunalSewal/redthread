@@ -25,6 +25,7 @@ from redthread.agent.schemas import LlmAssessment, LlmReport, json_schema
 from redthread.agent.simulator import simulate
 from redthread.agent.tools import Tools
 from redthread.answer import Answer
+from redthread.belief import Belief, Judged, assess
 from redthread.patterns import classify
 from redthread.policy import Action, Assessment, evidence_request, recommend, sar_required
 
@@ -49,6 +50,9 @@ class CaseState(TypedDict, total=False):
     final: list[dict]
     report: dict
     written: bool
+    belief: dict
+    resolve_rounds: int
+    policy_evidence: list[dict]
     investigation_calls: int
     answer: dict
 
@@ -156,11 +160,20 @@ class Investigation:
                                        response_schema=json_schema(LlmAssessment), temperature=0.1)
         raw = LlmAssessment.model_validate_json(resp.text)
         clean = self._validate(state, raw)
+        belief = self._weigh_evidence(state, clean)
         state["llm_assessment"] = clean.model_dump()
-        state["assessment"] = asdict(self._to_policy(state, clean))
-        self._event(state, "assessment", f"verdict {clean.verdict}, p={clean.fraud_probability:.2f}, pattern "
-                                         f"{clean.pattern}, exposure ${state['assessment']['exposure_usd']:,.2f}")
+        state["belief"] = _belief_dump(belief)
+        state["assessment"] = asdict(self._to_policy(state, clean, belief))
+        self._event(state, "assessment", f"verdict {belief.verdict}, p={belief.posterior:.2f} from "
+                                         f"{belief.independent_evidence} independent line(s): {belief.explain()}")
         return state
+
+    def _weigh_evidence(self, state: CaseState, a: LlmAssessment) -> Belief:
+        """The probability is computed from the judged evidence, never asserted by the model."""
+        flagged = state["evidence"]["alert_context"]["flagged_txn"]
+        judged = [Judged(basis=e.basis, direction=e.direction, strength=e.strength, claim=e.claim)
+                  for e in a.evidence]
+        return assess(state["alert"]["trigger_type"], flagged.get("model_score"), judged)
 
     def _validate(self, state: CaseState, a: LlmAssessment) -> LlmAssessment:
         """Keep only IDs the tools actually returned; make the episode consistent with the verdict."""
@@ -174,10 +187,9 @@ class Investigation:
             return out
 
         affected = keep(a.affected_txn_ids, led.txns)
-        if a.verdict == "legitimate":
-            affected = []
-        elif flagged["tx_id"] not in affected:
+        if affected and flagged["tx_id"] not in affected:
             affected.insert(0, flagged["tx_id"])
+        affected = _with_testing_sequence(affected, state.get("evidence", {}), led)
         affected.sort(key=lambda t: led.txns[t]["ts"])
         cards = [c for c in keep(a.connected_card_ids, led.cards) if c != state["alert"]["card_id"]]
         devices = keep(a.connected_device_ids, led.devices)
@@ -202,20 +214,20 @@ class Investigation:
         if pattern != a.pattern:
             self._event(state, "validation", f"Pattern derived from the episode: {pattern} (model said {a.pattern})")
         return a.model_copy(update={
-            "fraud_probability": min(max(a.fraud_probability, P_FLOOR), 1 - P_FLOOR),
             "affected_txn_ids": affected, "first_suspicious_txn_id": affected[0] if affected else "",
-            "connected_card_ids": cards, "connected_device_ids": devices, "similar_prior_cases": similar,
-            "evidence": evidence, "pattern": pattern,
+            "connected_card_ids": cards, "connected_device_ids": devices or _linking_devices(state, led),
+            "similar_prior_cases": similar, "evidence": evidence, "pattern": pattern,
             "pattern_description": a.pattern_description if pattern == "undocumented" else "",
         })
 
-    def _to_policy(self, state: CaseState, a: LlmAssessment) -> Assessment:
+    def _to_policy(self, state: CaseState, a: LlmAssessment, belief: Belief) -> Assessment:
         led = self.tools.ledger
-        exposure = round(sum(abs(led.txns[t]["amount"]) for t in a.affected_txn_ids), 2)
+        affected = [] if belief.verdict == "legitimate" else a.affected_txn_ids
+        exposure = round(sum(abs(led.txns[t]["amount"]) for t in affected), 2)
         s = a.signals
         return Assessment(
-            verdict=a.verdict, probability=round(a.fraud_probability, 3), pattern=a.pattern, exposure_usd=exposure,
-            independent_evidence=a.independent_evidence,
+            verdict=belief.verdict, probability=belief.posterior, pattern=a.pattern, exposure_usd=exposure,
+            independent_evidence=belief.independent_evidence,
             customer_disputed=state["alert"]["trigger_type"] == "customer_report",
             single_signal=s.single_signal, card_testing=s.card_testing,
             card_testing_purchase_cleared_over_100=s.card_testing_purchase_cleared_over_100,
@@ -224,12 +236,52 @@ class Investigation:
             connected_cards=tuple(a.connected_card_ids), evidence_conflicts=s.evidence_conflicts,
             # R10 inputs come from the episode, not the model's judgement: cards of THIS customer caught in the
             # fraud (the alert card if fraud, plus connected cards with the same customer prefix).
-            customer_cards_confirmed_fraud=_customer_cards_in_episode(state["alert"], a),
+            customer_cards_confirmed_fraud=_customer_cards_in_episode(state["alert"], a, belief.verdict),
             # R10 needs credentials *confirmed* compromised; no evidence available here confirms it (an inferred
             # account takeover is not a confirmation), and analysts never blocked all cards in 5,565 closed cases.
             credentials_compromised=False,
             online=led.txns[str(state["alert"]["flagged_txn_id"])]["channel"] == "online",
         )
+
+    async def resolve_uncertainty(self, state: CaseState) -> CaseState:
+        """Mid-range belief means the evidence is genuinely thin. Rather than guess, name the one
+        question that would move it most and go and answer it."""
+        state["resolve_rounds"] = state.get("resolve_rounds", 0) + 1
+        brief = self._case_brief(state) + "\n\nCURRENT BELIEF: " + state["belief"]["explanation"]
+        contents = [_user(brief + "\n\n" + prompts.RESOLVE_TASK)]
+        tools = [types.Tool(function_declarations=FOLLOW_UP_TOOLS)]
+        for _ in range(3):
+            resp = await self.llm.generate(contents, system=prompts.INVESTIGATOR, tools=tools)
+            calls = resp.function_calls or []
+            if not calls or any(c.name == "finish_investigation" for c in calls):
+                break
+            contents.append(resp.candidates[0].content)
+            parts = []
+            for call in calls[:2]:
+                result = await self._follow_up(state, call.name, dict(call.args or {}))
+                parts.append(types.Part.from_function_response(name=call.name, response={"result": result}))
+            contents.append(types.Content(role="user", parts=parts))
+        self._event(state, "analysis", "Followed up on the open question before deciding")
+        return state
+
+    async def ground_policy(self, state: CaseState) -> CaseState:
+        """Retrieve the policy text behind each rule the decision cites, so the case record shows the
+        authority it rests on rather than a bare rule number."""
+        rules = dict.fromkeys(r for item in state["final"] + state["initial"]
+                              for r in re.findall(r"\b(R\d{1,2}|3[ab])\b", item["reason"]))
+        grounded = []
+        for rule in list(rules)[:4]:
+            digest = await self._collect(state, f"policy_rule:{rule}", self.tools.policy(_rule_query(rule), k=3))
+            if not digest:
+                continue
+            passage = next((p for p in digest["passages"] if _matches_rule(p["section"], rule)), None)
+            if passage:
+                grounded.append({"claim": f"{passage['section']}: {passage['text'][:400]}",
+                                 "source": "document", "ref": digest["ref"], "entity_ids": []})
+        state["policy_evidence"] = grounded
+        if grounded:
+            self._event(state, "evidence", f"Grounded {len(grounded)} cited rule(s) in the policy text")
+        return state
 
     async def decide_initial(self, state: CaseState) -> CaseState:
         a = Assessment(**{**state["assessment"], "connected_cards": tuple(state["assessment"]["connected_cards"])})
@@ -335,6 +387,7 @@ class Investigation:
         if reply:
             evidence.append({"claim": reply["text"], "source": "customer", "ref": "evidence_request:1",
                              "entity_ids": [str(alert["flagged_txn_id"])]})
+        evidence += state.get("policy_evidence", [])
         if Action.ESCALATE_TO_ANALYST in final_actions:
             status = "escalated"  # handed to a human analyst, whatever the verdict
         elif fa["verdict"] == "fraud":
@@ -394,8 +447,9 @@ class Investigation:
         la = self._final_llm_view(state)
         return {
             "alert": {k: state["alert"][k] for k in ("case_id", "opened_at", "trigger_type", "trigger_text")},
-            "initial_assessment": {k: state["llm_assessment"][k] for k in ("verdict", "fraud_probability", "pattern",
-                                                                            "reasoning", "uncertainty")},
+            "initial_assessment": {k: state["llm_assessment"][k] for k in ("pattern", "reasoning", "uncertainty")}
+            | {"verdict": state["assessment"]["verdict"], "probability": state["assessment"]["probability"],
+               "how_the_probability_was_reached": state["belief"]["explanation"]},
             "final": {"verdict": state["final_assessment"]["verdict"],
                       "probability": state["final_assessment"]["probability"],
                       "pattern": la["pattern"], "pattern_description": la["pattern_description"],
@@ -411,14 +465,74 @@ class Investigation:
         }
 
 
+RESOLVABLE = (0.25, 0.75)
+
+
+def _needs_resolving(state: CaseState) -> str:
+    belief = state.get("belief", {})
+    unresolved = RESOLVABLE[0] < belief.get("posterior", 0) < RESOLVABLE[1]
+    return "resolve_uncertainty" if unresolved and not state.get("resolve_rounds") else "decide_initial"
+
+
+def _rule_query(rule: str) -> str:
+    return f"policy rule {rule}" if rule.startswith("R") else f"policy section {rule} case report"
+
+
+def _matches_rule(section: str, rule: str) -> bool:
+    return section.lower().startswith((f"rule {rule.lower()}:", f"section {rule.lower()}."))
+
+
+def _belief_dump(belief: Belief) -> dict:
+    """The ledger as plain data, so the trace and the dashboard can replay the arithmetic."""
+    return {
+        "prior": belief.prior, "prior_reason": belief.prior_reason, "posterior": belief.posterior,
+        "verdict": belief.verdict, "independent_evidence": belief.independent_evidence,
+        "explanation": belief.explain(),
+        "ledger": [{"basis": i.basis, "direction": i.direction, "strength": i.strength, "claim": i.claim,
+                    "counted": i.counted, "lr": round(i.lr_applied, 3)} for i in belief.ledger],
+    }
+
+
+def _with_testing_sequence(affected: list[str], evidence: dict, led) -> list[str]:
+    """R5: if the episode overlaps a card-testing sequence, the small authorisations are part of it.
+
+    The sequence is already detected in tools.card_activity; without this the episode holds only the
+    large purchase, the pattern reads as card-not-present, and R5 never fires."""
+    if not affected:
+        return affected
+    out = list(affected)
+    for key, digest in evidence.items():
+        if not key.startswith("card_activity"):
+            continue
+        for seq in digest.get("card_testing_sequences", []):
+            ids = [*seq.get("small_auths", []), *seq.get("followed_by", [])]
+            if any(i in out for i in ids):
+                out += [i for i in ids if i in led.txns and i not in out]
+    return out
+
+
+def _linking_devices(state: CaseState, led) -> list[str]:
+    """Devices that actually tie this case to other cards, when the model named none."""
+    linking = []
+    for key, digest in state.get("evidence", {}).items():
+        if not key.startswith("device_check"):
+            continue
+        device = digest.get("device", {})
+        shared = digest.get("cards_new_device_in_window", 0) >= 2 or (device.get("ring_id") or -1) >= 0
+        specific = device.get("profile_specificity", "").startswith("specific")
+        if shared and specific and device["device_id"] in led.devices:
+            linking.append(device["device_id"])
+    return linking
+
+
 def _dataset_id(entity_id: str) -> bool:
     """IDs that exist in the dataset: transactions, cards, customers, closed cases. Holder and device IDs are
     RedThread's own derived identifiers and must not appear where the answer format expects dataset IDs."""
     return bool(re.fullmatch(r"\d+|C\d{5}(-K\d)?|CC-\d{4}", entity_id))
 
 
-def _customer_cards_in_episode(alert: dict, a: LlmAssessment) -> int:
-    if a.verdict != "fraud":
+def _customer_cards_in_episode(alert: dict, a: LlmAssessment, verdict: str) -> int:
+    if verdict != "fraud":
         return 0
     cards = {alert["card_id"], *(c for c in a.connected_card_ids if c.split("-")[0] == alert["customer_id"])}
     return len(cards)
@@ -475,14 +589,18 @@ FOLLOW_UP_TOOLS = [
 
 def build(inv: Investigation):
     g = StateGraph(CaseState)
-    for name in ("intake", "gather", "investigate", "assess", "decide_initial", "request_evidence",
-                 "decide_final", "report", "write_back", "answer"):
+    for name in ("intake", "gather", "investigate", "assess", "resolve_uncertainty", "ground_policy",
+                 "decide_initial", "request_evidence", "decide_final", "report", "write_back", "answer"):
         g.add_node(name, getattr(inv, name))
     g.set_entry_point("intake")
     for a, b in [("intake", "gather"), ("gather", "investigate"), ("investigate", "assess"),
-                 ("assess", "decide_initial"), ("request_evidence", "decide_final"), ("decide_final", "report"),
+                 ("resolve_uncertainty", "assess"), ("request_evidence", "decide_final"),
+                 ("decide_final", "ground_policy"), ("ground_policy", "report"),
                  ("report", "write_back"), ("write_back", "answer"), ("answer", END)]:
         g.add_edge(a, b)
+    # A belief that lands mid-range is a question, not an answer: go and resolve it once, then reassess.
+    g.add_conditional_edges("assess", _needs_resolving,
+                            {"resolve_uncertainty": "resolve_uncertainty", "decide_initial": "decide_initial"})
     g.add_conditional_edges("decide_initial", lambda s: "request_evidence" if s.get("request") else "decide_final",
                             {"request_evidence": "request_evidence", "decide_final": "decide_final"})
     return g.compile()

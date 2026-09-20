@@ -137,8 +137,8 @@ async def _run(alert: dict, queue: asyncio.Queue) -> None:
         async with McpGraph() as graph:
             state = await investigate_alert(graph, alert, on_event=queue.put_nowait, as_of=alert["opened_at"])
         (paths.CASES_OUT / f"{case_id}.json").write_text(json.dumps(state["answer"], indent=2), encoding="utf-8")
-        trace = {k: state.get(k) for k in ("alert", "events", "evidence", "llm_assessment", "assessment", "initial",
-                                           "request", "reply", "final_assessment", "final", "report")}
+        trace = {k: state.get(k) for k in ("alert", "events", "evidence", "llm_assessment", "belief", "assessment",
+                                           "initial", "request", "reply", "final_assessment", "final", "report")}
         RUNS.mkdir(exist_ok=True)
         (RUNS / f"{case_id}.trace.json").write_text(json.dumps(trace, indent=1, default=str), encoding="utf-8")
         await queue.put({"kind": "done", "case_id": case_id})

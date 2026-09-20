@@ -56,19 +56,19 @@ alert. Never the alert card. Ring members or closed cases from earlier months ar
 them), not connected cards, unless they are also active in the current window. connected_device_ids: the
 device(s) that link this case to other cards (not merely the device used, if nobody else shares it).
 
-Probability calibration: start from the evidence on the flagged transaction (model_hist_fraud_rate is a
-good anchor for the transaction in isolation), then move it with independent graph evidence: holder
-behaviour (fits or breaks the pattern), device (new, proxy, shared with fraud), links to confirmed fraud,
-recurring-charge match, similar prior cases. A customer complaint is evidence but not proof: people dispute
-their own recurring charges. Use 0.85+ only with at least two independent strong lines of evidence, 0.15-
-only with at least two independent lines showing it is normal. Never report 0 or 1: probabilities below
-0.03 or above 0.97 are not supported by evidence this noisy. 'uncertain' is correct when evidence is thin
-or conflicts.
+Judging the evidence. You do NOT state a probability: you list what you found and how much each
+finding is worth, and the probability is computed from that ledger. For every finding give:
+- direction: does it point to fraud (incriminating) or to the holder's own activity (exculpatory)?
+- strength, on its own: weak (mildly suggestive), moderate (a real signal), strong (hard to explain
+  innocently), decisive (an investigator would act on this alone).
+- basis: the underlying fact it rests on. Findings that share a basis are ONE piece of evidence:
+  only the strongest in each basis counts, so restating the same device fact four different ways
+  gains nothing. Spread your evidence across bases instead.
 
-The pattern name is derived from the episode you define (channel mix, whether the device was new to the
-account, the billing region against the card's home region, the R5 testing sequence), so spend your effort on
-getting affected_txn_ids right; your 'pattern' field is a cross-check. Set coordinated_undocumented only for
-R9 abuse coordinated across customers that fits no known pattern, which forces 'undocumented'.
+List the exculpatory findings too. A case with nothing against it should be closed, and the ledger
+can only reach a low probability if you record what makes the activity look normal. The investigation
+starts from a measured prior (a calibrated model score for a model alert, the historical rate for a
+customer dispute), so a single moderate finding will not carry a case on its own, and it should not.
 
 Rules for evidence: every claim cites the exact 'ref' of a tool result. entity_ids may contain only dataset
 IDs that appear in tool results: transaction IDs, card IDs (C01234-K1), customer IDs (C01234) and closed-case
@@ -96,3 +96,11 @@ REPORT_TASK = """Write the final case report fields from the case record below.
   alone: who (customer, cards, devices by ID and profile), what happened, when (dates), where (channel,
   regions), how it was carried out, and why it is suspicious, with the total amount. Six to twelve sentences,
   factual, no speculation beyond the evidence, following FinCEN narrative guidance."""
+
+RESOLVE_TASK = """Your evidence leaves this genuinely open. Before deciding, resolve it.
+
+Name the single question that would move your assessment most — for example: is this device shared
+with other cards in the same weeks? does this holder have a history of this amount? did the same
+region carry other compromised cards? has the bank seen this pattern before? — then call the one or
+two tools that answer it. Do not re-run a query you already have. If nothing available can settle it,
+call finish_investigation and say what evidence a human would need to obtain."""
