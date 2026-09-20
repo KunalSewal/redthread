@@ -1,0 +1,68 @@
+[
+  {
+    "source": "ring_monitor",
+    "flagged_txn_id": "3435476",
+    "card_id": "C00854-K2",
+    "customer_id": "C00854",
+    "opened_at": "2016-11-06 16:35:06",
+    "risk_score": 0.5,
+    "trigger_text": "Monitoring: transaction 3435476 ($149.99) on card C00854-K2 used a device from ring 37749036, new to this account. The bank's queue raised no alert (risk score 0.50). Investigate.",
+    "case_id": "MON-001",
+    "trigger_type": "risk_score"
+  },
+  {
+    "source": "ring_monitor",
+    "flagged_txn_id": "3442910",
+    "card_id": "C11309-K1",
+    "customer_id": "C11309",
+    "opened_at": "2016-11-09 01:46:20",
+    "risk_score": 0.94,
+    "trigger_text": "Monitoring: transaction 3442910 ($150.09) on card C11309-K1 used a device from ring 34603052, new to this account. The bank's queue raised no alert (risk score 0.94). Investigate.",
+    "case_id": "MON-002",
+    "trigger_type": "risk_score"
+  },
+  {
+    "source": "ring_monitor",
+    "flagged_txn_id": "3442995",
+    "card_id": "C07212-K2",
+    "customer_id": "C07212",
+    "opened_at": "2016-11-09 02:28:40",
+    "risk_score": 0.95,
+    "trigger_text": "Monitoring: transaction 3442995 ($150.04) on card C07212-K2 used a device from ring 34603052, new to this account. The bank's queue raised no alert (risk score 0.95). Investigate.",
+    "case_id": "MON-003",
+    "trigger_type": "risk_score"
+  },
+  {
+    "source": "model_monitor",
+    "flagged_txn_id": "3459158",
+    "card_id": "C01104-K2",
+    "customer_id": "C01104",
+    "opened_at": "2016-11-15 04:18:01",
+    "risk_score": 0.19,
+    "trigger_text": "Monitoring: the second-generation model scored transaction 3459158 ($149.92, card C01104-K2) at 1.00 while the legacy risk score was 0.19, so no alert was raised. Investigate.",
+    "case_id": "MON-004",
+    "trigger_type": "risk_score"
+  },
+  {
+    "source": "model_monitor",
+    "flagged_txn_id": "3536052",
+    "card_id": "C07196-K2",
+    "customer_id": "C07196",
+    "opened_at": "2016-12-12 13:46:16",
+    "risk_score": 0.15,
+    "trigger_text": "Monitoring: the second-generation model scored transaction 3536052 ($450.06, card C07196-K2) at 1.00 while the legacy risk score was 0.15, so no alert was raised. Investigate.",
+    "case_id": "MON-005",
+    "trigger_type": "risk_score"
+  },
+  {
+    "source": "model_monitor",
+    "flagged_txn_id": "3538486",
+    "card_id": "C06532-K2",
+    "customer_id": "C06532",
+    "opened_at": "2016-12-13 03:56:20",
+    "risk_score": 0.17,
+    "trigger_text": "Monitoring: the second-generation model scored transaction 3538486 ($149.92, card C06532-K2) at 1.00 while the legacy risk score was 0.17, so no alert was raised. Investigate.",
+    "case_id": "MON-006",
+    "trigger_type": "risk_score"
+  }
+]

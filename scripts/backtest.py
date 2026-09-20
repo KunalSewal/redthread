@@ -121,11 +121,12 @@ if __name__ == "__main__":
     parser.add_argument("--month", type=int, default=10)
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument("--model", help="override the reasoning model for this run")
-    parser.add_argument("--thinking", default="", help="Gemini 3 thinking level: low | high")
+    parser.add_argument("--thinking", default=None, help="Gemini 3 thinking level: low | high (default: config)")
     parser.add_argument("--out", default="backtest.json", help="file under runs/")
     args = parser.parse_args()
     random.seed(args.seed)
     if args.model:
         config.REASONING_MODEL = args.model
-    config.THINKING_LEVEL = args.thinking
+    if args.thinking is not None:
+        config.THINKING_LEVEL = args.thinking
     asyncio.run(main(args.n, args.month, args.seed, args.out))

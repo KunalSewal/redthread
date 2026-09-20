@@ -1,0 +1,150 @@
+{
+  "case_id": "MON-006",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.95,
+    "pattern": "card_not_present_fraud",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3538486"
+    ],
+    "first_suspicious_txn_id": "3538486",
+    "connected_card_ids": [
+      "C05116-K1",
+      "C13037-K1"
+    ],
+    "connected_device_profiles": [
+      "Windows | Windows 7 | chrome 60.0 | 2112x1188"
+    ],
+    "exposure_usd": 149.92,
+    "evidence": [
+      {
+        "claim": "Flagged transaction 3538486 on card C06532-K2 for $149.92 (product H, online) received a second-generation model score of 0.998 with a historical fraud rate of 0.921.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3538486)",
+        "entity_ids": [
+          "3538486",
+          "C06532-K2",
+          "C06532"
+        ]
+      },
+      {
+        "claim": "Device D008998 was used across 3 separate cards within 48 hours for online product H purchases of approximately $150, including transaction 3538480 on card C05116-K1 just 3 minutes prior and transaction 3544636 on card C13037-K1 on 2016-12-15.",
+        "source": "graph",
+        "ref": "query:device_neighbors(device=D008998, 2016-11-13..2016-12-16)",
+        "entity_ids": [
+          "3538486",
+          "3538480",
+          "3544636",
+          "C06532-K2",
+          "C05116-K1",
+          "C13037-K1"
+        ]
+      },
+      {
+        "claim": "Shared origin analysis on device D008998 indicates 100% of transactions scored above 0.5 across 3 distinct cards (C05116-K1, C06532-K2, C13037-K1), representing a lift of 48.43 over baseline.",
+        "source": "graph",
+        "ref": "query:shared_origin(tx=3538486, window=+/-7d)",
+        "entity_ids": [
+          "3538486",
+          "C05116-K1",
+          "C06532-K2",
+          "C13037-K1"
+        ]
+      },
+      {
+        "claim": "Transaction 3538486 departs from the card's established history of predominantly in-person (258 of 281) product W purchases in region 315, and holder history shows zero recurring charge pattern for product H.",
+        "source": "graph",
+        "ref": "query:holder_history(holder=C06532-K2|315|164, before=2016-12-13)",
+        "entity_ids": [
+          "C06532-K2"
+        ]
+      },
+      {
+        "claim": "Prior closed case CC-0116 on card C06532-K2 was investigated and cleared due to confirmed cardholder travel.",
+        "source": "graph",
+        "ref": "query:linked_cases(tx=3538486)",
+        "entity_ids": [
+          "CC-0116",
+          "C06532-K2"
+        ]
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-0116",
+      "CC-0702"
+    ],
+    "summary": "Transaction 3538486 for $149.92 on card C06532-K2 was flagged after receiving an elevated second-generation model score of 0.998 despite a low legacy risk score. Graph analysis revealed that device D008998 was utilized across three distinct cards within a 48-hour window for near-identical online product H purchases of approximately $150. Furthermore, this online transaction represents a marked departure from the cardholder's historical baseline, which consists overwhelmingly of in-person product W transactions in region 315. Based on multi-card device clustering and clear behavioral deviation, the activity is confirmed as card-not-present fraud with a probability of 0.95.",
+    "written_to_graph": true,
+    "graph_case_id": "CASE-MON-006"
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "Section 6: probability 0.95 >= 0.85 on 3 independent signals"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "3a: fraud probability at or above 0.30; R6: several cards show fraud from device:D008998"
+      },
+      {
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "R6: shared origin device:D008998"
+      },
+      {
+        "action": "MONITOR_CONNECTED_CARDS",
+        "route": "auto",
+        "reason": "R6: 2 connected card(s) share the same origin"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "Section 6: probability 0.95 >= 0.85 on 3 independent signals"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "3a: fraud probability at or above 0.30; R6: several cards show fraud from device:D008998"
+      },
+      {
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "R6: shared origin device:D008998"
+      },
+      {
+        "action": "MONITOR_CONNECTED_CARDS",
+        "route": "auto",
+        "reason": "R6: 2 connected card(s) share the same origin"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": true,
+    "reason": "3a and R6: fraud across several cards sharing device:D008998",
+    "narrative": "This suspicious activity report details unauthorized card-not-present activity involving customer C06532 and card C06532-K2, linked to an organized multi-card compromise. On December 13, 2016, at 03:56:20 UTC, flagged transaction 3538486 was conducted online for $149.92 for product H in billing region 315. The transaction originated from device D008998, identified as a Windows 7 device running Chrome 60.0 with a display resolution of 2112x1188. Graph investigation revealed that device D008998 was operated across three separate cards within a 48-hour span between December 13, 2016, and December 15, 2016. Specifically, the same device was used to execute transaction 3538480 on card C05116-K1 for $150.05 only three minutes prior to the flagged transaction, as well as transaction 3544636 on card C13037-K1 for $149.92 two days later. All three transactions involved online purchases of product H for approximately $150, demonstrating a shared origin with a 48.43 lift over baseline. This activity sharply contradicts the historical pattern for card C06532-K2, which consists predominantly of in-person purchases (258 of 281) for product W in region 315, with no prior recurring history for product H. Total fraudulent exposure on card C06532-K2 is $149.92, with an aggregate exposure of $449.89 across the three linked cards. Due to confirmed multi-card compromise, card C06532-K2 has been blocked, linked cards have been placed under monitoring, and this filing is submitted.",
+    "subjects": [
+      "C06532",
+      "C06532-K2",
+      "C05116-K1",
+      "C13037-K1"
+    ],
+    "total_amount_usd": 149.92,
+    "activity_dates": [
+      "2016-12-13",
+      "2016-12-13"
+    ]
+  },
+  "stop_reason": "The investigation concluded under policy section 6 because the fraud probability reached a decisive 0.95 supported by multiple independent lines of evidence, including multi-card device clustering and behavioral deviation, rendering further inquiry unnecessary.",
+  "tool_calls": 11,
+  "tokens": 51768,
+  "latency_s": 41.8
+}

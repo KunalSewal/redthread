@@ -48,6 +48,34 @@ alert ──► gather evidence ──► investigate ──► assess ──►
   anonymous proxy, shows up across dozens of unrelated cards. Ring detection isolates it without
   chaining through popular phones that thousands of people share.
 
+## Does it work?
+
+The answer key is hidden, so accuracy is measured by replaying closed October cases as fresh alerts
+with point-in-time retrieval (`as_of`), so the agent cannot see its own outcome
+(`python scripts/backtest.py --n 24`):
+
+| Replayed closed cases (n=24) | Result |
+|---|---|
+| Verdict accuracy | 24 / 24 |
+| Cleared cases correctly cleared | 12 / 12 |
+| Pattern accuracy | 83% |
+| Affected-transaction recall / precision | 0.90 / 0.90 |
+| Calibration (Brier) | 0.005 |
+
+These cases come from the same generator as the benchmark and the agent was tuned using *other*
+closed cases, so this is not a strictly held-out set, and 24 runs carry wide error bars.
+
+The pattern classifier is measured separately against every confirmed-fraud closed case
+(`python scripts/eval_patterns.py`): **96.2% agreement with the bank's analysts on 4,665 cases**.
+
+The reasoning model was chosen the same way: `gemini-3.8-flash` with thinking=high beat
+`gemini-3.1-pro-preview` 26/28 to 23/28 on replayed cases, with better calibration and no cleared
+case accused of fraud (`runs/confirm_*.json`).
+
+On the 20 benchmark cases: 11 fraud, 9 legitimate, 5 reports filed, 1 escalated, ~84s and 14 graph
+calls per case. `cases_extra/` holds six alerts the agent raised by itself from ring activity and
+from transactions the bank's legacy score ignored.
+
 ## Repository layout
 
 | Path | What |
@@ -78,6 +106,13 @@ python scripts/setup_graph.py queries --only ring_wcc && \
 python scripts/build_knowledge.py --fetch         # GraphRAG knowledge base
 python scripts/run_cases.py                       # investigate all 20 cases -> cases/
 python -m redthread.validate cases                # check every answer file
+python scripts/backtest.py --n 24                 # accuracy against closed-case outcomes
+python scripts/eval_patterns.py                   # pattern classifier vs 4,665 analyst labels
+python scripts/monitor.py --max-alerts 6          # agent raises its own alerts -> cases_extra/
+
+# dashboard
+python -m uvicorn redthread.api.app:app --port 8000
+cd ui && npm install && npx vite                   # http://localhost:5173
 ```
 
 `python -m pytest` runs the unit tests (policy engine, answer schema, card-ID derivation, simulator, tools).

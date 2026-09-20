@@ -1,7 +1,5 @@
 # RedThread: teaching an agent to investigate card fraud on TigerGraph
 
-*Draft. Numbers marked TODO are refreshed from the final run before publishing.*
-
 The brief for the TigerGraph challenge at Hacker House Goa was deceptively simple: given a fraud
 alert, investigate it and decide what the bank should do. Twenty benchmark cases, an answer key we
 never see, and a dataset with no fraud labels in it at all. Half the alerts are legitimate. An agent
@@ -159,17 +157,29 @@ The answer key is hidden, so we built our own exam: replay closed October cases 
 `as_of` set to the moment they opened, so the agent cannot see its own answer, and compare with what
 the analysts concluded.
 
-| | Result |
+| Replayed October cases (n=24) | Result |
 |---|---|
-| Verdict accuracy | TODO |
-| Cleared cases correctly cleared | TODO |
-| Confirmed fraud caught | TODO |
-| Pattern accuracy | TODO |
-| Affected-transaction recall / precision | TODO |
-| Calibration (Brier) | TODO |
+| Verdict accuracy | **24 / 24** |
+| Cleared cases correctly cleared | 12 / 12 |
+| Confirmed fraud caught | 12 / 12 |
+| Pattern accuracy | 83% |
+| Affected-transaction recall / precision | 0.90 / 0.90 |
+| Calibration (Brier) | 0.005 |
+| Agreement with the analysts' filing decision | 71% |
 
-On the twenty benchmark cases: TODO fraud, TODO legitimate, TODO reports filed, about a minute and
-ten graph calls per case.
+Two caveats worth stating. These cases come from the same generator as the benchmark but are not the
+benchmark, and the agent had already been improved using *other* closed cases, so this is not a clean
+held-out set in the strict sense. And a run of 24 has wide error bars: 24/24 does not mean the next
+24 would be perfect.
+
+On the twenty benchmark cases the agent returned 11 fraud and 9 legitimate, filed 5 reports, escalated
+1, and asked for extra evidence on 2 — about 84 seconds and 14 graph calls per case.
+
+It also runs unprompted. Pointed at November and December with no alerts at all, it raised six of its
+own — three from ring devices, three from transactions our model scored high while the bank's legacy
+score stayed low — and found fraud in all six. Three of them were charges of $149.99, $150.09 and
+$150.04 on different cards through the same devices. A per-transaction model sees three ordinary
+purchases; the graph sees one operator.
 
 ## The dashboard
 
@@ -180,6 +190,15 @@ initial estimate to the final one so you can see what the evidence request chang
 thread: every graph query, judgement and decision in order. Beside it, the evidence graph, and the
 approvals queue, where an L1 team lead can approve a card block but only an L2 fraud manager can
 approve a filing — the agent executes only what the policy lets it execute.
+
+## Choosing the model by measuring it
+
+The obvious choice was the Pro tier. The backtest disagreed. Replaying 28 closed cases, Gemini 3.8
+Flash with thinking turned up got 26 right against Pro 3.1's 23, with far better calibration (Brier
+0.005 against 0.117) and — the part that matters for a bank — no cleared customer accused of fraud,
+where Pro produced two at probability 0.95 or above. Raising Pro's thinking level changed nothing.
+The newer, cheaper, faster generation simply reasoned better about this evidence, and we would not
+have known without an exam we could run ourselves.
 
 ## What we would do with more time
 

@@ -9,6 +9,20 @@ Open questions stay at the top until resolved.
 
 ## Decided
 
+- **2026-09-20: `gemini-3.8-flash` (thinking=high) as the reasoning model, chosen by backtest.**
+  It beat `gemini-3.1-pro-preview` 26/28 vs 23/28 on replayed closed cases, with far better
+  calibration and no cleared case called fraud (Pro produced two at p>=0.95). Pro's thinking level
+  made no difference. Evidence in `runs/confirm_*.json`; rationale recorded in `src/redthread/config.py`.
+- **2026-09-20: the fraud pattern is derived from the episode, not judged by the LLM.**
+  96.2% agreement with analysts across 4,665 confirmed-fraud closed cases vs ~13% for the LLM
+  (`scripts/eval_patterns.py`). The LLM still decides which transactions form the episode.
+- **2026-09-20: point-in-time retrieval everywhere (`as_of`).** An investigation never sees cases
+  opened at or after its alert. Required for honest backtesting and stops a rerun feeding a later
+  case's memory into an earlier alert.
+- **2026-09-20: R10 inputs (cards with fraud, credentials compromised) are computed from the
+  episode.** The LLM counted unrelated history in the issuer bucket and twice recommended blocking
+  every card a customer held; analysts never did that once in 5,565 closed cases.
+
 - **2026-09-19: This is the HHGOA shortlisting task; code is written now.** The "code during the
   event" rule applies to the Oct 28–31 event itself, not to this task.
 - **2026-09-19: TigerGraph Savanna free tier (TG-4), not local Community Edition.** The dev machine

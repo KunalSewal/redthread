@@ -1,0 +1,162 @@
+{
+  "case_id": "MON-003",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.95,
+    "pattern": "card_not_present_new_device",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3442995"
+    ],
+    "first_suspicious_txn_id": "3442995",
+    "connected_card_ids": [
+      "C01629-K1",
+      "C11309-K1"
+    ],
+    "connected_device_profiles": [
+      "SM-J327T1 Build/NRD90M | Android 7.0 | chrome 65.0 for android | 1280x720"
+    ],
+    "exposure_usd": 150.04,
+    "evidence": [
+      {
+        "claim": "Transaction 3442995 on card C07212-K2 for customer C07212 was an online purchase of $150.04 for product H with model score 0.90 (historical fraud rate 92.1%) and risk score 0.95, using an anonymous.com email address from a device marked as New.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3442995)",
+        "entity_ids": [
+          "3442995",
+          "C07212-K2",
+          "C07212"
+        ]
+      },
+      {
+        "claim": "Device D007351 has a specific profile (SM-J327T1 Build/NRD90M | Android 7.0 | chrome 65.0 for android | 1280x720) in ring 34603052, with 2 prior confirmed fraud closed cases: CC-5527 on card C10979-K1 and CC-5533 on card C07247-K1.",
+        "source": "graph",
+        "ref": "query:device_neighbors(device=D007351, 2016-10-10..2016-11-12)",
+        "entity_ids": [
+          "CC-5527",
+          "C10979-K1",
+          "CC-5533",
+          "C07247-K1"
+        ]
+      },
+      {
+        "claim": "Shared origin analysis identifies device D007351 with a lift of 48.43 vs baseline, used across 3 cards (C01629-K1, C07212-K2, C11309-K1) within 7 days, with 100% of transactions scoring over 0.5.",
+        "source": "graph",
+        "ref": "query:shared_origin(tx=3442995, window=+/-7d)",
+        "entity_ids": [
+          "3442995",
+          "C01629-K1",
+          "C07212-K2",
+          "C11309-K1"
+        ]
+      },
+      {
+        "claim": "Within 24 hours of the alert, device D007351 performed concurrent ~$150 product H purchases on connected cards C01629-K1 (txn 3440243, model score 0.989) and C11309-K1 (txn 3442910, model score 0.729).",
+        "source": "graph",
+        "ref": "query:device_neighbors(device=D007351, 2016-10-10..2016-11-12)",
+        "entity_ids": [
+          "C01629-K1",
+          "3440243",
+          "C11309-K1"
+        ]
+      },
+      {
+        "claim": "Holder baseline shows only one prior transaction (txn 3442991, an in-person charge for product W), with the flagged transaction being new in product and device, and no recurring billing pattern.",
+        "source": "graph",
+        "ref": "query:holder_history(holder=C07212-K2|325|130, before=2016-11-09)",
+        "entity_ids": [
+          "3442991",
+          "C07212-K2"
+        ]
+      },
+      {
+        "claim": "Card C07212-K2 has 20 prior confirmed fraud closed cases, including CC-5532 and CC-5419, indicating repeated prior compromise.",
+        "source": "graph",
+        "ref": "query:linked_cases(tx=3442995)",
+        "entity_ids": [
+          "C07212-K2",
+          "CC-5532",
+          "CC-5419"
+        ]
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-5527",
+      "CC-5533",
+      "CC-5419",
+      "CC-5532"
+    ],
+    "summary": "Transaction 3442995 ($150.04) on card C07212-K2 was flagged as an unauthorized card-not-present online transaction conducted through a new device, D007351. Device D007351 is linked to fraud ring 34603052 and was previously confirmed fraudulent in closed cases CC-5527 and CC-5533. Within the same 24-hour window, the device was used to execute concurrent ~$150 purchases across connected cards C01629-K1 and C11309-K1 using anonymous email addresses. The cardholder baseline showed no prior activity matching this product or device. The transaction was confirmed as card-not-present fraud from a new device, prompting card blocking and ring monitoring.",
+    "written_to_graph": true,
+    "graph_case_id": "CASE-MON-003"
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "Section 6: probability 0.95 >= 0.85 on 4 independent signals"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "3a: fraud probability at or above 0.30; R6: several cards show fraud from device:D007351"
+      },
+      {
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "R6: shared origin device:D007351"
+      },
+      {
+        "action": "MONITOR_CONNECTED_CARDS",
+        "route": "auto",
+        "reason": "R6: 2 connected card(s) share the same origin"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "Section 6: probability 0.95 >= 0.85 on 4 independent signals"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "3a: fraud probability at or above 0.30; R6: several cards show fraud from device:D007351"
+      },
+      {
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "R6: shared origin device:D007351"
+      },
+      {
+        "action": "MONITOR_CONNECTED_CARDS",
+        "route": "auto",
+        "reason": "R6: 2 connected card(s) share the same origin"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": true,
+    "reason": "3a and R6: fraud across several cards sharing device:D007351",
+    "narrative": "This Suspicious Activity Report details unauthorized card-not-present transactions involving customer C07212 and card C07212-K2. On November 9, 2016 at 02:28:40 UTC, online transaction 3442995 was executed for $150.04 in billing region 325 for product H. The transaction was conducted using device D007351, identified by the profile SM-J327T1 Build/NRD90M on Android 7.0 running Chrome 65.0, which was recorded as new to card C07212-K2. The transaction utilized an anonymous email address from domain anonymous.com. Internal graph analysis established that device D007351 is linked to organized fraud ring 34603052 and was previously confirmed fraudulent in closed cases CC-5527 and CC-5533. Shared origin analytics demonstrated that device D007351 exhibited a 48.43 lift over baseline across multiple unrelated accounts within a seven-day window. Within 24 hours of the alert, device D007351 was also used to conduct concurrent ~$150 product H purchases on connected cards C01629-K1 (transaction 3440243) and C11309-K1 (transaction 3442910). The cardholder baseline for C07212-K2 shows no history with this device, product, or online channel. Additionally, card C07212-K2 has a record of prior compromise across 20 confirmed fraud cases, including CC-5532 and CC-5419. The total fraudulent exposure identified for this transaction is $150.04. Card C07212-K2 was blocked and connected cards were placed on monitoring to prevent further ring exploitation.",
+    "subjects": [
+      "C07212",
+      "C07212-K2",
+      "C01629-K1",
+      "C11309-K1"
+    ],
+    "total_amount_usd": 150.04,
+    "activity_dates": [
+      "2016-11-09",
+      "2016-11-09"
+    ]
+  },
+  "stop_reason": "The investigation stopped pursuant to Section 6 because the fraud probability reached 0.95 based on multiple independent lines of decisive evidence, including device membership in confirmed fraud ring 34603052, prior confirmed fraud cases CC-5527 and CC-5533, high model scoring (0.90), and concurrent unauthorized transactions on connected cards C01629-K1 and C11309-K1.",
+  "tool_calls": 14,
+  "tokens": 179559,
+  "latency_s": 79.8
+}

@@ -106,10 +106,11 @@ tests/
 See `context/decisions.md` for the current decision log. Update the Status line below at the end of
 each work session.
 
-- **Status (2026-09-20):** End to end working. Graph loaded on Savanna (counts verified), 17 installed
-  queries, ring detection, GraphRAG knowledge base, LangGraph agent over TigerGraph MCP with Gemini,
-  case memory write-back, FastAPI + React dashboard. Next: review the 20 answers, iterate on accuracy,
-  optional `cases_extra/`, demo video, blog. Progress: `context/plan.md`.
+- **Status (2026-09-20, end of session):** Complete and measured. All 20 answers in `cases/` validate;
+  6 self-raised alerts in `cases_extra/`. Backtest: 24/24 verdicts on replayed closed cases, Brier
+  0.005; pattern classifier 96.2% vs 4,665 analyst labels. Model chosen by measurement (Flash 3.8 +
+  thinking). Dashboard runs with live investigations and approvals. Remaining: owner records the demo
+  video, publishes blog + social post. Progress: `context/plan.md`.
 
 ## Commands
 

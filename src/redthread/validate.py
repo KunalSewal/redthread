@@ -94,7 +94,7 @@ def dataset_errors(answer: Answer, data: Dataset) -> list[str]:
 
 def validate_dir(cases_dir: Path) -> int:
     data = Dataset()
-    files = sorted(cases_dir.glob("*.json"))
+    files = [f for f in sorted(cases_dir.glob("*.json")) if f.name != "alerts.json"]  # monitor input, not an answer
     failures = 0
     for f in files:
         try:

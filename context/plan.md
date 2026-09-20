@@ -45,7 +45,7 @@ case_pack / live alert
 5. [x] GSQL schema, loading jobs, 17 installed queries, ring detection (WCC over suspicious device use).
 6. [x] Graph loaded and verified; 464 doc chunks + 5,565 closed-case embeddings in TigerGraph vectors.
 7. [x] Agent (LangGraph + MCP + Gemini), case memory write-back.
-8. [ ] Run 20 cases → `cases/`; validate; iterate on accuracy.
-9. [ ] Optional: monitor Nov–Dec alerts → `cases_extra/`.
+8. [x] 20 cases run, validated, audited; accuracy measured by backtest (24/24 verdicts, Brier 0.005).
+9. [x] Monitoring: 6 self-raised alerts in `cases_extra/`, all confirmed fraud.
 10. [x] UI: FastAPI + React dashboard with live investigations and approvals.
-11. [ ] Demo video, blog post, social post.
+11. [ ] Demo video (script ready), blog post (written), social post (drafted) — owner to record/publish.
