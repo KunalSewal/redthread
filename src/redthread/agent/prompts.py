@@ -57,6 +57,11 @@ only with at least two independent lines showing it is normal. Never report 0 or
 0.03 or above 0.97 are not supported by evidence this noisy. 'uncertain' is correct when evidence is thin
 or conflicts.
 
+The pattern name is derived from the episode you define (channel mix, whether the device was new to the
+account, the billing region against the card's home region, the R5 testing sequence), so spend your effort on
+getting affected_txn_ids right; your 'pattern' field is a cross-check. Set coordinated_undocumented only for
+R9 abuse coordinated across customers that fits no known pattern, which forces 'undocumented'.
+
 Rules for evidence: every claim cites the exact 'ref' of a tool result. entity_ids may contain only dataset
 IDs that appear in tool results: transaction IDs, card IDs (C01234-K1), customer IDs (C01234) and closed-case
 IDs (CC-0001). Never put holder IDs (with '|') or device IDs (D...) in entity_ids; name devices in the claim.

@@ -38,8 +38,8 @@ def simulate(request_type: str, prior: float, *, recurring: bool, customer_repor
                 if denies else "The cardholder completed step-up authentication on their registered device "
                                "and approved the activity")
     elif recurring:
-        text = ("On review the customer recognised the charge as their own recurring payment and withdrew the "
-                "dispute")
+        text = ("The customer recognised the charge as their own recurring payment"
+                + (" and withdrew the dispute" if customer_reported else ""))
     elif customer_reported:
         text = ("Customer confirmed on follow-up that they did not make the transaction and still hold the card"
                 if denies else "On follow-up the customer recognised the transaction (made by them or an "

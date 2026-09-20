@@ -111,10 +111,11 @@ class Tools:
         self.ledger.cards.update(cards)
         device = _attrs(top["device"])
         holder = _attrs(top["holder"])
-        prior = sorted(_attrs(res[1]["prior_closed_cases"]), key=lambda c: c["opened_at"], reverse=True)
+        history = res[1]
+        prior = sorted(_attrs(res[2]["prior_closed_cases"]), key=lambda c: c["opened_at"], reverse=True)
         for c in prior:
             self.ledger.closed_cases[c["case_id"]] = c
-        agent = _attrs(res[2]["prior_agent_cases"])
+        agent = _attrs(res[3]["prior_agent_cases"])
         self.ledger.agent_cases.update(c["case_id"] for c in agent)
         out = {
             "ref": self._ref("alert_context", f"alert_context(tx={tx_id})"),
@@ -123,6 +124,8 @@ class Tools:
                      "ring_id": card.get("ring_id"), "ring_size": card.get("ring_size")},
             "customer_id": card["customer_id"],
             "customer_cards": cards,
+            "card_history": {"prior_txns": history["card_prior_txns"], "regions": history["card_regions"],
+                             "channels": history["card_channels"], "products": history["card_products"]},
             "note": ("customer_id is an issuer bucket shared by many account holders; judge normal behaviour "
                      "at the holder level (holder_id), not the card or customer level"),
         }

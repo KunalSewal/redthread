@@ -6,8 +6,16 @@
 CREATE OR REPLACE QUERY alert_context(VERTEX<Txn> tx, DATETIME as_of = to_datetime("2099-01-01 00:00:00"))
     FOR GRAPH RedThread {
   // as_of: point-in-time retrieval. An investigation never sees cases opened after its own alert.
+  MaxAccum<DATETIME> @@t0;
+  MapAccum<STRING, SumAccum<INT>> @@card_regions, @@card_channels, @@card_products;
+  SumAccum<INT> @@card_prior_txns;
   start = {tx};
+  tmp = SELECT t FROM start:t ACCUM @@t0 += t.ts;
   card = SELECT c FROM start:t -(MADE_BY:e)-> Card:c;
+  // The card's own history before this alert: the home region an out-of-region episode departs from.
+  tmp = SELECT t FROM card:c -(MADE:e)-> Txn:t WHERE t.ts < @@t0
+        ACCUM @@card_prior_txns += 1, @@card_channels += (t.channel -> 1), @@card_products += (t.product_cd -> 1),
+              @@card_regions += (t.region -> 1);
   holder = SELECT h FROM start:t -(BY_HOLDER:e)-> Holder:h;
   device = SELECT d FROM start:t -(FROM_DEVICE:e)-> DeviceProfile:d;
   customer = SELECT cu FROM card:c -(OWNED_BY:e)-> Customer:cu;
@@ -16,6 +24,8 @@ CREATE OR REPLACE QUERY alert_context(VERTEX<Txn> tx, DATETIME as_of = to_dateti
                        WHERE cc.opened_at < as_of;
   prior_agent_cases = SELECT f FROM customer_cards:c -(CARD_FRAUD_CASE:e)-> FraudCase:f WHERE f.opened_at < as_of;
   PRINT start AS flagged, card, holder, device, customer, customer_cards;
+  PRINT @@card_prior_txns AS card_prior_txns, @@card_regions AS card_regions, @@card_channels AS card_channels,
+        @@card_products AS card_products;
   PRINT prior_closed_cases[prior_closed_cases.case_id, prior_closed_cases.card_id, prior_closed_cases.opened_at,
         prior_closed_cases.outcome, prior_closed_cases.pattern, prior_closed_cases.n_txns,
         prior_closed_cases.exposure_usd, prior_closed_cases.analyst_notes];
