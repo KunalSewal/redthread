@@ -18,6 +18,10 @@ load_dotenv(ROOT / ".env")
 REASONING_MODEL = os.getenv("REDTHREAD_REASONING_MODEL", "gemini-3.8-flash")
 
 # Gemini 3 thinking level for reasoning calls: "low" | "high" | "" to leave the model's default.
+# "high" is what the submitted answers in cases/ were produced with. Measured on the same 24 replayed
+# cases, "high" and the model default score identically (24/24 verdicts, Brier 0.005) while "high"
+# costs roughly 3x the tokens, so set REDTHREAD_THINKING_LEVEL="" if cost matters more than
+# reproducing those answers exactly. See runs/backtest_final.json and runs/backtest_final_high.json.
 THINKING_LEVEL = os.getenv("REDTHREAD_THINKING_LEVEL", "high")
 
 EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"

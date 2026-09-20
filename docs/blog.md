@@ -167,6 +167,10 @@ the analysts concluded.
 | Calibration (Brier) | 0.005 |
 | Agreement with the analysts' filing decision | 71% |
 
+Turning the model's thinking level up changed none of this (identical verdicts and patterns, Brier
+0.0051 against 0.0054) while costing about three times the tokens — worth knowing before paying for
+deliberation you cannot measure.
+
 Two caveats worth stating. These cases come from the same generator as the benchmark but are not the
 benchmark, and the agent had already been improved using *other* closed cases, so this is not a clean
 held-out set in the strict sense. And a run of 24 has wide error bars: 24/24 does not mean the next
