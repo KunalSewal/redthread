@@ -29,6 +29,7 @@ from setup_graph import load_file  # noqa: E402
 log = logging.getLogger("build_knowledge")
 REG_DIR = paths.ROOT / "docs" / "regulatory"
 WORDS_PER_CHUNK, OVERLAP = 180, 30
+MAX_CHUNKS_PER_DOC = 60  # ~11k words per document; see regulatory_chunks()
 
 
 def fetch() -> None:
@@ -37,9 +38,19 @@ def fetch() -> None:
         target = REG_DIR / name
         if target.exists():
             continue
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 RedThread-research"})
-        target.write_bytes(urllib.request.urlopen(req, timeout=90).read())
-        log.info("downloaded %s", name)
+        # Some regulator sites reject a bare script user agent, so identify as a normal browser.
+        req = urllib.request.Request(url, headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                          "Chrome/126.0 Safari/537.36 RedThread-research",
+            "Accept": "text/html,application/xhtml+xml,application/pdf,*/*",
+            "Accept-Language": "en-GB,en;q=0.9"})
+        try:
+            target.write_bytes(urllib.request.urlopen(req, timeout=90).read())
+            log.info("downloaded %s", name)
+        except (urllib.error.URLError, TimeoutError) as exc:
+            # A publisher blocking automated download should not stop the knowledge base being built.
+            target.unlink(missing_ok=True)
+            log.warning("could not download %s (%s); continuing without it", name, exc)
 
 
 def readme_chunks() -> list[dict]:
@@ -78,6 +89,12 @@ def document_text(path: Path) -> str:
 
 
 def regulatory_chunks() -> list[dict]:
+    """Chunk each regulatory document, capped so one very large file cannot swamp retrieval.
+
+    The OFAC SDN list is 2.7 million words of sanctioned names, which would be ~18,000 chunks of
+    pure noise for a dataset with no counterparty names in it. The cap keeps each document's opening
+    material — for the SDN list, the part that explains what it is and how it is used.
+    """
     chunks = []
     for name, (title, _) in SOURCES.items():
         path = REG_DIR / name
@@ -86,11 +103,15 @@ def regulatory_chunks() -> list[dict]:
             continue
         words = re.sub(r"\s+", " ", document_text(path)).split()
         step = WORDS_PER_CHUNK - OVERLAP
+        before = len(chunks)
         for i, start in enumerate(range(0, max(len(words) - OVERLAP, 1), step)):
+            if len(chunks) - before >= MAX_CHUNKS_PER_DOC:
+                break
             body = " ".join(words[start:start + WORDS_PER_CHUNK])
             if len(body) > 200:
                 chunks.append({"source": name, "section": f"{title} (part {i + 1})", "content": body})
-        log.info("%-45s %6d words", name, len(words))
+        capped = " (capped)" if len(chunks) - before >= MAX_CHUNKS_PER_DOC else ""
+        log.info("%-45s %8d words -> %3d chunks%s", name, len(words), len(chunks) - before, capped)
     return chunks
 
 

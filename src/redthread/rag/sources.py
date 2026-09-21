@@ -33,4 +33,25 @@ SOURCES: dict[str, tuple[str, str]] = {
     "fatf_cyber_enabled_fraud.pdf": (
         "FATF: Illicit Financial Flows from Cyber-Enabled Fraud",
         "https://www.fatf-gafi.org/content/dam/fatf-gafi/reports/Illicit-financial-flows-cyber-enabled-fraud.pdf.coredownload.inline.pdf"),
+    "fincen_sar_activity_review.pdf": (
+        "FinCEN: SAR Activity Review - Trends, Tips and Issues",
+        "https://www.fincen.gov/sites/default/files/sar_report/sar_tti_19.pdf"),
+    "ofac_sdn_list.pdf": (
+        "OFAC: Specially Designated Nationals list",
+        "https://www.treasury.gov/ofac/downloads/sdnlist.pdf"),
+    "fatf_new_payment_methods.html": (
+        "FATF: Money Laundering Using New Payment Methods",
+        "https://www.fatf-gafi.org/en/publications/Methodsandtrends/Reportonnewpaymentmethods.html"),
+    "fatf_professional_money_laundering.html": (
+        "FATF: Professional Money Laundering",
+        "https://www.fatf-gafi.org/en/publications/Methodsandtrends/Professional-money-laundering.html"),
+    "fatf_remittance_currency_exchange.html": (
+        "FATF: Money Laundering through Remittance and Currency Exchange Providers",
+        "https://www.fatf-gafi.org/en/publications/Methodsandtrends/Moneylaunderingthroughmoneyremittanceandcurrencyexchangeproviders.html"),
+    "fatf_trade_based_money_laundering.html": (
+        "FATF: Trade-Based Money Laundering",
+        "https://www.fatf-gafi.org/en/publications/Methodsandtrends/Trade-based-money-laundering-trends-and-developments.html"),
+    "fatf_international_cooperation.html": (
+        "FATF: International Co-operation on ML Detection, Investigation and Prosecution",
+        "https://www.fatf-gafi.org/en/publications/Methodsandtrends/international-cooperation-against-money-laundering.html"),
 }

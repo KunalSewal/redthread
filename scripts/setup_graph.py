@@ -101,6 +101,7 @@ SCHEMA_CHANGES = [
     ("01b_vectors.gsql", lambda: "emb(" in gsql("LS")),
     ("01c_rings.gsql", lambda: _has_attribute("Card", "ring_id")),
     ("01d_device_rings.gsql", lambda: _has_attribute("DeviceProfile", "ring_id")),
+    ("01e_gds_attrs.gsql", lambda: _has_attribute("Card", "community_id")),
 ]
 
 

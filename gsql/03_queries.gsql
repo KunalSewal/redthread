@@ -383,3 +383,88 @@ CREATE OR REPLACE QUERY monitor_model_misses(DATETIME from_ts, DATETIME to_ts, D
          ORDER BY t.model_score DESC LIMIT k;
   PRINT hits[hits.tx_id, hits.card_id, hits.ts, hits.amount, hits.risk_score, hits.model_score, hits.channel];
 }
+
+// ---------------------------------------------------------------------------------------------
+// Built on the TigerGraph GDS library results (scripts/install_algorithms.py): tg_louvain writes
+// community_id and tg_pagerank writes pagerank over the card <-> device projection. Communities are
+// broader than our ring_wcc components (which require suspicious, new-to-account device use), so a
+// card can sit in a large legitimate community while belonging to no ring at all.
+CREATE OR REPLACE QUERY community_profile(VERTEX<Card> card, DATETIME from_ts, DATETIME to_ts,
+    INT max_members = 40, DATETIME as_of = to_datetime("2099-01-01 00:00:00")) FOR GRAPH RedThread {
+  // The Louvain community this card belongs to: who it moves with, and how much of that neighbourhood
+  // is already known bad. Complements ring_wcc, which finds the tight core; this finds the crowd.
+  MaxAccum<INT> @@community;
+  SumAccum<INT> @@members;
+  SetAccum<STRING> @@fraud_card_ids;  // distinct CARDS: a card with three confirmed cases is one
+                                      // compromised card, not three
+  SumAccum<INT> @@all_cards;
+  SetAccum<STRING> @@all_fraud_card_ids;
+  SumAccum<INT> @n_txns;
+  MaxAccum<DOUBLE> @max_model_score = -1;  // -1 = no transactions in the window; the default sentinel
+                                           // (-1.8e308) is unparseable JSON
+  SetAccum<STRING> @closed_fraud_cases;
+  start = {card};
+  tmp = SELECT c FROM start:c ACCUM @@community += c.community_id;
+  peers = SELECT c FROM Card:c WHERE c.community_id == @@community AND @@community >= 0
+          ACCUM @@members += 1;
+  tx = SELECT t FROM peers:c -(MADE:e)-> Txn:t WHERE t.ts >= from_ts AND t.ts <= to_ts
+       ACCUM c.@n_txns += 1, c.@max_model_score += t.model_score;
+  // as_of: point-in-time retrieval. An investigation never sees cases opened after its own alert,
+  // so a neighbour that was convicted later must not count as evidence today.
+  tmp = SELECT cc FROM peers:c -(CARD_CLOSED_CASE:e)-> ClosedCase:cc
+        WHERE cc.outcome == "confirmed_fraud" AND cc.opened_at < as_of
+        ACCUM c.@closed_fraud_cases += cc.case_id, @@fraud_card_ids += c.card_id;
+  // Cards already known to sit in a ring first, then the rest of the community.
+  shown = SELECT c FROM peers:c ORDER BY c.ring_size DESC LIMIT max_members;
+  devices = SELECT d FROM DeviceProfile:d WHERE d.community_id == @@community AND @@community >= 0
+            ORDER BY d.n_cards DESC LIMIT 15;
+  // Base rate over every card, under the same as_of filter, so the caller can state a lift rather
+  // than an unanchored percentage. One extra scan of 14k cards; negligible next to the peer scan.
+  all_cards = SELECT c FROM Card:c ACCUM @@all_cards += 1;
+  tmp = SELECT cc FROM all_cards:c -(CARD_CLOSED_CASE:e)-> ClosedCase:cc
+        WHERE cc.outcome == "confirmed_fraud" AND cc.opened_at < as_of
+        ACCUM @@all_fraud_card_ids += c.card_id;
+  PRINT @@community AS community_id, @@members AS community_cards,
+        @@fraud_card_ids.size() AS cards_with_confirmed_fraud,
+        @@all_cards AS all_cards, @@all_fraud_card_ids.size() AS all_cards_with_confirmed_fraud;
+  PRINT shown[shown.card_id, shown.ring_id, shown.ring_size, shown.@n_txns, shown.@max_model_score,
+        shown.@closed_fraud_cases] AS members;
+  PRINT devices[devices.device_id, devices.profile, devices.n_cards] AS devices;
+}
+
+// The largest communities, for monitoring and the dashboard's ring view.
+CREATE OR REPLACE QUERY community_summary(INT k = 10, INT min_cards = 5) FOR GRAPH RedThread {
+  // Which communities look organised: ranked by the share of their cards carrying a confirmed-fraud
+  // closed case. Communities smaller than min_cards are excluded, because 2 of 2 is not a rate.
+  TYPEDEF TUPLE<DOUBLE fraud_share, INT fraud_cards, INT cards, INT community> CommunityStat;
+  HeapAccum<CommunityStat>(10, fraud_share DESC, fraud_cards DESC) @@top;
+  MapAccum<INT, SumAccum<INT>> @@cards, @@fraud_cards;
+  OrAccum @has_fraud;
+  SumAccum<INT> @@ranked;
+  @@top.resize(k);
+  cards = SELECT c FROM Card:c WHERE c.community_id >= 0;
+  tmp = SELECT cc FROM cards:c -(CARD_CLOSED_CASE:e)-> ClosedCase:cc
+        WHERE cc.outcome == "confirmed_fraud" ACCUM c.@has_fraud += TRUE;
+  tmp = SELECT c FROM cards:c ACCUM @@cards += (c.community_id -> 1);
+  tmp = SELECT c FROM cards:c WHERE c.@has_fraud ACCUM @@fraud_cards += (c.community_id -> 1);
+  FOREACH (comm, n) IN @@cards DO
+    IF n >= min_cards THEN
+      INT bad = 0;
+      IF @@fraud_cards.containsKey(comm) THEN bad = @@fraud_cards.get(comm); END;
+      @@ranked += 1;
+      @@top += CommunityStat((bad + 0.0) / n, bad, n, comm);
+    END;
+  END;
+  PRINT @@top AS communities;
+  PRINT @@cards.size() AS communities_total, @@ranked AS communities_ranked;
+}
+
+CREATE OR REPLACE QUERY policy_sections(STRING doc_source = "fraud_policy", INT k = 40)
+    FOR GRAPH RedThread {
+  // Every chunk of one document, for looking a rule up by name rather than by similarity.
+  // Vector search is the wrong tool for "fetch rule R6": "R6" carries almost no semantic signal, so
+  // the nearest neighbours come back as unrelated policy prose and sanctions-list noise. The fraud
+  // policy is only about twenty chunks, so the whole document is cheap to return and match exactly.
+  hits = SELECT c FROM DocChunk:c WHERE c.source == doc_source LIMIT k;
+  PRINT hits[hits.chunk_id, hits.source, hits.section, hits.content] AS sections;
+}

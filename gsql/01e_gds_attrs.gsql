@@ -1,0 +1,8 @@
+// Attributes the TigerGraph GDS algorithms write their results into.
+// community_id: Louvain community over the card <-> device projection.
+// pagerank: how central a card or device is in that projection (hub devices score high).
+CREATE GLOBAL SCHEMA_CHANGE JOB add_gds_attrs {
+  ALTER VERTEX Card ADD ATTRIBUTE (community_id INT DEFAULT -1, pagerank DOUBLE DEFAULT 0);
+  ALTER VERTEX DeviceProfile ADD ATTRIBUTE (community_id INT DEFAULT -1, pagerank DOUBLE DEFAULT 0);
+}
+RUN GLOBAL SCHEMA_CHANGE JOB add_gds_attrs

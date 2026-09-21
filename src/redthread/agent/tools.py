@@ -18,7 +18,7 @@ HOT_SCORE = 0.5
 SMALL_AUTH_USD = 10.0
 MAX_ROWS = 70
 AS_OF_QUERIES = {"alert_context", "card_window", "device_neighbors", "linked_cases", "similar_closed_cases",
-                 "similar_fraud_cases"}
+                 "similar_fraud_cases", "community_profile"}
 GENERIC_DEVICE_INFO = {"iOS Device", "MacOS", "Windows", "Trident/7.0", "Linux", "SAMSUNG", "unknown"}
 
 
@@ -70,6 +70,7 @@ class Tools:
         self.g = graph
         self.ledger = Ledger()
         self.as_of = as_of
+        self._policy_sections: list[dict] | None = None  # the fraud policy, fetched once per case
 
     async def _q(self, name: str, **params) -> list[dict]:
         if self.as_of and name in AS_OF_QUERIES:
@@ -329,14 +330,88 @@ class Tools:
                          "agent_cases": sorted(m["agent_cases"])} for m in members],
         }
 
-    async def policy(self, question: str, k: int = 4) -> dict:
-        res = await self._q("policy_search", qv=embed_query(question), k=k)
-        hits = _attrs(res[0]["hits"])
+    async def community(self, card_id: str, center_ts: str, days: int = 30) -> dict:
+        """The Louvain community this card sits in, and how much of it is already known bad.
+
+        ``ring`` finds the tight core: cards joined by one specific device that was new to each
+        account. Louvain finds the looser crowd the card moves with, so a card with no ring can
+        still turn out to live in a bad neighbourhood. The query returns the fraud rate over all
+        cards under the same as_of filter, so this reports a lift against the base rate rather than
+        a percentage with nothing to compare it to.
+        """
+        center = _ts(center_ts)
+        res = await self._q("community_profile", card=(card_id,), from_ts=_fmt(center - timedelta(days=days)),
+                            to_ts=_fmt(center), max_members=40)
+        top = res[0]
+        if top["community_id"] < 0 or not top["community_cards"]:
+            return {"ref": self._ref("community", f"community_profile(card={card_id})"),
+                    "note": "this card was not assigned to a community"}
+        members = _attrs(res[1]["members"])
+        devices = _attrs(res[2]["devices"])
+        self.ledger.cards.update(m["card_id"] for m in members)
+        for d in devices:
+            self.ledger.devices[d["device_id"]] = d["profile"]
+        share = top["cards_with_confirmed_fraud"] / top["community_cards"]
+        base = top["all_cards_with_confirmed_fraud"] / max(top["all_cards"], 1)
         return {
-            "ref": self._ref("policy", f"policy_search(\"{question[:60]}\")"),
-            "passages": [{"chunk_id": h["chunk_id"], "section": h["section"], "text": h["content"][:1200]}
-                         for h in hits],
+            "ref": self._ref("community", f"community_profile(card={card_id})"),
+            "definition": ("community detection (TigerGraph GDS tg_louvain) over the card-device graph, "
+                           "weighted by how many transactions tie a card to a device"),
+            "community_id": top["community_id"],
+            "cards_in_community": top["community_cards"],
+            "cards_with_confirmed_fraud": top["cards_with_confirmed_fraud"],
+            "fraud_rate_in_community": round(share, 3),
+            "fraud_rate_all_cards": round(base, 3),
+            "lift_vs_base_rate": round(share / base, 1) if base else None,
+            "shared_devices": [{"device_id": d["device_id"], "profile": d["profile"], "n_cards": d["n_cards"]}
+                               for d in devices[:6]],
+            "members": [{"card_id": m["card_id"], "ring_id": m["ring_id"],
+                         "txns_in_window": m["n_txns"], "max_model_score": _score(m["max_model_score"]),
+                         "confirmed_fraud_closed_cases": sorted(m["closed_fraud_cases"])}
+                        for m in members[:20]],
         }
+
+    async def policy_rule(self, rule: str) -> dict | None:
+        """The text of one named policy rule, looked up rather than searched for.
+
+        Vector search cannot reliably find "R6": the rule number carries almost no semantic signal,
+        so the nearest neighbours come back as unrelated policy prose and sanctions-list noise — it
+        retrieved the right rule in one attempt out of five. The policy is twenty chunks, so the
+        document is fetched and matched by name.
+        """
+        if self._policy_sections is None:
+            res = await self._q("policy_sections", doc_source="fraud_policy", k=40)
+            self._policy_sections = _attrs(res[0]["sections"])
+        want = rule.lower()
+        prefixes = (f"rule {want}:", f"section {want}.")
+        hit = next((c for c in self._policy_sections
+                    if c["section"].lower().startswith(prefixes)), None)
+        if not hit:
+            return None
+        return {"ref": self._ref("policy_rule", f"policy_sections(section={hit['section']})"),
+                "section": hit["section"], "text": hit["content"], "source": "fraud_policy",
+                "authority": "bank"}
+
+    async def policy(self, question: str, k: int = 4, authority: str | None = None) -> dict:
+        """Retrieve guidance. ``authority`` filters to the bank's own policy or to the regulators
+        (FinCEN, FATF, FFIEC, OFAC), which is the difference between citing a rule we wrote and
+        citing an external authority."""
+        res = await self._q("policy_search", qv=embed_query(question), k=k * 2 if authority else k)
+        hits = _attrs(res[0]["hits"])
+        passages = [{"chunk_id": h["chunk_id"], "section": h["section"], "text": h["content"][:1200],
+                     "authority": _authority(h["source"]), "source": h["source"]} for h in hits]
+        if authority:
+            passages = [p for p in passages if p["authority"] == authority][:k]
+        label = f"policy_search(\"{question[:60]}\"{', ' + authority if authority else ''})"
+        return {"ref": self._ref("policy", label), "passages": passages}
+
+
+BANK_SOURCES = {"fraud_policy", "readme"}
+
+
+def _authority(source: str) -> str:
+    """Who is speaking: the bank's own policy, or an outside regulator."""
+    return "bank" if source in BANK_SOURCES else "regulator"
 
 
 def _count(values) -> dict:

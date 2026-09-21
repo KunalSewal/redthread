@@ -26,6 +26,19 @@ How to read this data (important, verified by the engineering team):
   unrelated people and is weak evidence of a link. A specific profile seen on several cards, new to each
   account, behind a proxy, and tied to confirmed fraud is strong evidence of a shared origin. ring_id >= 0
   means the device/card belongs to a ring found by connected-components analysis of suspicious device use.
+- Rings and communities answer different questions. A ring is the tight core: cards joined by one
+  specific device that was new to each account in a suspicious transaction. A community (Louvain) is
+  the looser crowd a card moves with, so a card with no ring can still sit in a bad neighbourhood.
+  Read a community by its lift_vs_base_rate, never by its raw fraud rate: about 10% of all cards
+  carry a confirmed-fraud case, so a 29% community rate is a lift of 2.8. Community membership is
+  WEAK evidence and must never be called moderate, strong or decisive. Measured on 500 closed cases:
+  a lift above 5 occurs in 30% of confirmed fraud and 16% of cleared cases (likelihood ratio 1.9),
+  and a lift of 2-5 gives 2.5; so it shifts belief a little and settles nothing. Half of all cards
+  sit in a community with no known-bad card at all, slightly more often when the case was cleared
+  (71% vs 52%), so a lift of 0 is mildly exculpatory and worth recording as such. A community is
+  circumstantial: on its own it is never enough to block, only a reason to look harder at the card's
+  own behaviour. Ring membership and community membership rest on the same fact that the card keeps
+  company with known-bad cards, so both belong to the cross_card_links basis and only the stronger counts.
 - Region / email elements: large regions and common email domains carry thousands of unrelated
   transactions. Only a high lift on several distinct cards suggests a shared origin.
 - Closed cases (CC-...) are the only confirmed outcomes. Analyst notes explain why cases were fraud or

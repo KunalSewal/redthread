@@ -35,3 +35,28 @@ def test_recurring_cadence():
 def test_mcp_response_parsing_ignores_trailing_text():
     text = '```json\n{"success": true, "data": {"result": [1]}}\n```\n\nSuggestions: {"not": "json"'
     assert _parse(text)["data"]["result"] == [1]
+
+
+def test_a_policy_rule_is_looked_up_by_name_not_by_similarity():
+    """Vector search finds the right rule about one time in five: "R6" carries almost no semantic
+    signal, so the neighbours come back as unrelated policy prose and sanctions-list noise. The rule
+    is matched by its section name instead."""
+    import asyncio
+
+    from redthread.agent.tools import Ledger, Tools
+
+    tools = Tools.__new__(Tools)
+    tools.ledger = Ledger()
+    tools._policy_sections = [
+        {"chunk_id": "DOC-1", "section": "Rule R1: Verify before you block on a weak signal",
+         "content": "R1 text", "source": "fraud_policy"},
+        {"chunk_id": "DOC-6", "section": "Rule R6: Shared origin", "content": "R6 text",
+         "source": "fraud_policy"},
+        {"chunk_id": "DOC-9", "section": "Section 3a. A case is not a report", "content": "3a text",
+         "source": "fraud_policy"},
+    ]
+    assert asyncio.run(tools.policy_rule("R6"))["section"] == "Rule R6: Shared origin"
+    assert asyncio.run(tools.policy_rule("3a"))["section"] == "Section 3a. A case is not a report"
+    # R1 must not match "R10", and a rule that does not exist must not match anything.
+    assert asyncio.run(tools.policy_rule("R10")) is None
+    assert asyncio.run(tools.policy_rule("R99")) is None
