@@ -48,7 +48,12 @@ explains itself. Graded on 20 benchmark cases (`data/case_pack.csv`) against a h
 ## Required stack (from the problem statement)
 
 - TigerGraph (Savanna or Community Edition 4.2+) for graph **and** vector storage.
-- GSQL queries + TigerGraph graph algorithms (WCC / Louvain / Jaccard etc.) for pattern detection.
+- GSQL queries + TigerGraph graph algorithms for pattern detection. What we actually run:
+  our own connected-components pass (`ring_wcc`, tuned to new-to-account device use and measured)
+  and the GDS library's `tg_louvain` for communities, surfaced to the agent by the `community` tool.
+  `tg_pagerank` and `tg_jaccard_nbor_ss` are installed from the library but not run in batch:
+  PageRank takes a single vertex type and our card-device projection is bipartite. Do not describe
+  an algorithm as used unless it runs.
 - TigerGraph MCP (`tigergraph-mcp`, official repo `tigergraph/tigergraph-mcp`) as the agent's tool surface.
 - GraphRAG: graph evidence + retrieved policy/typology/closed-case text passed to the LLM as context.
 - A UI showing investigation, case progression, evidence, uncertainty, and next actions.
@@ -64,6 +69,10 @@ explains itself. Graded on 20 benchmark cases (`data/case_pack.csv`) against a h
 - Set-valued query parameters cannot be empty (arrive as NULL): write edges one call at a time.
 - Schema changes disable affected loading jobs: rerun `setup_graph.py jobs` after one.
 - Savanna free tier auto-suspends; everything is resumable. Stop the workspace when done (credits).
+- Writing Python source from a shell heredoc: a non-raw string containing `` becomes a literal
+  backspace (0x08) in the file, silently breaking a regex. This has bitten us twice. Write such
+  edits with the Write/Edit tools, and scan with
+  `python -c "d=open(f,'rb').read(); print([i for i,b in enumerate(d) if b<9])"`.
 
 ## Engineering practices
 
@@ -106,11 +115,24 @@ tests/
 See `context/decisions.md` for the current decision log. Update the Status line below at the end of
 each work session.
 
-- **Status (2026-09-20, end of session):** Complete and measured. All 20 answers in `cases/` validate;
-  6 self-raised alerts in `cases_extra/`. Backtest: 24/24 verdicts on replayed closed cases, Brier
-  0.005; pattern classifier 96.2% vs 4,665 analyst labels. Model chosen by measurement (Flash 3.8 +
-  thinking). Dashboard runs with live investigations and approvals. Remaining: owner records the demo
-  video, publishes blog + social post. Progress: `context/plan.md`.
+- **Status (2026-09-21):** All 20 answers valid: 10 fraud, 9 legitimate, 1 `uncertain` (HHG-004, the
+  first to reach an answer file). On 60 replayed closed cases with the trigger decoupled from the
+  outcome: verdict accuracy 75%, Brier 0.277, cleared cases left alone 80%, wrongly accused customers
+  down 17 to 6, missed fraud 7 to 3, 17 left `uncertain`; by trigger 80% (customer reports) against
+  68% (model alerts). Numbers: `runs/backtest_final.json`, matched "before" in
+  `runs/backtest_after.json` (same seed).
+  **Never quote the old backtest (24/24, Brier 0.005)** — that harness set the trigger from the
+  outcome. Three root causes are written up in `context/decisions.md` (correlated evidence, a
+  circular simulated reply, and policy rules fetched by vector search).
+  Workbench rebuilt: 5 routes, thread-as-scrubber, live counterfactuals, `?replay=1` presenter mode,
+  AA contrast, keyboard and 390px passes. README, blog, demo script and social drafts rewritten
+  against the real numbers.
+  `cases_extra/` now holds 25 self-raised alerts, all valid: 14 fraud, 11 `uncertain`, $3,900 of
+  exposure, 13 reports; the bank had scored 19 of the 25 below 0.30.
+  **Remaining:** (1) re-run the model comparison on the fixed harness or keep the
+  README's "unverified" caveat; (2) consider calibrating the model's own strength labels (84 "strong",
+  19 "decisive" across the backtest); (3) nothing is committed — the owner asked to be asked first;
+  (4) owner records the demo (`docs/demo-script.md`) and publishes blog + social post.
 
 ## Commands
 

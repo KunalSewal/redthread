@@ -151,74 +151,160 @@ confirmed-fraud cases**. The LLM decides which transactions form the episode; th
 The pattern generalises: when a judgement is really a mechanical property of the evidence, measure
 it against the labelled history and write the rule.
 
+## The fourth time, the thing that was confidently wrong was us
+
+Those three we caught by reading the agent's output. The fourth we caught by doubting our own exam,
+and it was worse than all of them.
+
+The benchmark's answer key is hidden, so we built our own test: replay closed cases the bank's
+analysts already decided, with point-in-time retrieval so the agent cannot see its own outcome or
+anything later. It scored **24 out of 24**, with a Brier score of 0.005. We wrote that number in the
+README.
+
+It was meaningless. Rebuilding each alert, we had set the trigger from the outcome:
+
+```python
+"trigger_type": "customer_report" if confirmed else "risk_score",
+```
+
+Every confirmed fraud arrived as a customer complaint and every cleared case as a model alert. The
+alert type *was* the answer. An agent that ignored the graph entirely and pattern-matched the first
+line of the prompt would also have scored 24 out of 24. We had built a test that could not fail, and
+then we had passed it.
+
+The fix is three lines: assign the trigger independently of the outcome, use the flagged
+transaction's real legacy score instead of a flattering constant, and report accuracy **per trigger**
+so that leaning on the trigger shows up as a gap between the strata. On the honest version, the same
+pipeline scored **59%**, with a Brier score of **0.36** — worse than guessing the base rate, because
+the wrong answers were delivered at 0.97.
+
+Two things had been hiding behind that broken exam.
+
+**The evidence was multiplying itself.** Our agent does not state a probability. It judges each
+finding — which way it points, how strong it is, and what it rests on — and the code does the Bayes,
+one likelihood ratio per independent basis. But the bases are not independent. In a real fraud the
+device, the holder's behaviour, the region and the timing all move together, so six findings pointing
+one way multiply into certainty the evidence cannot support. Across the twenty benchmark cases,
+*every* legitimate case sat at 0.03 and *every* fraud case at 0.88 or above, with nothing in between.
+The verdict tracked the trigger: fraud on 8 of 8 customer complaints, legitimate on 9 of 11 model
+alerts.
+
+The correction is standard for correlated evidence — temper the sum before it becomes a probability:
+
+```
+logit(posterior) = logit(prior) + 0.4 × Σ log LR
+```
+
+We fitted that 0.4 on half the backtest cases and reported it on the half it never saw, optimising
+not accuracy but an operational cost, because for a bank the mistakes are not symmetric: an
+`uncertain` verdict is escalated to an analyst and the case still gets handled, while a blocked
+legitimate customer and a missed fraud are both real damage. Optimising calibration alone drove fraud
+recall to 0.29 by pushing everything to the middle, which is a different failure, not a fix.
+
+**The customer's reply was a mirror.** The agent asks for more evidence when it is unsure. The
+dataset has no customers, so we simulate the reply — and we chose it from the prior:
+
+```python
+denies = prior >= 0.5 and not recurring
+```
+
+Then we updated that same prior with a likelihood ratio of eight. A case weighed at 0.65 produced a
+denial and came out at 0.94; one at 0.38 produced a confirmation and came out at 0.07. It was
+circular, it could only amplify, and it destroyed every `uncertain` verdict before it reached the
+answer — which is why the agent, in months of runs, had never once returned one. On 59 replayed cases
+it touched thirteen and got ten of them wrong.
+
+A reply you inferred from your own belief is not evidence about that belief. It now moves the
+probability only when it carries information the prior did not already fix — a charge matching the
+holder's own recurring pattern, which is read out of the transaction history rather than out of the
+agent's head — and an assumed reply no longer counts as an independent signal in the policy's
+stopping rule.
+
 ## Does it work?
 
-The answer key is hidden, so we built our own exam: replay closed October cases as fresh alerts with
-`as_of` set to the moment they opened, so the agent cannot see its own answer, and compare with what
-the analysts concluded.
+So we rebuilt the exam and ran it again. On the same 60 replayed cases, with the trigger
+independent of the outcome:
 
-| Replayed October cases (n=24) | Result |
-|---|---|
-| Verdict accuracy | **24 / 24** |
-| Cleared cases correctly cleared | 12 / 12 |
-| Confirmed fraud caught | 12 / 12 |
-| Pattern accuracy | 83% |
-| Affected-transaction recall / precision | 0.90 / 0.90 |
-| Calibration (Brier) | 0.005 |
-| Agreement with the analysts' filing decision | 71% |
+| Replayed closed cases (n=60) | Before | After |
+|---|---|---|
+| Verdict accuracy | 59% | **75%** |
+| Cleared cases left alone | 41% | **80%** |
+| Confirmed fraud caught | 77% | 70% |
+| Calibration (Brier) | 0.357 | **0.277** |
+| Legitimate customers accused of fraud | 17 | **6** |
+| Fraud closed as legitimate | 7 | **3** |
+| Left `uncertain` for an analyst | 0 | **17** |
 
-Turning the model's thinking level up changed none of this (identical verdicts and patterns, Brier
-0.0051 against 0.0054) while costing about three times the tokens — worth knowing before paying for
-deliberation you cannot measure.
+The number we care about most is the third from the bottom. Six wrongly accused customers is still
+six too many, but it is a third of what the confident version produced, and the cases it now hesitates
+on are escalated rather than decided.
 
-Two caveats worth stating. These cases come from the same generator as the benchmark but are not the
-benchmark, and the agent had already been improved using *other* closed cases, so this is not a clean
-held-out set in the strict sense. And a run of 24 has wide error bars: 24/24 does not mean the next
-24 would be perfect.
+The honest way to check whether an agent is investigating or just reading the alert type is to split
+the score by trigger. Ours used to be lopsided — 54% on customer complaints against 67% on model
+alerts, because it had learned that a denial was close to proof. It is now 80% and 68%. The gap is
+gone, which is the result we actually wanted; the headline accuracy is the side effect.
 
-On the twenty benchmark cases the agent returned 11 fraud and 9 legitimate, filed 5 reports, escalated
-1, and asked for extra evidence on 2 — about 84 seconds and 14 graph calls per case.
+None of this is a good score in absolute terms. Three quarters of verdicts right, on a test where half
+the cases are legitimate, is a system worth putting in front of an analyst, not one worth letting run
+unattended — and that is exactly what the policy engine does with it.
 
-It also runs unprompted. Pointed at November and December with no alerts at all, it raised six of its
-own — three from ring devices, three from transactions our model scored high while the bank's legacy
-score stayed low — and found fraud in all six. Three of them were charges of $149.99, $150.09 and
-$150.04 on different cards through the same devices. A per-transaction model sees three ordinary
-purchases; the graph sees one operator.
+The pattern classifier is measured separately against every confirmed-fraud closed case: **96.2%
+agreement with the bank's analysts on 4,665 cases**. It is strong on the four common patterns and
+genuinely weak on two — card testing (recall 0.062) and undocumented patterns — and the interface
+shows both rather than hiding them.
 
-## The dashboard
+It also runs unprompted. Pointed at November and December with no alerts at all, it raised 25 cases
+of its own — 13 from ring devices, 12 from transactions our model scored high while the bank's legacy
+score stayed low. It called fraud in 14 of them, worth $3,900 of exposure, filed 13 reports, and left
+the other 11 `uncertain` for a human rather than guessing. The bank had scored 19 of the 25 below
+0.30. Three were charges of $149.99, $150.09 and $150.04 on different cards through the same devices:
+a per-transaction model sees three ordinary purchases, and the graph sees one operator.
 
-The interface is built around uncertainty rather than a verdict badge. The probability sits on the
-policy's own scale, with the thresholds that actually change what the bank may do (0.15 close, 0.30
-open a case, 0.70 block on a single signal, 0.85 decisive) marked on it, and an arrow from the
-initial estimate to the final one so you can see what the evidence request changed. Below it, the
-thread: every graph query, judgement and decision in order. Beside it, the evidence graph, and the
-approvals queue, where an L1 team lead can approve a card block but only an L2 fraud manager can
-approve a filing — the agent executes only what the policy lets it execute.
+## The workbench
+
+The interface is built around a single idea: **the thread is a scrubber.** Each investigation is a
+line down the left of the case file, one node per step. Arrow keys walk it backwards, and the whole
+case file rewinds with it — the evidence graph shows only the entities known by then, the belief
+scale shows where belief stood, the evidence digest swaps to the tool that ran, and the action plan
+shows the plan as of then. One control drives five views, which means the story can be told in one
+continuous move instead of a tour of tabs.
+
+Two details matter more than they look. The belief scale draws an explicit **"no estimate yet"**
+region, because belief is genuinely known at only three points and drawing a smooth curve between
+them would be inventing data. And because the ledger arithmetic is deterministic, **any line can be
+struck out** and the probability *and the recommended action* recompute live, through the same
+functions the agent used — explainability with no model call and nothing to drift.
+
+Orange means fraud, and nothing else: not "selected", not "primary button", not "a series in a
+chart". If everything can be orange, orange says nothing. Uncertain gets no hue at all.
 
 ## Choosing the model by measuring it
 
-The obvious choice was the Pro tier. The backtest disagreed. Replaying 28 closed cases, Gemini 3.8
-Flash with thinking turned up got 26 right against Pro 3.1's 23, with far better calibration (Brier
-0.005 against 0.117) and — the part that matters for a bank — no cleared customer accused of fraud,
-where Pro produced two at probability 0.95 or above. Raising Pro's thinking level changed nothing.
-The newer, cheaper, faster generation simply reasoned better about this evidence, and we would not
-have known without an exam we could run ourselves.
+Replaying closed cases, Gemini 3.8 Flash with thinking turned up beat Pro 3.1 — 26 right against 23,
+with better calibration and no cleared customer accused of fraud, where Pro produced two at 0.95 or
+above. The newer, cheaper, faster generation simply reasoned better about this evidence.
+
+That comparison ran on the flawed harness described above, so we are reporting it as unverified
+rather than quietly leaving it in the results table. It is the honest consequence of finding a broken
+exam: everything measured with it has to be re-earned.
 
 ## What we would do with more time
 
-- **Card testing** is detected by the policy's R5 sequence, but the labelled card-testing episodes
-  in the closed cases list only the fraudulent transactions, so the classifier recognises 1 in 16.
-- **The customer simulator is a single rule.** A stronger design would model reply latency and
-  partial recall, and would exercise rule R4 (no reply within 24 hours), which our agent never hits.
-- **Uncertainty is underused.** `uncertain` is a valid verdict that earns full credit on cases
-  designed to be ambiguous, and our agent almost always commits.
+- **Card testing** is detected by the policy's R5 sequence, but the labelled card-testing episodes in
+  the closed cases list only the fraudulent transactions, so the classifier recognises 1 in 16.
+- **The customer simulator is still a single rule.** Now that it is honest about carrying no
+  information, the next step is to make it genuinely informative — reply latency, partial recall, and
+  rule R4's no-reply-within-24-hours path, which our agent still never hits.
+- **The model judges its own evidence strength**, and it is generous: across the backtest it called
+  84 findings "strong" and 19 "decisive". Tempering corrects the aggregate, but calibrating the
+  strength labels themselves against outcomes would be better than correcting them afterwards.
 - **Monitoring is a batch script.** The pieces are there for it to run continuously against the
   risk-score stream instead.
 
 ## Stack
 
-TigerGraph Savanna (free tier, TG-00) · GSQL with 19 installed queries and connected-components ring
-detection · TigerVector for GraphRAG · the official `tigergraph-mcp` server · LangGraph · Gemini ·
-LightGBM · FastAPI and React.
+TigerGraph Savanna (free tier, TG-00) · GSQL with 21 installed queries, connected-components ring
+detection and the GDS library's `tg_louvain` for communities · TigerVector for GraphRAG · the
+official `tigergraph-mcp` server · LangGraph · Gemini · LightGBM · FastAPI and React.
 
 Code: https://github.com/KunalSewal/redthread

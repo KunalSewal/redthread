@@ -18,7 +18,7 @@ case_pack / live alert
  tigergraph-mcp ──► TigerGraph Savanna   policy engine, exposure,      reasoning, tool choice,
    installed GSQL queries,               routes, ID validation,        synthesis, SAR narrative
    vectorSearch (GraphRAG),              answer schema
-   graph algorithms (WCC, Jaccard)
+   graph algorithms (ring_wcc, tg_louvain)
          ▲
          │ scripts/prepare_data.py → scripts/load_graph.py → scripts/install_queries.py
      data/*.csv
@@ -42,10 +42,13 @@ case_pack / live alert
 2b. [x] Transaction fraud model trained on closed cases (AUC 0.968 on October holdout); scores in graph.
 3. [x] Policy engine + answer schema + validator. Tests.
 4. [x] Hand investigation to design queries (findings in `context/data-dictionary.md`).
-5. [x] GSQL schema, loading jobs, 17 installed queries, ring detection (WCC over suspicious device use).
+5. [x] GSQL schema, loading jobs, 21 installed queries, ring detection (our own connected-components
+   pass over suspicious device use) plus TigerGraph's GDS `tg_louvain` for communities.
 6. [x] Graph loaded and verified; 464 doc chunks + 5,565 closed-case embeddings in TigerGraph vectors.
 7. [x] Agent (LangGraph + MCP + Gemini), case memory write-back.
-8. [x] 20 cases run, validated, audited; accuracy measured by backtest (24/24 verdicts, Brier 0.005).
+8. [x] 20 cases run, validated, audited. The backtest that produced "24/24 verdicts, Brier
+   0.005" was broken: it set the trigger from the outcome, so the alert type was the answer.
+   See `context/decisions.md` (2026-09-20). Current numbers come from `runs/backtest_final.json`.
 9. [x] Monitoring: 6 self-raised alerts in `cases_extra/`, all confirmed fraud.
 10. [x] UI: FastAPI + React dashboard with live investigations and approvals.
 11. [ ] Demo video (script ready), blog post (written), social post (drafted) — owner to record/publish.
