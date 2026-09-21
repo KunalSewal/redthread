@@ -114,6 +114,10 @@ class Investigation:
         ring_id = (device or {}).get("ring_id", -1)
         if ring_id is not None and ring_id >= 0:
             await self._collect(state, "ring", t.ring(ring_id, flagged["ts"]))
+        else:
+            # No ring on the device. Louvain still places the card in a community, which is how a
+            # card the connected-components pass misses can still show a bad neighbourhood.
+            await self._collect(state, "community", t.community(a["card_id"], flagged["ts"]))
         return state
 
     async def investigate(self, state: CaseState) -> CaseState:
@@ -146,6 +150,7 @@ class Investigation:
             "holder_baseline": lambda: t.holder_baseline(args["holder_id"], flagged["tx_id"]),
             "device_check": lambda: t.device_check(args["device_id"], flagged["ts"], int(args.get("days", 30))),
             "ring": lambda: t.ring(int(args["ring_id"]), flagged["ts"]),
+            "community": lambda: t.community(args["card_id"], flagged["ts"]),
             "similar_cases": lambda: t.similar_cases(args["description"]),
             "policy": lambda: t.policy(args["question"]),
         }
@@ -171,9 +176,16 @@ class Investigation:
     def _weigh_evidence(self, state: CaseState, a: LlmAssessment) -> Belief:
         """The probability is computed from the judged evidence, never asserted by the model."""
         flagged = state["evidence"]["alert_context"]["flagged_txn"]
-        judged = [Judged(basis=e.basis, direction=e.direction, strength=e.strength, claim=e.claim)
+        judged = [Judged(basis=e.basis, direction=e.direction, strength=e.strength, claim=e.claim,
+                         entities=_claim_entities(e))
                   for e in a.evidence]
-        return assess(state["alert"]["trigger_type"], flagged.get("model_score"), judged)
+        # The card, holder and transaction under investigation appear in nearly every claim, so they
+        # must not make two findings look like one correlated source.
+        subject = frozenset(str(x) for x in (
+            state["alert"].get("card_id"), state["alert"].get("customer_id"),
+            state["alert"].get("flagged_txn_id"), flagged.get("tx_id"), flagged.get("holder_id"),
+            flagged.get("card_id")) if x)
+        return assess(state["alert"]["trigger_type"], flagged.get("model_score"), judged, subject)
 
     def _validate(self, state: CaseState, a: LlmAssessment) -> LlmAssessment:
         """Keep only IDs the tools actually returned; make the episode consistent with the verdict."""
@@ -271,16 +283,23 @@ class Investigation:
                               for r in re.findall(r"\b(R\d{1,2}|3[ab])\b", item["reason"]))
         grounded = []
         for rule in list(rules)[:4]:
-            digest = await self._collect(state, f"policy_rule:{rule}", self.tools.policy(_rule_query(rule), k=3))
-            if not digest:
+            passage = await self.tools.policy_rule(rule)
+            if not passage:
                 continue
-            passage = next((p for p in digest["passages"] if _matches_rule(p["section"], rule)), None)
-            if passage:
-                grounded.append({"claim": f"{passage['section']}: {passage['text'][:400]}",
-                                 "source": "document", "ref": digest["ref"], "entity_ids": []})
+            state.setdefault("evidence", {})[f"policy_rule:{rule}"] = {
+                "ref": passage["ref"], "passages": [passage]}
+            self._event(state, "evidence", passage["ref"])
+            grounded.append({"claim": f"{passage['section']}: {passage['text'][:400]}",
+                             "source": "document", "ref": passage["ref"], "entity_ids": []})
+        redflag = await self._collect(state, "regulatory_redflags",
+                                      self.tools.policy(_redflag_query(state), k=2, authority="regulator"))
+        if redflag and redflag["passages"]:
+            best = redflag["passages"][0]
+            grounded.append({"claim": f"Matches published guidance — {best['section']}: {best['text'][:400]}",
+                             "source": "external", "ref": redflag["ref"], "entity_ids": []})
         state["policy_evidence"] = grounded
         if grounded:
-            self._event(state, "evidence", f"Grounded {len(grounded)} cited rule(s) in the policy text")
+            self._event(state, "evidence", f"Grounded {len(grounded)} citation(s) in policy and regulatory text")
         return state
 
     async def decide_initial(self, state: CaseState) -> CaseState:
@@ -311,7 +330,11 @@ class Investigation:
         p = min(max(reply["posterior"], P_FLOOR), 1 - P_FLOOR)
         a["probability"] = p
         a["verdict"] = "fraud" if p >= STOP_HIGH else "legitimate" if p <= STOP_LOW else "uncertain"
-        a["independent_evidence"] = a["independent_evidence"] + 1
+        # Only a reply that carried information counts as another independent signal. An assumed
+        # reply, inferred from the evidence we already had, is not a second opinion — and policy
+        # reads this count (R1, and the stopping rule).
+        if reply.get("informative"):
+            a["independent_evidence"] = a["independent_evidence"] + 1
         if a["verdict"] == "legitimate":
             a.update(exposure_usd=0.0, pattern="none", shared_origin=False, linked_to_other_fraud=False,
                      coordinated_undocumented=False, connected_cards=[])
@@ -380,7 +403,10 @@ class Investigation:
         la, led = self._final_llm_view(state), self.tools.ledger
         final_actions = [r["action"] for r in state["final"]]
         reply = state.get("reply")
-        evidence = [e for e in la["evidence"]]
+        # The answer format in data/README.md fixes four fields per evidence object. direction,
+        # strength and basis drive the belief ledger and stay in the trace and the UI; emitting them
+        # here would deviate from the graded contract.
+        evidence = [{k: e[k] for k in ("claim", "source", "ref", "entity_ids")} for e in la["evidence"]]
         if alert["trigger_type"] == "customer_report":
             evidence.insert(0, {"claim": f"Customer reported: {alert['trigger_text']}", "source": "customer",
                                 "ref": "trigger:customer_report", "entity_ids": [str(alert["flagged_txn_id"])]})
@@ -474,12 +500,11 @@ def _needs_resolving(state: CaseState) -> str:
     return "resolve_uncertainty" if unresolved and not state.get("resolve_rounds") else "decide_initial"
 
 
-def _rule_query(rule: str) -> str:
-    return f"policy rule {rule}" if rule.startswith("R") else f"policy section {rule} case report"
-
-
-def _matches_rule(section: str, rule: str) -> bool:
-    return section.lower().startswith((f"rule {rule.lower()}:", f"section {rule.lower()}."))
+def _redflag_query(state: CaseState) -> str:
+    """What to ask the regulatory corpus: the pattern and the facts that define this case."""
+    a = state["llm_assessment"]
+    signals = [k for k, v in a["signals"].items() if v is True]
+    return f"red flags for {a['pattern'].replace('_', ' ')}: {', '.join(signals[:4]) or a['uncertainty'][:120]}"
 
 
 def _belief_dump(belief: Belief) -> dict:
@@ -487,9 +512,12 @@ def _belief_dump(belief: Belief) -> dict:
     return {
         "prior": belief.prior, "prior_reason": belief.prior_reason, "posterior": belief.posterior,
         "verdict": belief.verdict, "independent_evidence": belief.independent_evidence,
-        "explanation": belief.explain(),
+        "explanation": belief.explain(), "subject": sorted(belief.subject),
+        # entities and discounted are carried so the dashboard can recompute the posterior when a
+        # line is struck out, rather than approximating it.
         "ledger": [{"basis": i.basis, "direction": i.direction, "strength": i.strength, "claim": i.claim,
-                    "counted": i.counted, "lr": round(i.lr_applied, 3)} for i in belief.ledger],
+                    "counted": i.counted, "lr": round(i.lr_applied, 3), "discounted": i.discounted,
+                    "entities": list(i.entities)} for i in belief.ledger],
     }
 
 
@@ -563,6 +591,22 @@ def _describe(alert: dict, flagged: dict, device: dict | None) -> str:
     return "; ".join(parts)
 
 
+ID_IN_TEXT = re.compile(r"\b(?:D\d{4,}|C\d{4,}-K\d|CC-\d{3,}|CASE-[A-Za-z0-9-]+|\d{6,})\b")
+
+
+def _claim_entities(e) -> tuple[str, ...]:
+    """Every entity a claim rests on, from its declared IDs and from the claim text.
+
+    The model reliably lists the cards and transactions but often omits the device the claim is
+    actually about, which is exactly the entity that makes two findings correlated. Reading the IDs
+    out of the text as well keeps that detection deterministic rather than trusting the model to
+    report its own dependencies.
+    """
+    ids = {str(x) for x in e.entity_ids}
+    ids |= set(ID_IN_TEXT.findall(e.claim or ""))
+    return tuple(sorted(ids))
+
+
 def _decl(name: str, description: str, properties: dict, required: list[str]) -> types.FunctionDeclaration:
     return types.FunctionDeclaration(name=name, description=description, parameters_json_schema={
         "type": "object", "properties": properties, "required": required})
@@ -578,6 +622,9 @@ FOLLOW_UP_TOOLS = [
           {"device_id": {"type": "string"}, "days": {"type": "integer"}}, ["device_id"]),
     _decl("ring", "Members, devices and fraud history of a ring found by connected-components analysis.",
           {"ring_id": {"type": "integer"}}, ["ring_id"]),
+    _decl("community", "The Louvain community a card belongs to and its fraud rate against the base rate. "
+          "Use when you want the wider neighbourhood, especially where no ring was found.",
+          {"card_id": {"type": "string"}}, ["card_id"]),
     _decl("similar_cases", "Vector search over closed and prior agent cases, then graph traversal to devices.",
           {"description": {"type": "string"}}, ["description"]),
     _decl("policy", "Search the fraud policy, pattern definitions and regulatory guidance.",

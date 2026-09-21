@@ -2,7 +2,7 @@
 
 from types import SimpleNamespace
 
-from redthread.agent.graph import _linking_devices, _matches_rule, _needs_resolving, _with_testing_sequence
+from redthread.agent.graph import _linking_devices, _needs_resolving, _with_testing_sequence
 
 
 def ledger(tx_ids):
@@ -54,10 +54,3 @@ def test_uncertain_belief_is_resolved_once():
     assert _needs_resolving({"belief": {"posterior": 0.5}, "resolve_rounds": 1}) == "decide_initial"
     assert _needs_resolving({"belief": {"posterior": 0.93}}) == "decide_initial"
     assert _needs_resolving({"belief": {"posterior": 0.05}}) == "decide_initial"
-
-
-def test_rule_passages_are_matched_to_the_rule_cited():
-    assert _matches_rule("Rule R6: Shared origin", "R6")
-    assert _matches_rule("Section 3a. A case is not a report", "3a")
-    assert not _matches_rule("Rule R1: Verify before you block", "R6")
-    assert not _matches_rule("Known pattern 3: Card-not-present fraud from a new device", "R3")

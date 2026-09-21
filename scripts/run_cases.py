@@ -54,7 +54,7 @@ async def main(ids: list[str]) -> int:
             (paths.CASES_OUT / f"{alert['case_id']}.json").write_text(json.dumps(answer, indent=2), encoding="utf-8")
             trace = {k: state.get(k) for k in ("alert", "events", "evidence", "llm_assessment", "belief",
                                                "assessment", "initial", "request", "reply", "final_assessment",
-                                               "final", "report")}
+                                               "final", "report", "policy_evidence")}
             (TRACES / f"{alert['case_id']}.trace.json").write_text(json.dumps(trace, indent=1, default=str),
                                                                      encoding="utf-8")
             c = answer["case"]
