@@ -1,0 +1,196 @@
+{
+  "case_id": "MON-009",
+  "case": {
+    "status": "escalated",
+    "verdict": "uncertain",
+    "fraud_probability": 0.32,
+    "pattern": "undocumented",
+    "pattern_description": "A coordinated multi-card fraud syndicate uses a specific Samsung SM-G935F Android device behind an anonymous proxy to perform unauthorized card-not-present online purchases across newly targeted accounts. The actors evade automated model detection by keeping individual transaction amounts moderate and transaction counts low per card. This exact modus operandi was confirmed as fraudulent in closed cases CC-2649, CC-2971, CC-2985, and CC-3035.",
+    "affected_txn_ids": [
+      "3461032"
+    ],
+    "first_suspicious_txn_id": "3461032",
+    "connected_card_ids": [
+      "C01996-K2",
+      "C04108-K2",
+      "C10326-K1",
+      "C10193-K2",
+      "C01289-K1",
+      "C04274-K1",
+      "C02975-K1",
+      "C13487-K1",
+      "C12796-K1",
+      "C02910-K1",
+      "C09975-K1",
+      "C11670-K2"
+    ],
+    "connected_device_profiles": [
+      "SM-G935F Build/NRD90M | Android 7.0 | chrome 62.0 for android | 1920x1080"
+    ],
+    "exposure_usd": 129.94,
+    "evidence": [
+      {
+        "claim": "Transaction 3461032 was initiated using device D004630, which has a specific Samsung SM-G935F Android profile, was marked New to the account, and operated behind an anonymous proxy (IP_PROXY:ANONYMOUS).",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3461032)",
+        "entity_ids": [
+          "3461032",
+          "C08168-K1",
+          "C08168"
+        ]
+      },
+      {
+        "claim": "Device D004630 belongs to fraud ring 36700632 and was used across 13 distinct cards in the active window (2016-10-16 to 2016-11-18), with all 13 cards appearing as a new device behind an anonymous proxy, including ring card C02975-K1 and active investigation card C10326-K1.",
+        "source": "graph",
+        "ref": "query:device_neighbors(device=D004630, 2016-10-16..2016-11-18)",
+        "entity_ids": [
+          "C08168-K1",
+          "C01996-K2",
+          "C04108-K2",
+          "C10326-K1",
+          "C02975-K1"
+        ]
+      },
+      {
+        "claim": "Device D004630 is linked to four prior confirmed-fraud closed cases (CC-2649, CC-2971, CC-2985, CC-3035), where cardholders reported unauthorized online purchases originating from this exact device profile behind an anonymous proxy under an undocumented pattern.",
+        "source": "graph",
+        "ref": "query:linked_cases(tx=3461032)",
+        "entity_ids": [
+          "CC-2649",
+          "CC-2971",
+          "CC-2985",
+          "CC-3035",
+          "C08168-K1"
+        ]
+      },
+      {
+        "claim": "The transaction was executed under a holder anchor with 0 prior transactions, offering no baseline of legitimate recurring or historical usage to explain the activity.",
+        "source": "graph",
+        "ref": "query:holder_history(holder=C08168-K1|NA|136, before=2016-11-15)",
+        "entity_ids": [
+          "C08168-K1"
+        ]
+      },
+      {
+        "claim": "Transaction 3461032 produced an exceptionally low automated model score of 0.002 (historical fraud rate 0.006) and legacy risk score of 0.01, failing to trigger standard automated queuing due to the model blind spot regarding cross-card device sharing.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3461032)",
+        "entity_ids": [
+          "3461032",
+          "C08168-K1"
+        ]
+      },
+      {
+        "claim": "Section 3a. A case is not a report: Section 3a. A case is not a report. Two different things, and the agent produces both. **A case** (`CREATE_CASE`) is the bank's internal record of an investigation. Open one whenever fraud probability reaches 0.30, whenever you request evidence, or whenever a customer disputes a charge. A case can be closed as fraud or as legitimate. It can be updated when new evidence arrives. It should be writte",
+        "source": "document",
+        "ref": "query:policy_sections(section=Section 3a. A case is not a report)",
+        "entity_ids": []
+      },
+      {
+        "claim": "Rule R9: Undocumented patterns: Rule R9: Undocumented patterns. When activity fits none of the known patterns but the evidence shows coordinated or repeated abuse across customers, recommend `CREATE_CASE`, `FILE_REPORT`, and `ESCALATE_TO_ANALYST`, and describe the pattern in your own words. Do not force it into a known category.",
+        "source": "document",
+        "ref": "query:policy_sections(section=Rule R9: Undocumented patterns)",
+        "entity_ids": []
+      },
+      {
+        "claim": "Rule R6: Shared origin: Rule R6: Shared origin. When several cards show fraud from the same device profile, the same billing region, or the same recipient email in one window, name the shared element, recommend `CREATE_CASE` and `FILE_REPORT`, and `MONITOR_CONNECTED_CARDS` for every card that shares it.",
+        "source": "document",
+        "ref": "query:policy_sections(section=Rule R6: Shared origin)",
+        "entity_ids": []
+      },
+      {
+        "claim": "Matches published guidance \u2014 FFIEC: Money Laundering and Terrorist Financing Red Flags (part 1): \"FFIEC BSA/AML Appendices - Appendix F \u2013 Money Laundering and Terrorist Financing Red Flags JavaScript must be enabled in your browser in order to use some functions. BSA/AML Manual BSA/AML Manual Appendices Appendix F \u2013 Money Laundering and Terrorist Financing Red Flags Appendices APPENDIX F: MONEY LAUNDERING AND TERRORIST FINANCING \"\"RED FLAGS\"\" The following are examples of potentially suspicio",
+        "source": "external",
+        "ref": "query:policy_search(\"red flags for undocumented: shared_origin, linked_to_other_f\", regulator)",
+        "entity_ids": []
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-2649",
+      "CC-2971",
+      "CC-2985",
+      "CC-3035"
+    ],
+    "summary": "Transaction 3461032 ($129.94) on card C08168-K1 was flagged by risk monitoring due to the use of device D004630 from fraud ring 36700632, despite an automated model score of 0.002. Graph investigation revealed that device D004630, a Samsung SM-G935F operating behind an anonymous proxy, is new to this account and connected to 12 other cards in the active monitoring window. Furthermore, device D004630 was directly implicated in four prior confirmed-fraud closed cases (CC-2649, CC-2971, CC-2985, and CC-3035) involving unauthorized online charges. Based on decisive cross-card ring links and verified prior fraud history, the alert was escalated for formal case creation, SAR reporting, analyst review, and proactive monitoring of connected cards under an undocumented fraud pattern.",
+    "written_to_graph": true,
+    "graph_case_id": "CASE-MON-009"
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "3a: fraud probability at or above 0.30; R9: coordinated abuse across customers fitting no known pattern; R6: several cards show fraud from device:D004630"
+      },
+      {
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "R9; R6: shared origin device:D004630"
+      },
+      {
+        "action": "MONITOR_CONNECTED_CARDS",
+        "route": "auto",
+        "reason": "R6: 12 connected card(s) share the same origin"
+      },
+      {
+        "action": "ESCALATE_TO_ANALYST",
+        "route": "auto",
+        "reason": "R9"
+      }
+    ],
+    "final": [
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "3a: fraud probability at or above 0.30; R9: coordinated abuse across customers fitting no known pattern; R6: several cards show fraud from device:D004630"
+      },
+      {
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "R9; R6: shared origin device:D004630"
+      },
+      {
+        "action": "MONITOR_CONNECTED_CARDS",
+        "route": "auto",
+        "reason": "R6: 12 connected card(s) share the same origin"
+      },
+      {
+        "action": "ESCALATE_TO_ANALYST",
+        "route": "auto",
+        "reason": "R9"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": true,
+    "reason": "R9; R6: shared origin device:D004630",
+    "narrative": "This Suspicious Activity Report details suspected coordinated card-not-present fraud involving customer C08168 and payment card C08168-K1. On November 15, 2016 at 22:37:00 UTC, an unauthorized online transaction of $129.94 (transaction ID 3461032) was initiated on card C08168-K1. The transaction was conducted through an online channel using device D004630, identified as a Samsung SM-G935F operating Android 7.0 with Chrome 62.0. Device D004630 connected through an anonymous proxy (IP_PROXY:ANONYMOUS) and was flagged as new to the cardholder account. Graph analytics established that device D004630 is a central component of organized fraud ring 36700632. Between October 16, 2016 and November 18, 2016, device D004630 was utilized across 12 additional cards, including C01996-K2, C04108-K2, C10326-K1, C10193-K2, C01289-K1, C04274-K1, C02975-K1, C13487-K1, C12796-K1, C02910-K1, C09975-K1, and C11670-K2, consistently appearing as a new device behind an anonymous proxy. Furthermore, device D004630 is tied to four prior confirmed-fraud cases (CC-2649, CC-2971, CC-2985, and CC-3035) involving unauthorized online purchases. Total suspicious activity identified on card C08168-K1 in this episode totals $129.94. The financial institution has escalated the matter to senior fraud analysts, filed this regulatory narrative, and placed all connected cards on enhanced monitoring.",
+    "subjects": [
+      "C08168",
+      "C08168-K1",
+      "C01996-K2",
+      "C04108-K2",
+      "C10326-K1",
+      "C10193-K2",
+      "C01289-K1",
+      "C04274-K1",
+      "C02975-K1",
+      "C13487-K1",
+      "C12796-K1",
+      "C02910-K1",
+      "C09975-K1",
+      "C11670-K2"
+    ],
+    "total_amount_usd": 129.94,
+    "activity_dates": [
+      "2016-11-15",
+      "2016-11-15"
+    ]
+  },
+  "stop_reason": "The investigation ended pursuant to Policy Section 6 because two independent incriminating bases\u2014decisive cross-card links to fraud ring 36700632 across 12 cards and strong links to four confirmed-fraud closed cases\u2014established the coordinated fraud pattern, and further investigation would not alter the required actions.",
+  "tool_calls": 19,
+  "tokens": 203361,
+  "latency_s": 120.4
+}

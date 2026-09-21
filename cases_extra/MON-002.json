@@ -3,98 +3,162 @@
   "case": {
     "status": "closed_fraud",
     "verdict": "fraud",
-    "fraud_probability": 0.95,
-    "pattern": "card_not_present_new_device",
+    "fraud_probability": 0.97,
+    "pattern": "card_not_present_fraud",
     "pattern_description": "",
     "affected_txn_ids": [
-      "3442910"
+      "3441648"
     ],
-    "first_suspicious_txn_id": "3442910",
+    "first_suspicious_txn_id": "3441648",
     "connected_card_ids": [
-      "C01629-K1",
-      "C07212-K2"
+      "C02716-K2",
+      "C03237-K1",
+      "C04661-K1",
+      "C06147-K2",
+      "C06374-K1"
     ],
     "connected_device_profiles": [
-      "SM-J327T1 Build/NRD90M | Android 7.0 | chrome 65.0 for android | 1280x720"
+      "iOS Device | iOS 11.2.5 | mobile safari generic | 2436x1125"
     ],
-    "exposure_usd": 150.09,
+    "exposure_usd": 49.91,
     "evidence": [
       {
-        "claim": "Flagged transaction 3442910 is an online purchase of $150.09 for product H using anonymous.com emails, marked with device status New, with model score 0.729 (historical fraud rate 77.96%) and risk score 0.94.",
+        "claim": "The second-generation model scored transaction 3441648 at 0.992, with an empirical historical fraud rate of 0.921 for past transactions with similar scores.",
         "source": "graph",
-        "ref": "query:alert_context(tx=3442910)",
+        "ref": "query:alert_context(tx=3441648)",
         "entity_ids": [
-          "3442910",
-          "C11309-K1",
-          "C11309"
+          "3441648"
         ]
       },
       {
-        "claim": "Device D007351 with specific profile SM-J327T1 Build/NRD90M on chrome 65.0 for android is linked to prior confirmed fraud cases CC-5527 on card C10979-K1 ($150.05) and CC-5533 on card C07247-K1 ($149.99).",
+        "claim": "The legacy risk score for transaction 3441648 was 0.14, below the alerting threshold.",
         "source": "graph",
-        "ref": "query:device_neighbors(device=D007351, 2016-10-10..2016-11-12)",
+        "ref": "query:alert_context(tx=3441648)",
         "entity_ids": [
-          "C10979-K1",
-          "C07247-K1",
-          "CC-5527",
-          "CC-5533"
+          "3441648"
         ]
       },
       {
-        "claim": "Device D007351 was used in a concurrent shared-origin burst across 3 cards in the +/-7 day window with 100% of transactions scoring above 0.5, generating a lift of 48.43 vs baseline.",
+        "claim": "Card C09530-K1 has 149 of 155 prior transactions in-person and 149 of 155 in product category W, whereas transaction 3441648 is an unusual online purchase of product H for a holder with no prior baseline.",
         "source": "graph",
-        "ref": "query:shared_origin(tx=3442910, window=+/-7d)",
+        "ref": "query:alert_context(tx=3441648)",
         "entity_ids": [
-          "3442910",
-          "C01629-K1",
-          "C07212-K2",
-          "C11309-K1"
+          "3441648",
+          "C09530-K1"
         ]
       },
       {
-        "claim": "Card C01629-K1 experienced transaction 3440243 on 2016-11-08 02:34:47 for $150.06 (product H, online) from device D007351 with model score 0.989 using anonymous.com emails.",
+        "claim": "Holder C09530-K1|264|129 has zero prior transactions in confirmed fraud cases.",
         "source": "graph",
-        "ref": "query:card_window(card=C01629-K1, 2016-11-07..2016-11-09)",
+        "ref": "query:holder_history(holder=C09530-K1|264|129, before=2016-11-08)",
         "entity_ids": [
-          "C01629-K1",
-          "3440243"
+          "C09530-K1"
         ]
       },
       {
-        "claim": "Card C07212-K2 experienced transaction 3442995 on 2016-11-09 02:28:40 for $150.04 (product H, online) from device D007351 (New) with model score 0.900 using anonymous.com emails.",
+        "claim": "Device D003615 has a generic profile ('iOS Device | iOS 11.2.5 | mobile safari generic | 2436x1125') shared across 85 cards all-time with ring_id -1.",
         "source": "graph",
-        "ref": "query:card_window(card=C07212-K2, 2016-11-08..2016-11-10)",
+        "ref": "query:device_neighbors(device=D003615, 2016-10-09..2016-11-11)",
         "entity_ids": [
-          "C07212-K2",
-          "3442995"
+          "3441648"
         ]
       },
       {
-        "claim": "Holder baseline for C11309-K1 in region 330 shows 0 prior transactions and no established recurring pattern.",
+        "claim": "In the 7-day window, device D003615 was used across 8 cards where 6 distinct cards showed transactions with model scores over 0.5, yielding a lift of 21.19 vs baseline.",
         "source": "graph",
-        "ref": "query:holder_history(holder=C11309-K1|330|130, before=2016-11-09)",
+        "ref": "query:shared_origin(tx=3441648, window=+/-7d)",
         "entity_ids": [
-          "C11309-K1"
+          "3441648",
+          "C02716-K2",
+          "C03237-K1",
+          "C04661-K1",
+          "C06147-K2",
+          "C06374-K1",
+          "C09530-K1"
         ]
       },
       {
-        "claim": "Card C11309-K1 has 20 prior confirmed fraud closed cases, including CC-5221 ($150.05) and CC-5105 ($35.06) classified as card_not_present_new_device.",
+        "claim": "Card C09530-K1 belongs to community 78643451, which has a fraud rate of 0.077 and a lift of 0.8 versus the all-cards base rate of 0.101.",
         "source": "graph",
-        "ref": "query:linked_cases(tx=3442910)",
+        "ref": "query:community_profile(card=C09530-K1)",
         "entity_ids": [
-          "C11309-K1",
-          "CC-5221",
-          "CC-5105"
+          "C09530-K1"
         ]
+      },
+      {
+        "claim": "Device D003615 is tied to 12 prior closed cases confirmed as fraud (including CC-5231, CC-3893, CC-3725, CC-3696) and only 1 cleared case (CC-3635).",
+        "source": "graph",
+        "ref": "query:linked_cases(tx=3441648)",
+        "entity_ids": [
+          "3441648",
+          "CC-5231",
+          "CC-3893",
+          "CC-3725",
+          "CC-3696",
+          "CC-3607",
+          "CC-3546",
+          "CC-3421",
+          "CC-3419",
+          "CC-3196",
+          "CC-3156",
+          "CC-3068",
+          "CC-2929",
+          "CC-3635"
+        ]
+      },
+      {
+        "claim": "Transaction 3441648 for $49.91 matches a coordinated cluster of ~$50 online charges for product H on device D003615 across multiple cards, including transaction 3435940 ($49.98) on card C06147-K2 and transaction 3435942 ($50.07) on card C04661-K1 executed seconds apart on 2016-11-06.",
+        "source": "graph",
+        "ref": "query:device_neighbors(device=D003615, 2016-10-09..2016-11-11)",
+        "entity_ids": [
+          "3441648",
+          "C06147-K2",
+          "C04661-K1"
+        ]
+      },
+      {
+        "claim": "Region 264 matches 10 prior transactions on card C09530-K1 and shows an un-elevated lift of 0.47 in the 7-day shared origin window.",
+        "source": "graph",
+        "ref": "query:shared_origin(tx=3441648, window=+/-7d)",
+        "entity_ids": [
+          "3441648",
+          "C09530-K1"
+        ]
+      },
+      {
+        "claim": "No customer dispute or statement was received; the investigation was initiated via automated monitoring of model scores.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3441648)",
+        "entity_ids": [
+          "3441648"
+        ]
+      },
+      {
+        "claim": "Section 3a. A case is not a report: Section 3a. A case is not a report. Two different things, and the agent produces both. **A case** (`CREATE_CASE`) is the bank's internal record of an investigation. Open one whenever fraud probability reaches 0.30, whenever you request evidence, or whenever a customer disputes a charge. A case can be closed as fraud or as legitimate. It can be updated when new evidence arrives. It should be writte",
+        "source": "document",
+        "ref": "query:policy_sections(section=Section 3a. A case is not a report)",
+        "entity_ids": []
+      },
+      {
+        "claim": "Rule R6: Shared origin: Rule R6: Shared origin. When several cards show fraud from the same device profile, the same billing region, or the same recipient email in one window, name the shared element, recommend `CREATE_CASE` and `FILE_REPORT`, and `MONITOR_CONNECTED_CARDS` for every card that shares it.",
+        "source": "document",
+        "ref": "query:policy_sections(section=Rule R6: Shared origin)",
+        "entity_ids": []
+      },
+      {
+        "claim": "Matches published guidance \u2014 FinCEN: Advisory on Imposter Scams and Money Mule Schemes (part 3): COVID-19 Imposter Scams and Money Mule Schemes Consumer frauds include imposter scams and money mule schemes, where actors deceive victims by impersonating federal government agencies, international organizations, or charities. FinCEN identified the financial red flag indicators described below to alert financial institutions to these frauds and to assist financial institutions in detecting, preve",
+        "source": "external",
+        "ref": "query:policy_search(\"red flags for card not present fraud: shared_origin, linked_\", regulator)",
+        "entity_ids": []
       }
     ],
     "similar_prior_cases": [
-      "CC-5527",
-      "CC-5533",
-      "CC-5221",
-      "CC-5105"
+      "CC-5231",
+      "CC-3725",
+      "CC-3696",
+      "CC-3893"
     ],
-    "summary": "Transaction 3442910 for $150.09 on card C11309-K1 was flagged by risk monitoring as an online purchase of product H from a new device, D007351. Device D007351 matches a specific Android profile previously confirmed in closed fraud cases CC-5527 and CC-5533. During the same 24-hour window, D007351 executed concurrent ~$150 purchases of product H using anonymous.com email addresses on cards C01629-K1 and C07212-K2. With no prior holder baseline in billing region 330 and a history of 20 confirmed fraud compromises on C11309-K1, the activity represents card-not-present fraud from a new device. The card has been blocked, linked cards placed on monitoring, and a regulatory report filed.",
+    "summary": "Automated monitoring flagged transaction 3441648 ($49.91) on card C09530-K1 after the second-generation model assigned a score of 0.992 despite a low legacy risk score of 0.14. Cardholder C09530-K1 transacts almost exclusively in person for product category W, making this online purchase of product H an abrupt departure from baseline behavior. Graph investigation revealed that transacting device D003615 is the hub of an active card-not-present fraud operation, linking eight cards within seven days with an extreme fraud lift of 21.19. Moreover, device D003615 is tied to twelve prior confirmed fraud cases and exhibited rapid-fire ~$50 purchases across multiple distinct cards. The transaction is confirmed fraudulent under the card_not_present_fraud pattern, warranting immediate card blocking and regulatory reporting.",
     "written_to_graph": true,
     "graph_case_id": "CASE-MON-002"
   },
@@ -104,66 +168,69 @@
       {
         "action": "BLOCK_CARD",
         "route": "L1",
-        "reason": "Section 6: probability 0.95 >= 0.85 on 4 independent signals"
+        "reason": "Section 6: probability 0.97 >= 0.85 on 7 independent signals"
       },
       {
         "action": "CREATE_CASE",
         "route": "auto",
-        "reason": "3a: fraud probability at or above 0.30; R6: several cards show fraud from device:D007351"
+        "reason": "3a: fraud probability at or above 0.30; R6: several cards show fraud from device:D003615"
       },
       {
         "action": "FILE_REPORT",
         "route": "L2",
-        "reason": "R6: shared origin device:D007351"
+        "reason": "R6: shared origin device:D003615"
       },
       {
         "action": "MONITOR_CONNECTED_CARDS",
         "route": "auto",
-        "reason": "R6: 2 connected card(s) share the same origin"
+        "reason": "R6: 5 connected card(s) share the same origin"
       }
     ],
     "final": [
       {
         "action": "BLOCK_CARD",
         "route": "L1",
-        "reason": "Section 6: probability 0.95 >= 0.85 on 4 independent signals"
+        "reason": "Section 6: probability 0.97 >= 0.85 on 7 independent signals"
       },
       {
         "action": "CREATE_CASE",
         "route": "auto",
-        "reason": "3a: fraud probability at or above 0.30; R6: several cards show fraud from device:D007351"
+        "reason": "3a: fraud probability at or above 0.30; R6: several cards show fraud from device:D003615"
       },
       {
         "action": "FILE_REPORT",
         "route": "L2",
-        "reason": "R6: shared origin device:D007351"
+        "reason": "R6: shared origin device:D003615"
       },
       {
         "action": "MONITOR_CONNECTED_CARDS",
         "route": "auto",
-        "reason": "R6: 2 connected card(s) share the same origin"
+        "reason": "R6: 5 connected card(s) share the same origin"
       }
     ],
     "what_changed": "nothing"
   },
   "sar": {
     "file": true,
-    "reason": "3a and R6: fraud across several cards sharing device:D007351",
-    "narrative": "This Suspicious Activity Report details unauthorized card-not-present activity involving customer C11309 and card C11309-K1. On November 9, 2016 at 01:46:20 UTC, online transaction 3442910 was initiated for $150.09 in region 330 for product H. The transaction was conducted from device D007351 (profile SM-J327T1 Build/NRD90M | Android 7.0 | chrome 65.0 for android | 1280x720) marked as New to the account, utilizing anonymous.com email addresses. Device D007351 is directly linked to confirmed fraud cases CC-5527 on card C10979-K1 and CC-5533 on card C07247-K1. Additionally, device D007351 was concurrently operated across multiple compromised accounts within 24 hours, generating transaction 3440243 ($150.06) on card C01629-K1 on November 8, 2016 and transaction 3442995 ($150.04) on card C07212-K2 on November 9, 2016. Card C11309-K1 has been compromised in 20 prior confirmed fraud cases, and the cardholder has no legitimate historical activity in region 330. Direct suspicious exposure on the subject card is $150.09, representing an active cross-card fraud pattern. Card C11309-K1 was blocked to mitigate risk, connected cards were placed under active monitoring, and this report is submitted in accordance with Bank Secrecy Act and FinCEN suspicious activity reporting standards.",
+    "reason": "3a and R6: fraud across several cards sharing device:D003615",
+    "narrative": "This Suspicious Activity Report details a coordinated card-not-present fraud scheme involving customer C09530, card C09530-K1, and device D003615. On November 8, 2016, at 18:56:15 UTC, transaction 3441648 for $49.91 was conducted online in product category H associated with billing region 264. The cardholder's baseline history consists almost entirely of in-person purchases in product category W (149 of 155 historical transactions), rendering this online transaction an abrupt departure from established activity. The purchase was executed via device D003615, identified with the profile 'iOS Device | iOS 11.2.5 | mobile safari generic | 2436x1125'. Knowledge graph analysis identified device D003615 as an active fraud vector, connecting eight cards within a seven-day window with an elevated fraud lift of 21.19. Device D003615 directly links subject card C09530-K1 to five other compromised cards, specifically C02716-K2, C03237-K1, C04661-K1, C06147-K2, and C06374-K1, each exhibiting near-identical ~$50 online purchases for product H. Indicating automated or scripted abuse, device D003615 processed transactions on cards C06147-K2 ($49.98) and C04661-K1 ($50.07) just seven seconds apart on November 6, 2016. Furthermore, device D003615 is linked to twelve confirmed fraud closed cases, including CC-5231, CC-3893, and CC-3725, with only one cleared case. Total confirmed fraudulent exposure on card C09530-K1 is $49.91. The bank has blocked card C09530-K1 to prevent further losses and initiated ongoing monitoring on all connected cards.",
     "subjects": [
-      "C11309",
-      "C11309-K1",
-      "C01629-K1",
-      "C07212-K2"
+      "C09530",
+      "C09530-K1",
+      "C02716-K2",
+      "C03237-K1",
+      "C04661-K1",
+      "C06147-K2",
+      "C06374-K1"
     ],
-    "total_amount_usd": 150.09,
+    "total_amount_usd": 49.91,
     "activity_dates": [
-      "2016-11-09",
-      "2016-11-09"
+      "2016-11-08",
+      "2016-11-08"
     ]
   },
-  "stop_reason": "The investigation concluded under Policy Section 6 because the fraud probability reached a decisive 0.95, well above the 0.85 threshold, supported by multiple independent lines of evidence including prior confirmed fraud on device D007351, concurrent multi-card exploitation, and 20 prior confirmed compromises on the card, rendering additional evidence collection unnecessary.",
-  "tool_calls": 14,
-  "tokens": 191103,
-  "latency_s": 95.9
+  "stop_reason": "The investigation ended pursuant to policy section 6 because the assessed fraud probability reached 0.97, well above the 0.85 decisive threshold, supported by multiple independent incriminating evidence bases (holder behavioral departure, cross-card device sharing with high lift, and twelve linked confirmed-fraud cases) such that further inquiry would not change the outcome.",
+  "tool_calls": 18,
+  "tokens": 244708,
+  "latency_s": 110.9
 }

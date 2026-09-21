@@ -1,0 +1,255 @@
+{
+  "case_id": "MON-018",
+  "case": {
+    "status": "escalated",
+    "verdict": "fraud",
+    "fraud_probability": 0.97,
+    "pattern": "undocumented",
+    "pattern_description": "A coordinated multi-card fraud syndicate utilizes device D000360 routed through an anonymous IP proxy (IP_PROXY:ANONYMOUS) and mail.com email addresses to conduct unauthorized online purchases across unrelated victim accounts. Each card is charged approximately $100 for product H once daily during morning hours (08:59\u201309:13 AM) to evade single-card velocity filters and legacy scoring rules. The cross-card infrastructure abuse does not conform to documented single-card typologies.",
+    "affected_txn_ids": [
+      "3491098"
+    ],
+    "first_suspicious_txn_id": "3491098",
+    "connected_card_ids": [
+      "C01155-K2",
+      "C06544-K1",
+      "C10137-K2"
+    ],
+    "connected_device_profiles": [
+      "MacOS | Mac | safari generic | 1366x768"
+    ],
+    "exposure_usd": 99.94,
+    "evidence": [
+      {
+        "claim": "The calibrated second-generation fraud model scored transaction 3491098 at 0.993, with a historical fraud rate of 0.921 (92.1% of transactions with similar scores were confirmed fraud).",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3491098)",
+        "entity_ids": [
+          "3491098",
+          "C08804-K1",
+          "C08804"
+        ]
+      },
+      {
+        "claim": "The legacy real-time risk score for transaction 3491098 was low at 0.30, which prevented an automated real-time alert.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3491098)",
+        "entity_ids": [
+          "3491098",
+          "C08804-K1",
+          "C08804"
+        ]
+      },
+      {
+        "claim": "Device D000360 was used across 4 cards in the 30-day window (C08804-K1, C01155-K2, C06544-K1, C10137-K2) behind an anonymous proxy, with 3 cards scoring over 0.5 (fraud lift of 36.33), and connected card C10137-K2 having six prior confirmed fraud cases.",
+        "source": "graph",
+        "ref": "query:device_neighbors(device=D000360, 2016-10-28..2016-11-30)",
+        "entity_ids": [
+          "3491098",
+          "C08804-K1",
+          "C01155-K2",
+          "C06544-K1",
+          "C10137-K2",
+          "3496768",
+          "3493926",
+          "3493920"
+        ]
+      },
+      {
+        "claim": "Flagged transaction 3491098 was routed through an anonymous proxy (IP_PROXY:ANONYMOUS) using device D000360.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3491098)",
+        "entity_ids": [
+          "3491098",
+          "C08804-K1"
+        ]
+      },
+      {
+        "claim": "Device D000360 has a generic profile (MacOS | Mac | safari generic | 1366x768) shared by unrelated users, has no ring membership (ring_id -1), and was marked with status Found rather than New.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3491098)",
+        "entity_ids": [
+          "3491098",
+          "C08804-K1"
+        ]
+      },
+      {
+        "claim": "Card C08804-K1 previously only had 2 in-person transactions for product W in region 343, whereas transaction 3491098 is online for product H in region 512, representing a complete channel, product, and regional divergence with zero prior baseline for this holder.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3491098)",
+        "entity_ids": [
+          "3491098",
+          "C08804-K1",
+          "C08804"
+        ]
+      },
+      {
+        "claim": "Flagged transaction 3491098 ($99.94) matches the exact amount range (~$100) and morning timing (08:59 to 09:13 AM) of transactions 3493920 ($99.97), 3493926 ($99.93), and 3496768 ($100.08) conducted across three other cards via device D000360.",
+        "source": "graph",
+        "ref": "query:device_neighbors(device=D000360, 2016-10-28..2016-11-30)",
+        "entity_ids": [
+          "3491098",
+          "3493920",
+          "3493926",
+          "3496768"
+        ]
+      },
+      {
+        "claim": "No card testing sequence or micro-authorizations under $5 preceded transaction 3491098 on card C08804-K1.",
+        "source": "graph",
+        "ref": "query:card_window(card=C08804-K1, 2016-11-17..2016-11-30)",
+        "entity_ids": [
+          "3491098",
+          "C08804-K1"
+        ]
+      },
+      {
+        "claim": "Region 512 exhibits a baseline fraud lift of 0.96 across 607 transactions in the 7-day window, showing no elevated geographic risk.",
+        "source": "graph",
+        "ref": "query:shared_origin(tx=3491098, window=+/-7d)",
+        "entity_ids": [
+          "C08804-K1"
+        ]
+      },
+      {
+        "claim": "Customer C08804 and device D000360 have zero prior closed fraud cases on record.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3491098)",
+        "entity_ids": [
+          "C08804-K1",
+          "C08804"
+        ]
+      },
+      {
+        "claim": "Prior closed cases CC-2985, CC-3035, and CC-2971 establish that coordinated online transactions across multiple cards using an anonymous proxy from a shared device profile represent confirmed undocumented fraud syndicates.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(\"mail.com IP_PROXY:ANONYMOUS D000360 product H 99.94...\", k=6)",
+        "entity_ids": [
+          "CC-2985",
+          "CC-3035",
+          "CC-2971"
+        ]
+      },
+      {
+        "claim": "The investigation was initiated through proactive model monitoring rather than a customer dispute, and no customer statement has been filed.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3491098)",
+        "entity_ids": [
+          "3491098",
+          "C08804-K1"
+        ]
+      },
+      {
+        "claim": "Section 3a. A case is not a report: Section 3a. A case is not a report. Two different things, and the agent produces both. **A case** (`CREATE_CASE`) is the bank's internal record of an investigation. Open one whenever fraud probability reaches 0.30, whenever you request evidence, or whenever a customer disputes a charge. A case can be closed as fraud or as legitimate. It can be updated when new evidence arrives. It should be writte",
+        "source": "document",
+        "ref": "query:policy_sections(section=Section 3a. A case is not a report)",
+        "entity_ids": []
+      },
+      {
+        "claim": "Rule R9: Undocumented patterns: Rule R9: Undocumented patterns. When activity fits none of the known patterns but the evidence shows coordinated or repeated abuse across customers, recommend `CREATE_CASE`, `FILE_REPORT`, and `ESCALATE_TO_ANALYST`, and describe the pattern in your own words. Do not force it into a known category.",
+        "source": "document",
+        "ref": "query:policy_sections(section=Rule R9: Undocumented patterns)",
+        "entity_ids": []
+      },
+      {
+        "claim": "Rule R6: Shared origin: Rule R6: Shared origin. When several cards show fraud from the same device profile, the same billing region, or the same recipient email in one window, name the shared element, recommend `CREATE_CASE` and `FILE_REPORT`, and `MONITOR_CONNECTED_CARDS` for every card that shares it.",
+        "source": "document",
+        "ref": "query:policy_sections(section=Rule R6: Shared origin)",
+        "entity_ids": []
+      },
+      {
+        "claim": "Matches published guidance \u2014 FFIEC: Money Laundering and Terrorist Financing Red Flags (part 1): \"FFIEC BSA/AML Appendices - Appendix F \u2013 Money Laundering and Terrorist Financing Red Flags JavaScript must be enabled in your browser in order to use some functions. BSA/AML Manual BSA/AML Manual Appendices Appendix F \u2013 Money Laundering and Terrorist Financing Red Flags Appendices APPENDIX F: MONEY LAUNDERING AND TERRORIST FINANCING \"\"RED FLAGS\"\" The following are examples of potentially suspicio",
+        "source": "external",
+        "ref": "query:policy_search(\"red flags for undocumented: shared_origin, linked_to_other_f\", regulator)",
+        "entity_ids": []
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-2985",
+      "CC-3035",
+      "CC-2971"
+    ],
+    "summary": "Proactive monitoring flagged transaction 3491098 ($99.94) on card C08804-K1 due to a calibrated second-generation model score of 0.993. Knowledge graph analysis identified device D000360 operating behind an anonymous IP proxy across four distinct card accounts, executing near-identical morning purchases of product H for approximately $100. This online transaction marks a complete departure from cardholder C08804's prior baseline of in-person purchases in region 343. Connected card C10137-K2 is linked to six confirmed fraud closed cases, indicating an organized syndicate evading single-card velocity rules. The activity is determined to be confirmed undocumented fraud with a probability of 0.97, resulting in an immediate card block and regulatory filing.",
+    "written_to_graph": false,
+    "graph_case_id": ""
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "Section 6: probability 0.97 >= 0.85 on 7 independent signals"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "3a: fraud probability at or above 0.30; R9: coordinated abuse across customers fitting no known pattern; R6: several cards show fraud from device:D000360"
+      },
+      {
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "R9; R6: shared origin device:D000360"
+      },
+      {
+        "action": "MONITOR_CONNECTED_CARDS",
+        "route": "auto",
+        "reason": "R6: 3 connected card(s) share the same origin"
+      },
+      {
+        "action": "ESCALATE_TO_ANALYST",
+        "route": "auto",
+        "reason": "R9"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "Section 6: probability 0.97 >= 0.85 on 7 independent signals"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "3a: fraud probability at or above 0.30; R9: coordinated abuse across customers fitting no known pattern; R6: several cards show fraud from device:D000360"
+      },
+      {
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "R9; R6: shared origin device:D000360"
+      },
+      {
+        "action": "MONITOR_CONNECTED_CARDS",
+        "route": "auto",
+        "reason": "R6: 3 connected card(s) share the same origin"
+      },
+      {
+        "action": "ESCALATE_TO_ANALYST",
+        "route": "auto",
+        "reason": "R9"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": true,
+    "reason": "3a and R9: coordinated activity that fits no documented pattern",
+    "narrative": "This Suspicious Activity Report details an undocumented multi-card fraud syndicate identified on account customer C08804 and card C08804-K1. On November 27, 2016, transaction 3491098 was executed online for $99.94 for product H in region 512, producing a second-generation model fraud score of 0.993. The transaction utilized device D000360 (MacOS | Mac | safari generic | 1366x768) routed through an anonymous IP proxy (IP_PROXY:ANONYMOUS) using the disposable email domain mail.com. Graph analysis revealed that device D000360 was concurrently used across three additional distinct cards\u2014C01155-K2, C06544-K1, and C10137-K2\u2014between November 27 and November 29, 2016. Each associated transaction (IDs 3493920, 3493926, and 3496768) exhibited an identical pattern of purchasing product H for approximately $100 ($99.93 to $100.08) within a narrow morning window between 08:59 and 09:13 AM. The total suspicious volume across the four compromised cards linked to device D000360 was $399.92, with $99.94 directly impacting subject card C08804-K1. This online purchase sharply diverged from customer C08804's historical spending profile, which previously consisted exclusively of in-person retail purchases for product W in region 343. Additionally, connected card C10137-K2 is associated with six prior confirmed fraud cases, substantiating coordinated syndicate abuse designed to circumvent automated single-card velocity thresholds. The bank has blocked card C08804-K1 to mitigate ongoing exposure and placed connected cards under proactive monitoring.",
+    "subjects": [
+      "C08804",
+      "C08804-K1",
+      "C01155-K2",
+      "C06544-K1",
+      "C10137-K2"
+    ],
+    "total_amount_usd": 99.94,
+    "activity_dates": [
+      "2016-11-27",
+      "2016-11-27"
+    ]
+  },
+  "stop_reason": "The investigation ended pursuant to policy section 6 because the fraud probability reached 0.97, substantially exceeding the 0.85 threshold for decisive action, supported by multiple independent evidentiary bases including calibrated model scoring, shared device infrastructure behind an anonymous proxy, and prior confirmed fraud on connected accounts.",
+  "tool_calls": 19,
+  "tokens": 190459,
+  "latency_s": 113.1
+}

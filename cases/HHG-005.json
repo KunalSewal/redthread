@@ -3,7 +3,7 @@
   "case": {
     "status": "closed_legitimate",
     "verdict": "legitimate",
-    "fraud_probability": 0.04,
+    "fraud_probability": 0.03,
     "pattern": "none",
     "pattern_description": "",
     "affected_txn_ids": [],
@@ -13,49 +13,86 @@
     "exposure_usd": 0,
     "evidence": [
       {
-        "claim": "Transaction 3523199 was flagged by a legacy risk score of 0.54, but the calibrated fraud model scored it at 0.005 with a historical fraud rate of 0.006.",
+        "claim": "The bank's calibrated second-generation model scored flagged transaction 3523199 at 0.005, reflecting an empirical historical fraud rate of only 0.006 (0.6%), despite the initial legacy risk score of 0.54.",
         "source": "graph",
         "ref": "query:alert_context(tx=3523199)",
         "entity_ids": [
           "3523199",
-          "C02923-K1",
-          "C02923"
+          "C02923-K1"
         ]
       },
       {
-        "claim": "Card C02923-K1 has 85 of 90 prior transactions in billing region 330, matching the flagged transaction, and has established history in online channel (21 transactions) and product category R (6 transactions).",
+        "claim": "Transaction 3523199 was alerted due to a legacy real-time risk score of 0.54.",
         "source": "graph",
         "ref": "query:alert_context(tx=3523199)",
+        "entity_ids": [
+          "3523199",
+          "C02923-K1"
+        ]
+      },
+      {
+        "claim": "Flagged transaction 3523199 occurred in billing region 330, matching the primary billing region where 85 of 90 historical card transactions have taken place.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3523199)",
+        "entity_ids": [
+          "3523199",
+          "C02923-K1"
+        ]
+      },
+      {
+        "claim": "Card C02923-K1 has an established history of mixed-channel use including 21 prior online transactions and 6 purchases in product category R, with regular in-person usage in region 330 before and after the alert.",
+        "source": "graph",
+        "ref": "query:card_window(card=C02923-K1, 2016-11-07..2016-12-14)",
+        "entity_ids": [
+          "3523199",
+          "C02923-K1",
+          "3509459",
+          "3532043"
+        ]
+      },
+      {
+        "claim": "The transaction amount of $100.07 is consistent with typical purchase amounts for this card (recent grocery and merchandise transactions average $116 to $141), with no bursts or card testing sequences.",
+        "source": "graph",
+        "ref": "query:card_window(card=C02923-K1, 2016-11-27..2016-12-10)",
+        "entity_ids": [
+          "3523199",
+          "C02923-K1"
+        ]
+      },
+      {
+        "claim": "Device D000178 is marked as New for this account on transaction 3523199.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3523199)",
+        "entity_ids": [
+          "3523199",
+          "C02923-K1"
+        ]
+      },
+      {
+        "claim": "Device D000178 is a generic iOS iPad profile shared across 112 cards all time with no proxy, where 4 of 5 prior closed cases were cleared (CC-0965, CC-0219, CC-0374, CC-0189).",
+        "source": "graph",
+        "ref": "query:device_neighbors(device=D000178, 2016-11-07..2016-12-10)",
+        "entity_ids": [
+          "3523199",
+          "C02923-K1",
+          "CC-0965",
+          "CC-0219",
+          "CC-0374",
+          "CC-0189"
+        ]
+      },
+      {
+        "claim": "Card C02923-K1 has no ring association (ring_id -1) and belongs to a single-card community (community 163577991) with no connections to active fraud clusters.",
+        "source": "graph",
+        "ref": "query:community_profile(card=C02923-K1)",
         "entity_ids": [
           "C02923-K1"
         ]
       },
       {
-        "claim": "Device D000178 is a generic iOS profile shared across 112 cards with no proxy and no ring association (ring_id -1), and 4 out of 5 historical cases on this device profile were cleared as false alarms (CC-0219, CC-0189, CC-0374, CC-0965).",
+        "claim": "Customer card C02923-K1 had three confirmed account takeover cases in August and September 2016 (CC-2400, CC-2717, CC-2857) resulting in block and reissue.",
         "source": "graph",
-        "ref": "query:device_neighbors(device=D000178, 2016-11-07..2016-12-10)",
-        "entity_ids": [
-          "C02923-K1",
-          "CC-0219",
-          "CC-0189",
-          "CC-0374",
-          "CC-0965"
-        ]
-      },
-      {
-        "claim": "Card window activity shows normal, steady spending with 10 in-person transactions and 1 online transaction, showing no card testing or velocity bursts, followed by legitimate in-person transaction 3532043 on 2016-12-10.",
-        "source": "graph",
-        "ref": "query:card_window(card=C02923-K1, 2016-11-23..2016-12-14)",
-        "entity_ids": [
-          "C02923-K1",
-          "3523199",
-          "3532043"
-        ]
-      },
-      {
-        "claim": "Historical confirmed fraud cases on card C02923-K1 (CC-2400, CC-2717, CC-2857) occurred in August 2016 under distinct holder IDs over three months before the alert, with no ongoing compromise.",
-        "source": "graph",
-        "ref": "query:linked_cases(tx=3523199)",
+        "ref": "query:alert_context(tx=3523199)",
         "entity_ids": [
           "C02923-K1",
           "CC-2400",
@@ -64,31 +101,28 @@
         ]
       },
       {
-        "claim": "Shared origin analysis shows no suspicious concentration: region 330 has a lift of 0.42 and recipient email domain gmail.com has low risk correlation.",
+        "claim": "The current holder anchor for transaction 3523199 has zero prior transactions in confirmed fraud cases, indicating the current account activity is uncompromised following reissuance.",
         "source": "graph",
-        "ref": "query:shared_origin(tx=3523199, window=+/-7d)",
+        "ref": "query:holder_history(holder=C02923-K1|330|158, before=2016-12-07)",
         "entity_ids": [
-          "3523199"
+          "3523199",
+          "C02923-K1"
         ]
       },
       {
-        "claim": "Similar closed cases flagged by uncorroborated risk scores (CC-4591, CC-3521) were confirmed as legitimate cardholder activity and cleared.",
-        "source": "graph",
-        "ref": "query:similar_closed_cases(\"risk score: Real-time model scored transaction 3523199 ($100...\", k=6)",
-        "entity_ids": [
-          "CC-4591",
-          "CC-3521"
-        ]
+        "claim": "Matches published guidance \u2014 FFIEC: Money Laundering and Terrorist Financing Red Flags (part 1): \"FFIEC BSA/AML Appendices - Appendix F \u2013 Money Laundering and Terrorist Financing Red Flags JavaScript must be enabled in your browser in order to use some functions. BSA/AML Manual BSA/AML Manual Appendices Appendix F \u2013 Money Laundering and Terrorist Financing Red Flags Appendices APPENDIX F: MONEY LAUNDERING AND TERRORIST FINANCING \"\"RED FLAGS\"\" The following are examples of potentially suspicio",
+        "source": "external",
+        "ref": "query:policy_search(\"red flags for none: single_signal\", regulator)",
+        "entity_ids": []
       }
     ],
     "similar_prior_cases": [
-      "CC-0219",
-      "CC-0189",
-      "CC-4591",
       "CC-3521",
+      "CC-0965",
+      "CC-0219",
       "CC-2857"
     ],
-    "summary": "Transaction 3523199 ($100.07, online) on card C02923-K1 was flagged by an uncorroborated legacy risk score of 0.54. The calibrated fraud model evaluated the transaction at 0.005 with a historical fraud rate of only 0.006. The purchase aligns with the cardholder established profile, matching primary billing region 330 (85 of 90 prior transactions) and past online spending. Device D000178 is a generic iOS profile with no proxy or fraud ring associations, and surrounding account activity shows normal spending with no testing or disputes. The alert is determined to be a false alarm and cleared as legitimate.",
+    "summary": "Transaction 3523199 ($100.07, online) on card C02923-K1 was alerted due to an elevated legacy risk score of 0.54. The bank's calibrated second-generation fraud model scored the transaction at 0.005, corresponding to an empirical historical fraud rate of 0.6%. The purchase occurred within the cardholder's primary billing region 330 and aligned with their regular transaction sizes and online purchasing patterns. Although device D000178 was recorded as new to the account, it is a generic iPad profile shared across 112 cards with no proxy use or fraud ring association. Regular in-person activity in region 330 continued uninterrupted both before and after the alert, with no customer dispute reported. The transaction was determined to be legitimate and closed.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHG-005"
   },
@@ -98,14 +132,14 @@
       {
         "action": "CLOSE_NO_FRAUD",
         "route": "auto",
-        "reason": "Section 6: probability 0.04 <= 0.15 on 3 independent signals"
+        "reason": "Section 6: probability 0.03 <= 0.15 on 6 independent signals"
       }
     ],
     "final": [
       {
         "action": "CLOSE_NO_FRAUD",
         "route": "auto",
-        "reason": "Section 6: probability 0.04 <= 0.15 on 3 independent signals"
+        "reason": "Section 6: probability 0.03 <= 0.15 on 6 independent signals"
       }
     ],
     "what_changed": "nothing"
@@ -118,8 +152,8 @@
     "total_amount_usd": 0,
     "activity_dates": []
   },
-  "stop_reason": "The investigation stopped pursuant to Policy Section 6 because the calibrated fraud probability of 0.04 is well below the 0.15 threshold, supported by multiple independent lines of evidence confirming normal cardholder activity.",
-  "tool_calls": 14,
-  "tokens": 170527,
-  "latency_s": 66.7
+  "stop_reason": "Investigation concluded under Policy Section 6 because the fraud probability of 0.03 falls below the 0.15 threshold, supported by more than two independent exculpatory lines of evidence including calibrated model scoring, regional baseline match, and ongoing normal cardholder usage.",
+  "tool_calls": 16,
+  "tokens": 186713,
+  "latency_s": 76.9
 }

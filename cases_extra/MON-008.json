@@ -1,0 +1,189 @@
+{
+  "case_id": "MON-008",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.97,
+    "pattern": "card_not_present_new_device",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3459139",
+      "3459152",
+      "3459154",
+      "3459158"
+    ],
+    "first_suspicious_txn_id": "3459139",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 600.1,
+    "evidence": [
+      {
+        "claim": "Flagged transaction 3459158 has a second-generation model score of 0.998, with a calibrated historical fraud rate of 0.921.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3459158)",
+        "entity_ids": [
+          "3459158",
+          "C01104-K2",
+          "C01104"
+        ]
+      },
+      {
+        "claim": "Legacy risk score on transaction 3459158 was 0.19, which prevented an immediate real-time alert.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3459158)",
+        "entity_ids": [
+          "3459158",
+          "C01104-K2"
+        ]
+      },
+      {
+        "claim": "Transaction 3459158 ($149.92) is part of a rapid 18-minute burst of four online purchases of product H totaling $600.10 (txns 3459139, 3459152, 3459154, 3459158 between 04:00:52 and 04:18:01), each around $150.",
+        "source": "graph",
+        "ref": "query:card_window(card=C01104-K2, 2016-11-05..2016-11-18)",
+        "entity_ids": [
+          "3459139",
+          "3459152",
+          "3459154",
+          "3459158",
+          "C01104-K2"
+        ]
+      },
+      {
+        "claim": "The four burst transactions occurred across four distinct billing regions within 18 minutes (region 184, 441, 299, and 494), indicating impossible physical velocity.",
+        "source": "graph",
+        "ref": "query:card_window(card=C01104-K2, 2016-11-05..2016-11-18)",
+        "entity_ids": [
+          "3459139",
+          "3459152",
+          "3459154",
+          "3459158",
+          "C01104-K2"
+        ]
+      },
+      {
+        "claim": "The transaction burst was initiated on device D007387, marked as New for card C01104-K2 during this episode on transaction 3459154.",
+        "source": "graph",
+        "ref": "query:card_window(card=C01104-K2, 2016-11-05..2016-11-18)",
+        "entity_ids": [
+          "3459154",
+          "3459158",
+          "C01104-K2"
+        ]
+      },
+      {
+        "claim": "Device D007387 has a generic profile (iOS Device | iOS 11.3.0 | mobile safari generic | 1334x750) shared by 127 cards all-time and is not in a fraud ring (ring_id: -1).",
+        "source": "graph",
+        "ref": "query:device_neighbors(device=D007387, 2016-10-16..2016-11-18)",
+        "entity_ids": [
+          "C01104-K2"
+        ]
+      },
+      {
+        "claim": "Card C01104-K2 has 6 confirmed fraud closed cases out of 7, including four prior card_not_present_new_device cases (CC-5037, CC-2828, CC-2375, CC-2165); CC-5037 involved an identical $149.91 online purchase from an iOS mobile safari generic profile.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3459158)",
+        "entity_ids": [
+          "CC-5037",
+          "CC-2828",
+          "CC-2375",
+          "CC-2165",
+          "C01104-K2",
+          "C01104"
+        ]
+      },
+      {
+        "claim": "Card C01104-K2 had one prior alert cleared as legitimate travel in closed case CC-0862 after a high model score of 0.94.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3459158)",
+        "entity_ids": [
+          "CC-0862",
+          "C01104-K2",
+          "C01104"
+        ]
+      },
+      {
+        "claim": "Card C01104-K2 belongs to fraud ring 40894916 alongside confirmed fraud cards C09933-K2, C03278-K2, and C08234-K1, and sits in Louvain community 139460788 with a 25% fraud rate (lift 2.5).",
+        "source": "graph",
+        "ref": "query:ring_members(ring=40894916)",
+        "entity_ids": [
+          "C01104-K2",
+          "C09933-K2",
+          "C03278-K2",
+          "C08234-K1"
+        ]
+      },
+      {
+        "claim": "The holder profile for the flagged charge (C01104-K2|494|136) has zero prior transactions, indicating an unestablished holder baseline.",
+        "source": "graph",
+        "ref": "query:holder_history(holder=C01104-K2|494|136, before=2016-11-15)",
+        "entity_ids": [
+          "C01104-K2"
+        ]
+      },
+      {
+        "claim": "Disputed transaction 3459158 is for product category H, which card C01104-K2 has purchased 110 times historically.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3459158)",
+        "entity_ids": [
+          "3459158",
+          "C01104-K2"
+        ]
+      },
+      {
+        "claim": "Section 3a. A case is not a report: Section 3a. A case is not a report. Two different things, and the agent produces both. **A case** (`CREATE_CASE`) is the bank's internal record of an investigation. Open one whenever fraud probability reaches 0.30, whenever you request evidence, or whenever a customer disputes a charge. A case can be closed as fraud or as legitimate. It can be updated when new evidence arrives. It should be writte",
+        "source": "document",
+        "ref": "query:policy_sections(section=Section 3a. A case is not a report)",
+        "entity_ids": []
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-5037",
+      "CC-2828",
+      "CC-2375",
+      "CC-2165"
+    ],
+    "summary": "Monitoring flagged online transaction 3459158 ($149.92) on card C01104-K2 due to a high model score of 0.998. The transaction formed the culmination of a rapid 18-minute burst of four online purchases totaling $600.10 across four distinct billing regions, representing physically impossible geographic velocity. The activity was initiated via device D007387, which was flagged as new to this card account during the burst. Additionally, card C01104-K2 has six prior confirmed fraud cases, including case CC-5037 which involved an identical transaction pattern and device profile. The episode was determined to be card-not-present new-device fraud with a 0.97 probability, resulting in an immediate card block and case creation.",
+    "written_to_graph": true,
+    "graph_case_id": "CASE-MON-008"
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "Section 6: probability 0.97 >= 0.85 on 6 independent signals"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "3a: fraud probability at or above 0.30"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "Section 6: probability 0.97 >= 0.85 on 6 independent signals"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "3a: fraud probability at or above 0.30"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": false,
+    "reason": "3a: fraud suspected but exposure $600.10 is at most $1,000 and there is no shared device, region cluster or link to other customers' fraud; case only",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0,
+    "activity_dates": []
+  },
+  "stop_reason": "The investigation ended under Section 6 because the fraud probability reached 0.97, well above the 0.85 threshold for decisive action, supported by six independent evidence bases including calibrated model scoring, burst velocity, impossible geographic movement, new device status, and prior confirmed fraud history.",
+  "tool_calls": 19,
+  "tokens": 283770,
+  "latency_s": 129.3
+}

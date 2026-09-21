@@ -13,7 +13,7 @@
     "exposure_usd": 0,
     "evidence": [
       {
-        "claim": "Transaction 3509359 on card C12265-K2 was flagged solely by an uncalibrated legacy risk score of 0.52, while the bank's calibrated model score was 0.006 with an expected historical fraud rate of 0.006.",
+        "claim": "The calibrated second-generation fraud model scored transaction 3509359 at 0.006 with a historical fraud rate of 0.6%, strongly diverging from the legacy risk score of 0.52.",
         "source": "graph",
         "ref": "query:alert_context(tx=3509359)",
         "entity_ids": [
@@ -23,7 +23,7 @@
         ]
       },
       {
-        "claim": "Device D000140 is a generic desktop browser profile shared across 253 cards with no proxy and ring_id -1; its only two prior closed cases (CC-1447 and CC-0487) were both cleared as non-fraud.",
+        "claim": "Device D000140 has a generic desktop profile seen across 253 cards all-time, has no ring affiliation (ring_id -1), and has two prior closed cases that both cleared with no fraud (CC-1447, CC-0487).",
         "source": "graph",
         "ref": "query:device_neighbors(device=D000140, 2016-11-03..2016-12-06)",
         "entity_ids": [
@@ -32,18 +32,29 @@
         ]
       },
       {
-        "claim": "Card C12265-K2 displays consistent in-person usage in region 264 before and after the online transaction, including transactions 3510096 and 3510577 later on 2016-12-03, with no card testing sequences or suspicious bursts.",
+        "claim": "Card C12265-K2 belongs to Louvain community 39845908 with a high fraud lift of 9.9 linked to card C05472-K1 via device D001844, though device D001844 had zero transactions in the current window.",
         "source": "graph",
-        "ref": "query:card_window(card=C12265-K2, 2016-11-03..2016-12-06)",
+        "ref": "query:community_profile(card=C12265-K2)",
         "entity_ids": [
           "C12265-K2",
-          "3509359",
-          "3510096",
-          "3510577"
+          "C05472-K1",
+          "CC-0866",
+          "CC-2277",
+          "CC-2447"
         ]
       },
       {
-        "claim": "The current holder identity on card C12265-K2 has zero prior transactions in confirmed fraud cases.",
+        "claim": "Card C12265-K2 had two confirmed fraud cases in August 2016 (CC-2277 and CC-2447) involving account takeover, but both occurred over three months prior on a different holder anchor day (|46) and were resolved by reissuance.",
+        "source": "graph",
+        "ref": "query:linked_cases(tx=3509359)",
+        "entity_ids": [
+          "C12265-K2",
+          "CC-2277",
+          "CC-2447"
+        ]
+      },
+      {
+        "claim": "Holder baseline confirms that holder identity C12265-K2|264|154 has zero prior transactions in confirmed fraud cases, indicating that this specific holder identity is not compromised.",
         "source": "graph",
         "ref": "query:holder_history(holder=C12265-K2|264|154, before=2016-12-03)",
         "entity_ids": [
@@ -51,31 +62,39 @@
         ]
       },
       {
-        "claim": "Shared origin analysis for transaction 3509359 shows a lift of 0.0 for device D000140 and recipient email domain cox.net, and a low lift of 0.4 for region 264, showing no fraud clustering.",
+        "claim": "Transaction 3509359 for $125.08 aligns with the card's typical transaction amounts ($25.95 to $214.92), with ongoing in-person transactions continuing smoothly in region 264 shortly after (e.g. 3510096, 3510577) and no testing pattern.",
         "source": "graph",
-        "ref": "query:shared_origin(tx=3509359, window=+/-7d)",
+        "ref": "query:card_window(card=C12265-K2, 2016-11-23..2016-12-06)",
         "entity_ids": [
-          "3509359"
+          "3509359",
+          "C12265-K2",
+          "3510096",
+          "3510577"
         ]
       },
       {
-        "claim": "Prior closed fraud cases on card C12265-K2 (CC-2447 and CC-2277) occurred over three months prior in August 2016 under account takeover, resulting in card reissuance, and do not compromise the current holder baseline.",
+        "claim": "Billing region 264 matches all 82 prior card transactions and shows a low fraud lift of 0.4 in the 7-day window, indicating no localized fraud outbreak.",
         "source": "graph",
-        "ref": "query:linked_cases(tx=3509359)",
+        "ref": "query:shared_origin(tx=3509359, window=+/-7d)",
         "entity_ids": [
-          "C12265-K2",
-          "CC-2447",
-          "CC-2277"
+          "3509359",
+          "C12265-K2"
         ]
+      },
+      {
+        "claim": "Matches published guidance \u2014 FFIEC: Money Laundering and Terrorist Financing Red Flags (part 1): \"FFIEC BSA/AML Appendices - Appendix F \u2013 Money Laundering and Terrorist Financing Red Flags JavaScript must be enabled in your browser in order to use some functions. BSA/AML Manual BSA/AML Manual Appendices Appendix F \u2013 Money Laundering and Terrorist Financing Red Flags Appendices APPENDIX F: MONEY LAUNDERING AND TERRORIST FINANCING \"\"RED FLAGS\"\" The following are examples of potentially suspicio",
+        "source": "external",
+        "ref": "query:policy_search(\"red flags for none: single_signal\", regulator)",
+        "entity_ids": []
       }
     ],
     "similar_prior_cases": [
       "CC-1447",
       "CC-0487",
-      "CC-1254",
-      "CC-0594"
+      "CC-2277",
+      "CC-2447"
     ],
-    "summary": "Online transaction 3509359 ($125.08) on card C12265-K2 was flagged due to an uncalibrated legacy risk score of 0.52. The calibrated second-generation fraud model scored the transaction at 0.006 with an expected historical fraud rate of 0.006. Device D000140 is a generic browser profile without proxy use or ring affiliation, and its prior associated cases were cleared as non-fraud. Additionally, the cardholder maintained regular in-person transactions in region 264 immediately before and after this transaction on the same day. The transaction is determined to be legitimate cardholder activity, and the alert is closed as a false alarm.",
+    "summary": "Transaction 3509359 ($125.08, online) on card C12265-K2 was flagged by a legacy risk score of 0.52, but the calibrated fraud model evaluated it at 0.006 with an empirical fraud rate of only 0.6%. The transaction was conducted via a generic desktop device profile with no fraud ring associations and two prior cleared cases. Although the card experienced account takeover compromises three months earlier, those incidents preceded card reissuance under a different holder anchor day, and the current holder identity has no confirmed fraud history. Regular in-person spending in the cardholder's home billing region continued without disruption before and after the purchase, with no card testing or dispute reported. The alert was determined to be a false alarm and the transaction was cleared as legitimate.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHG-020"
   },
@@ -85,14 +104,14 @@
       {
         "action": "CLOSE_NO_FRAUD",
         "route": "auto",
-        "reason": "Section 6: probability 0.03 <= 0.15 on 4 independent signals"
+        "reason": "Section 6: probability 0.03 <= 0.15 on 6 independent signals"
       }
     ],
     "final": [
       {
         "action": "CLOSE_NO_FRAUD",
         "route": "auto",
-        "reason": "Section 6: probability 0.03 <= 0.15 on 4 independent signals"
+        "reason": "Section 6: probability 0.03 <= 0.15 on 6 independent signals"
       }
     ],
     "what_changed": "nothing"
@@ -105,8 +124,8 @@
     "total_amount_usd": 0,
     "activity_dates": []
   },
-  "stop_reason": "The investigation concluded under Policy Section 6 because the assessed fraud probability of 0.03 is well below the 0.15 threshold, supported by multiple independent lines of evidence showing normal cardholder behavior and a low-risk calibrated model score.",
-  "tool_calls": 12,
-  "tokens": 116069,
-  "latency_s": 65.3
+  "stop_reason": "The investigation was concluded under policy section 6 because the evaluated fraud probability (0.03) is decisively below the 0.15 clearance threshold across six independent evidentiary bases, meaning further investigation would not change the outcome.",
+  "tool_calls": 16,
+  "tokens": 150283,
+  "latency_s": 61.9
 }

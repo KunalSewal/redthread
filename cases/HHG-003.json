@@ -3,7 +3,7 @@
   "case": {
     "status": "closed_fraud",
     "verdict": "fraud",
-    "fraud_probability": 0.92,
+    "fraud_probability": 0.934,
     "pattern": "out_of_region_use",
     "pattern_description": "",
     "affected_txn_ids": [
@@ -24,46 +24,84 @@
         ]
       },
       {
-        "claim": "Customer C08623 submitted a report disputing transaction 3530164 ($49.00) on card C08623-K2, stating they never made the purchase.",
+        "claim": "Customer C08623 explicitly reported and disputed in-person transaction 3530164, stating 'I never made this $49.00 purchase. Please check my card.'",
         "source": "graph",
         "ref": "query:alert_context(tx=3530164)",
         "entity_ids": [
+          "3530164",
           "C08623",
-          "C08623-K2",
-          "3530164"
+          "C08623-K2"
         ]
       },
       {
-        "claim": "Transaction 3530056 occurred 49 minutes prior to the flagged transaction on card C08623-K2 in region 330 for $116.93, generating a model score of 0.622 (historical fraud rate 0.6449) and a risk score of 0.88.",
+        "claim": "Disputed transaction 3530164 ($49.00) was preceded 49 minutes earlier by transaction 3530056 ($116.93) under the same holder identity and region, which scored 0.622 on the calibrated fraud model with an empirical fraud rate of 64.5%.",
         "source": "graph",
         "ref": "query:card_window(card=C08623-K2, 2016-11-30..2016-12-13)",
         "entity_ids": [
-          "3530056",
-          "C08623-K2"
-        ]
-      },
-      {
-        "claim": "The holder identity for transactions 3530056 and 3530164 was first observed on 2016-12-10 with no prior transaction history, and the disputed charge matches no recurring billing pattern.",
-        "source": "graph",
-        "ref": "query:holder_history(holder=C08623-K2|330|161, before=2016-12-10)",
-        "entity_ids": [
-          "3530056",
           "3530164",
+          "3530056",
           "C08623-K2"
         ]
       },
       {
-        "claim": "Card C08623-K2 has multiple prior confirmed fraud closed cases (CC-4957, CC-3682, CC-2935, and CC-2817) involving unauthorized card-present out-of-region transactions reported by customer C08623.",
+        "claim": "Card C08623-K2 has four prior confirmed-fraud closed cases (CC-4957, CC-3682, CC-2935, and CC-2817) exhibiting out-of-region card-present fraud where cardholders reported unauthorized physical transactions while retaining possession of the card.",
         "source": "graph",
         "ref": "query:linked_cases(tx=3530164)",
         "entity_ids": [
           "C08623-K2",
-          "C08623",
           "CC-4957",
           "CC-3682",
           "CC-2935",
           "CC-2817"
         ]
+      },
+      {
+        "claim": "Flagged transaction 3530164 has no recurring history and the holder profile in region 330 has no activity prior to companion transaction 3530056 on the same day.",
+        "source": "graph",
+        "ref": "query:holder_history(holder=C08623-K2|330|161, before=2016-12-10)",
+        "entity_ids": [
+          "3530164",
+          "3530056",
+          "C08623-K2"
+        ]
+      },
+      {
+        "claim": "The calibrated fraud model evaluated flagged transaction 3530164 at 0.028 with a historical fraud rate of 0.6%.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3530164)",
+        "entity_ids": [
+          "3530164",
+          "C08623-K2"
+        ]
+      },
+      {
+        "claim": "Billing region 330 recorded 2,088 transactions across 390 cards during the 7-day window with a hot share of 0.0053 and a lift of 0.26 versus baseline, indicating region 330 is not an active fraud cluster.",
+        "source": "graph",
+        "ref": "query:shared_origin(tx=3530164, window=+/-7d)",
+        "entity_ids": [
+          "3530164",
+          "C08623-K2"
+        ]
+      },
+      {
+        "claim": "Card C08623-K2 sits in Louvain community 101711929 with 3 cards, 2 of which have confirmed fraud cases, yielding a 66.7% community fraud rate and a lift of 6.6 over baseline.",
+        "source": "graph",
+        "ref": "query:community_profile(card=C08623-K2)",
+        "entity_ids": [
+          "C08623-K2"
+        ]
+      },
+      {
+        "claim": "Rule R2: Customer denies the transaction: Rule R2: Customer denies the transaction. Recommend `BLOCK_CARD` and `CREATE_CASE`. Add `FILE_REPORT` if exposure exceeds $1,000 or the case connects to a shared device profile or another card's fraud.",
+        "source": "document",
+        "ref": "query:policy_sections(section=Rule R2: Customer denies the transaction)",
+        "entity_ids": []
+      },
+      {
+        "claim": "Matches published guidance \u2014 FATF: Illicit Financial Flows from Cyber-Enabled Fraud (part 50): withdrawal of cash by mules and CEF syndicates. The movement of cash outside of FIs can be difficult to track. Cash may be withdrawn via ATMs after being laundered across a ML network, which allows criminals to avoid face -to-face contact with FIs. These funds may be couriered across borders by cash couriers and be deposited for further laundering. Criminal proceeds may also be used to purchase va",
+        "source": "external",
+        "ref": "query:policy_search(\"red flags for out of region use: The physical compromise loc\", regulator)",
+        "entity_ids": []
       }
     ],
     "similar_prior_cases": [
@@ -72,7 +110,7 @@
       "CC-2935",
       "CC-2817"
     ],
-    "summary": "Customer C08623 reported transaction 3530164 ($49.00) on card C08623-K2 as unauthorized. Investigation revealed transaction 3530056 ($116.93) occurred 49 minutes prior in the same billing region 330 under the identical newly observed holder identity, generating a high model score of 0.622. Furthermore, card C08623-K2 has an extensive record of confirmed out-of-region card-present fraud in closed cases CC-4957, CC-3682, CC-2935, and CC-2817. Lacking any positive baseline history or recurring billing profile to overturn the customer's report, both transactions were confirmed as an out-of-region card cloning episode totaling $165.93.",
+    "summary": "Customer C08623 reported an unauthorized in-person purchase of $49.00 (transaction 3530164) in unfamiliar billing region 330. Investigation identified a linked companion transaction of $116.93 (3530056) occurring 49 minutes prior under the same holder identity, which scored 0.622 on the calibrated fraud model with a 64.5% historical fraud rate. Additionally, card C08623-K2 has four prior confirmed-fraud cases (CC-4957, CC-3682, CC-2935, and CC-2817) involving out-of-region card-present cloning where the legitimate holder retained the card. With no legitimate prior history in region 330, the activity represents confirmed out-of-region physical fraud with total exposure of $165.93, resulting in card blocking and case creation.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHG-003"
   },
@@ -112,8 +150,8 @@
     "total_amount_usd": 0,
     "activity_dates": []
   },
-  "stop_reason": "The investigation reached a decisive fraud probability of 0.92 under Policy Section 6 based on multiple independent lines of evidence: the direct customer dispute, an unestablished holder history, a closely preceding high-scoring transaction in region 330, and multiple prior confirmed fraud closed cases on card C08623-K2.",
-  "tool_calls": 14,
-  "tokens": 145591,
-  "latency_s": 64.6
+  "stop_reason": "The investigation concluded under policy section 6 as decisive probability (0.934) was established using multiple independent lines of incriminating evidence, including a direct customer denial, a closely timed companion transaction scoring high on the calibrated fraud model, and four prior confirmed fraud cases on the same card.",
+  "tool_calls": 18,
+  "tokens": 173320,
+  "latency_s": 85.2
 }

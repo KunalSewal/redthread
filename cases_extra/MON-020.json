@@ -1,0 +1,212 @@
+{
+  "case_id": "MON-020",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.965,
+    "pattern": "card_not_present_new_device",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3528764"
+    ],
+    "first_suspicious_txn_id": "3528764",
+    "connected_card_ids": [
+      "C04965-K2"
+    ],
+    "connected_device_profiles": [
+      "iOS Device | iOS 11.2.0 | mobile safari 11.0 | 1136x640"
+    ],
+    "exposure_usd": 350.04,
+    "evidence": [
+      {
+        "claim": "The bank's second-generation fraud model scored transaction 3528764 on card C10835-K2 at 0.992, corresponding to a calibrated historical fraud rate of 92.1%.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3528764)",
+        "entity_ids": [
+          "3528764",
+          "C10835-K2"
+        ]
+      },
+      {
+        "claim": "The legacy real-time risk score for transaction 3528764 was 0.06, which did not trigger a legacy real-time alert.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3528764)",
+        "entity_ids": [
+          "3528764",
+          "C10835-K2"
+        ]
+      },
+      {
+        "claim": "Transaction 3528764 was conducted online from device D000072, which was new to the account and routed through an anonymous proxy (IP_PROXY:ANONYMOUS).",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3528764)",
+        "entity_ids": [
+          "3528764",
+          "C10835-K2"
+        ]
+      },
+      {
+        "claim": "Device D000072 has a generic profile (iOS Device, mobile safari 11.0) shared across 38 cards historically without an established fraud ring (ring_id -1).",
+        "source": "graph",
+        "ref": "query:device_neighbors(device=D000072, 2016-11-09..2016-12-12)",
+        "entity_ids": [
+          "C10835-K2"
+        ]
+      },
+      {
+        "claim": "Device D000072 was used in the same 7-day window on card C04965-K2 for transaction 3534614 ($349.98, product R, online, anonymous proxy, model score 0.996), yielding a 100% hot share and a fraud lift of 48.43 across 2 cards.",
+        "source": "graph",
+        "ref": "query:shared_origin(tx=3528764, window=+/-7d)",
+        "entity_ids": [
+          "3528764",
+          "C10835-K2",
+          "C04965-K2",
+          "3534614"
+        ]
+      },
+      {
+        "claim": "Card C10835-K2 belongs to Louvain community 128974894 with card C12598-K2, where all member cards carry confirmed fraud cases (CC-0057, CC-2701, CC-2901, CC-2130), reflecting a fraud lift of 9.9 over the base rate.",
+        "source": "graph",
+        "ref": "query:community_profile(card=C10835-K2)",
+        "entity_ids": [
+          "C10835-K2",
+          "C12598-K2",
+          "CC-2130"
+        ]
+      },
+      {
+        "claim": "Card C10835-K2 has a historical confirmed fraud case CC-2130 from August 2016 for $210.04 involving out-of-region use.",
+        "source": "graph",
+        "ref": "query:linked_cases(tx=3528764)",
+        "entity_ids": [
+          "C10835-K2",
+          "CC-2130"
+        ]
+      },
+      {
+        "claim": "Holder C10835-K2|184|160 had zero prior transactions before flagged transaction 3528764, offering no historical spending baseline or recurring billing match.",
+        "source": "graph",
+        "ref": "query:holder_history(holder=C10835-K2|184|160, before=2016-12-09)",
+        "entity_ids": [
+          "C10835-K2"
+        ]
+      },
+      {
+        "claim": "Card C10835-K2 maintained regular in-person grocery and retail activity with model scores <= 0.004 throughout late November and December 2016, including transaction 3528739 five minutes prior to the alert.",
+        "source": "graph",
+        "ref": "query:card_window(card=C10835-K2, 2016-11-25..2016-12-23)",
+        "entity_ids": [
+          "C10835-K2",
+          "3528739"
+        ]
+      },
+      {
+        "claim": "Flagged transaction 3528764 occurred in billing region 184, which is the primary region for card C10835-K2 (82 of 128 prior transactions) and exhibited an un-elevated fraud lift of 0.05.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3528764)",
+        "entity_ids": [
+          "C10835-K2",
+          "3528764"
+        ]
+      },
+      {
+        "claim": "The transaction amount of $350.04 for product R is an unusual online charge that matches transaction 3534614 ($349.98) on connected card C04965-K2 made using the exact same device and proxy setup.",
+        "source": "graph",
+        "ref": "query:device_neighbors(device=D000072, 2016-11-09..2016-12-12)",
+        "entity_ids": [
+          "3528764",
+          "3534614",
+          "C10835-K2",
+          "C04965-K2"
+        ]
+      },
+      {
+        "claim": "Section 3a. A case is not a report: Section 3a. A case is not a report. Two different things, and the agent produces both. **A case** (`CREATE_CASE`) is the bank's internal record of an investigation. Open one whenever fraud probability reaches 0.30, whenever you request evidence, or whenever a customer disputes a charge. A case can be closed as fraud or as legitimate. It can be updated when new evidence arrives. It should be writte",
+        "source": "document",
+        "ref": "query:policy_sections(section=Section 3a. A case is not a report)",
+        "entity_ids": []
+      },
+      {
+        "claim": "Rule R6: Shared origin: Rule R6: Shared origin. When several cards show fraud from the same device profile, the same billing region, or the same recipient email in one window, name the shared element, recommend `CREATE_CASE` and `FILE_REPORT`, and `MONITOR_CONNECTED_CARDS` for every card that shares it.",
+        "source": "document",
+        "ref": "query:policy_sections(section=Rule R6: Shared origin)",
+        "entity_ids": []
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-2130",
+      "CC-1438",
+      "CC-2831"
+    ],
+    "summary": "Transaction 3528764 for $350.04 on card C10835-K2 was flagged for card-not-present fraud after scoring 0.992 on the bank's calibrated machine-learning model. The purchase of product R was conducted online via device D000072, which was newly introduced to the account and operated behind an anonymous IP proxy. Cross-card graph analysis revealed that the same device and proxy setup were used less than 48 hours later to process an identical $349.98 transaction on unrelated card C04965-K2. Card C10835-K2 also has a prior confirmed fraud history from closed case CC-2130. Given the decisive fraud probability of 0.965, the activity was determined to be card-not-present fraud from a new device, card C10835-K2 was blocked, and connected cards are being monitored.",
+    "written_to_graph": true,
+    "graph_case_id": "CASE-MON-020"
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "Section 6: probability 0.96 >= 0.85 on 6 independent signals"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "3a: fraud probability at or above 0.30; R6: several cards show fraud from device:D000072"
+      },
+      {
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "R6: shared origin device:D000072"
+      },
+      {
+        "action": "MONITOR_CONNECTED_CARDS",
+        "route": "auto",
+        "reason": "R6: 1 connected card(s) share the same origin"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "Section 6: probability 0.96 >= 0.85 on 6 independent signals"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "3a: fraud probability at or above 0.30; R6: several cards show fraud from device:D000072"
+      },
+      {
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "R6: shared origin device:D000072"
+      },
+      {
+        "action": "MONITOR_CONNECTED_CARDS",
+        "route": "auto",
+        "reason": "R6: 1 connected card(s) share the same origin"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": true,
+    "reason": "3a and R6: fraud across several cards sharing device:D000072",
+    "narrative": "This Suspicious Activity Report details card-not-present fraud involving customer C10835, card C10835-K2, and an associated compromise linking card C04965-K2. On December 9, 2016, at 21:38:25 UTC, an unauthorized online transaction (ID 3528764) totaling $350.04 for product R was executed against card C10835-K2 in billing region 184. The transaction was initiated via device D000072, characterized as an iOS device running iOS 11.2.0 and Mobile Safari 11.0 with a screen resolution of 1136x640. Device D000072 was identified as newly introduced to the cardholder account and operated behind an anonymous proxy (IP_PROXY:ANONYMOUS) to conceal the perpetrator's geographic location. The bank's second-generation fraud surveillance model flagged transaction 3528764 with an elevated score of 0.992, reflecting a 92.1% historical likelihood of fraud. Cardholder in-person activity continued concurrently, including a local point-of-sale transaction (ID 3528739) completed just five minutes prior to the unauthorized online charge. Graph entity resolution established that device D000072 was subsequently used within 48 hours to initiate transaction 3534614 for $349.98 on unrelated card C04965-K2, utilizing the same anonymous proxy setup and purchasing the identical product category R. Further historical review indicated that card C10835-K2 was previously compromised in confirmed fraud case CC-2130, and both cards exhibit elevated cross-card fraud lift. Total confirmed direct exposure from the fraudulent transaction on card C10835-K2 is $350.04. The bank has blocked card C10835-K2, instituted monitoring on connected card C04965-K2, and logged an internal case for ongoing tracking.",
+    "subjects": [
+      "C10835",
+      "C10835-K2",
+      "C04965-K2"
+    ],
+    "total_amount_usd": 350.04,
+    "activity_dates": [
+      "2016-12-09",
+      "2016-12-09"
+    ]
+  },
+  "stop_reason": "The investigation stopped pursuant to policy section 6 because the fraud probability reached 0.965, well exceeding the decisive threshold of 0.85, supported by multiple independent bases including cross-card device sharing, anonymous proxy masking, an extreme calibrated model score, and prior confirmed fraud.",
+  "tool_calls": 19,
+  "tokens": 192645,
+  "latency_s": 89.0
+}

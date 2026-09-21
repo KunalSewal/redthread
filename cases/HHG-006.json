@@ -3,7 +3,7 @@
   "case": {
     "status": "closed_fraud",
     "verdict": "fraud",
-    "fraud_probability": 0.95,
+    "fraud_probability": 0.889,
     "pattern": "card_not_present_new_device",
     "pattern_description": "",
     "affected_txn_ids": [
@@ -26,67 +26,114 @@
         ]
       },
       {
-        "claim": "Customer C07297 reported unrecognized activity on card C07297-K1 regarding transaction 3476682 for $482.12.",
+        "claim": "Customer C07297 explicitly contacted the bank denying transaction 3476682: 'I never made this $482.12 purchase. Please check my card.'",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(\"customer report: Customer C07297 message: 'I never made this...\", k=6)",
+        "entity_ids": [
+          "3476682",
+          "C07297",
+          "C07297-K1"
+        ]
+      },
+      {
+        "claim": "Flagged transaction 3476682 received a low standalone model score of 0.089 with a historical fraud rate of 11.38% and a risk score of 0.25.",
         "source": "graph",
         "ref": "query:alert_context(tx=3476682)",
         "entity_ids": [
-          "C07297",
-          "C07297-K1",
           "3476682"
         ]
       },
       {
-        "claim": "Card C07297-K1 history shows 194 of 199 prior transactions were in-person and 194 of 199 were product W, making the sudden burst of online product C transactions highly anomalous.",
+        "claim": "A burst of 4 online product C purchases totaling $1,906.07 occurred within 30 minutes on 2016-11-21 (3476602, 3476633, 3476665, 3476682), including two transactions scoring over 0.79 on the fraud model.",
+        "source": "graph",
+        "ref": "query:card_window(card=C07297-K1, 2016-11-11..2016-11-24)",
+        "entity_ids": [
+          "3476602",
+          "3476633",
+          "3476665",
+          "3476682",
+          "C07297-K1"
+        ]
+      },
+      {
+        "claim": "The online burst was conducted across two devices new to the account (D000033 and D001723), with D001723 routing transactions 3476633 and 3476665 through a transparent IP proxy.",
+        "source": "graph",
+        "ref": "query:card_window(card=C07297-K1, 2016-11-11..2016-11-24)",
+        "entity_ids": [
+          "3476633",
+          "3476665",
+          "3476682",
+          "C07297-K1"
+        ]
+      },
+      {
+        "claim": "Disputed transaction 3476682 and companion 3476602 belong to holder C07297-K1|264|142, which first appeared on 2016-11-21 with no prior history or recurring pattern, deviating from the card baseline of 194 in-person transactions.",
+        "source": "graph",
+        "ref": "query:holder_history(holder=C07297-K1|264|142, before=2016-11-21)",
+        "entity_ids": [
+          "3476602",
+          "3476682",
+          "C07297-K1"
+        ]
+      },
+      {
+        "claim": "Flagged transaction 3476682 was billed in region 264, which is a familiar region for card C07297-K1 with 28 prior transactions.",
         "source": "graph",
         "ref": "query:alert_context(tx=3476682)",
+        "entity_ids": [
+          "3476682",
+          "C07297-K1"
+        ]
+      },
+      {
+        "claim": "Card C07297-K1 belongs to community 79691969 with 48 cards and 10 confirmed fraud cases (fraud rate 20.8%, lift vs base rate 2.1), with no detected ring membership.",
+        "source": "graph",
+        "ref": "query:community_profile(card=C07297-K1)",
         "entity_ids": [
           "C07297-K1"
         ]
       },
       {
-        "claim": "Within a 30-minute window on 2016-11-21, a burst of four online product C transactions occurred on card C07297-K1: 3476602 ($478.95), 3476633 ($456.96), 3476665 ($488.04), and 3476682 ($482.12), totaling $1,906.07.",
+        "claim": "Customer C07297 and card C07297-K1 have no prior confirmed fraud cases on record.",
         "source": "graph",
-        "ref": "query:card_window(card=C07297-K1, 2016-11-11..2016-11-24)",
+        "ref": "query:alert_context(tx=3476682)",
         "entity_ids": [
-          "C07297-K1",
-          "3476602",
-          "3476633",
-          "3476665",
-          "3476682"
+          "C07297",
+          "C07297-K1"
         ]
       },
       {
-        "claim": "Transactions 3476633 and 3476665 in the same burst had high model scores of 0.845 and 0.792 with a historical fraud rate of 0.7796, routed through IP_PROXY:TRANSPARENT from device D001723, marked as New.",
+        "claim": "Device D001723 used during companion burst transactions 3476633 and 3476665 has 46 closed cases all-time, 30 of which were confirmed fraud, including 19 card-not-present new device cases.",
         "source": "graph",
-        "ref": "query:card_window(card=C07297-K1, 2016-11-11..2016-11-24)",
+        "ref": "query:device_neighbors(device=D001723, 2016-10-22..2016-11-24)",
         "entity_ids": [
-          "3476633",
-          "3476665"
+          "CC-1105",
+          "CC-1697",
+          "CC-2269",
+          "CC-2710"
         ]
       },
       {
-        "claim": "Flagged transaction 3476682 and preceding transaction 3476602 were conducted from device D000033, which was also marked with device status New for this account.",
-        "source": "graph",
-        "ref": "query:card_window(card=C07297-K1, 2016-11-11..2016-11-24)",
-        "entity_ids": [
-          "3476682",
-          "3476602"
-        ]
+        "claim": "Rule R2: Customer denies the transaction: Rule R2: Customer denies the transaction. Recommend `BLOCK_CARD` and `CREATE_CASE`. Add `FILE_REPORT` if exposure exceeds $1,000 or the case connects to a shared device profile or another card's fraud.",
+        "source": "document",
+        "ref": "query:policy_sections(section=Rule R2: Customer denies the transaction)",
+        "entity_ids": []
       },
       {
-        "claim": "Prior closed case CC-2623 confirmed card-not-present new device fraud following a customer report of unrecognized online transactions from a new desktop browser device.",
-        "source": "graph",
-        "ref": "query:similar_closed_cases(\"customer report: Customer C07297 message: 'I never made this...\", k=6)",
-        "entity_ids": [
-          "CC-2623"
-        ]
+        "claim": "Section 3a. A case is not a report: Section 3a. A case is not a report. Two different things, and the agent produces both. **A case** (`CREATE_CASE`) is the bank's internal record of an investigation. Open one whenever fraud probability reaches 0.30, whenever you request evidence, or whenever a customer disputes a charge. A case can be closed as fraud or as legitimate. It can be updated when new evidence arrives. It should be writte",
+        "source": "document",
+        "ref": "query:policy_sections(section=Section 3a. A case is not a report)",
+        "entity_ids": []
       }
     ],
     "similar_prior_cases": [
-      "CC-2623",
-      "CC-5111"
+      "CC-1105",
+      "CC-1697",
+      "CC-2269",
+      "CC-2710",
+      "CC-3624"
     ],
-    "summary": "Customer C07297 reported an unrecognized online transaction of $482.12 on card C07297-K1. Graph analysis uncovered an anomalous burst of four rapid online product C transactions totaling $1,906.07 on November 21, 2016, sharply diverging from the customer's baseline of 97.5% in-person product W transactions. Two transactions utilized transparent proxies and scored high on the fraud model, while all four originated from two new devices (D000033 and D001723). The alert was confirmed as card-not-present fraud via new devices, warranting a card block and regulatory filing.",
+    "summary": "Cardholder C07297 alerted the bank after disputing an unauthorized $482.12 online purchase under transaction 3476682. Investigation confirmed this charge was part of a rapid 30-minute burst of four online purchases of product C on November 21, 2016, totaling $1,906.07. This cluster sharply deviates from the cardholder's baseline of 194 in-person purchases and only 5 online transactions. The unauthorized transactions were conducted using two new devices, including device D001723 which operated through a transparent proxy and has a history of 30 confirmed fraud cases. The episode is confirmed as card-not-present fraud from new devices, and card C07297-K1 was blocked with a SAR filed.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHG-006"
   },
@@ -131,7 +178,7 @@
   "sar": {
     "file": true,
     "reason": "3a: exposure $1,906.07 exceeds $1,000",
-    "narrative": "This Suspicious Activity Report details an unauthorized card-not-present compromise involving customer C07297 and card C07297-K1. On November 22, 2016, customer C07297 contacted the financial institution to dispute transaction 3476682 for $482.12, stating they did not authorize the purchase. A subsequent review identified a rapid burst of four unauthorized online product C authorizations totaling $1,906.07 conducted between 20:00:00 and 20:30:00 UTC on November 21, 2016. The affected transactions comprise 3476602 ($478.95), 3476633 ($456.96), 3476665 ($488.04), and 3476682 ($482.12). Historical account activity reflects that 194 of 199 prior transactions were conducted in-person and for product W, establishing that this sudden online activity represents an uncharacteristic deviation. Transactions 3476602 and 3476682 were processed from device D000033 associated with billing region 264 under a device status of New. Transactions 3476633 and 3476665 were executed from device D001723 associated with billing region 476, also flagged as New, utilizing transparent IP proxies and generating elevated fraud model scores of 0.845 and 0.792. The unauthorized party alternated devices and regions within 30 minutes to conduct multiple high-value card-not-present transactions without cardholder consent. Card C07297-K1 was blocked to mitigate ongoing exposure, and the full compromised amount of $1,906.07 is subject to dispute resolution.",
+    "narrative": "This Suspicious Activity Report details card-not-present fraud involving customer C07297 and payment card C07297-K1. On November 21, 2016, between 20:00:00 and 20:30:00, four unauthorized online card-not-present transactions totaling $1,906.07 were processed on card C07297-K1. The transactions comprised transaction 3476602 ($478.95) and transaction 3476682 ($482.12) associated with billing region 264, as well as transaction 3476633 ($456.96) and transaction 3476665 ($488.04) associated with billing region 476, all purchasing product C. On November 22, 2016, customer C07297 contacted the bank to dispute transaction 3476682, confirming that the cardholder never made or authorized the purchase. The cardholder's established transaction history consisted predominantly of 194 in-person purchases and only 5 online authorizations, demonstrating that this rapid sequence of online transactions was highly irregular. The activity was executed using two devices newly introduced to the account, identified as device D000033 and device D001723. Transactions 3476633 and 3476665 were routed through device D001723 via a transparent IP proxy. Internal database records show device D001723 is linked to 30 prior confirmed fraud cases, primarily involving card-not-present fraud from new devices across multiple accounts. Fraud detection model evaluations scored the two transactions originating from device D001723 at elevated risk levels of 0.845 and 0.792. The bank has blocked card C07297-K1 to mitigate ongoing losses, with total suspicious activity amounting to $1,906.07.",
     "subjects": [
       "C07297",
       "C07297-K1"
@@ -142,8 +189,8 @@
       "2016-11-21"
     ]
   },
-  "stop_reason": "The investigation was concluded under policy section 6 because a decisive fraud probability of 0.95 was reached based on two independent lines of evidence: the customer's direct denial of authorization and graph evidence confirming an anomalous 30-minute burst of card-not-present transactions from new devices and transparent proxies.",
-  "tool_calls": 14,
-  "tokens": 169397,
-  "latency_s": 74.4
+  "stop_reason": "Investigation concluded pursuant to policy section 6 because the fraud probability of 88.9% is decisive, supported by multiple independent incriminating bases including direct customer denial, severe behavioral anomaly, and proxy-routed devices with confirmed fraud histories, meaning further inquiries would not alter the decision.",
+  "tool_calls": 15,
+  "tokens": 131722,
+  "latency_s": 74.9
 }
