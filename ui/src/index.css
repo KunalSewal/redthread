@@ -1,61 +1,142 @@
-:root {
-  --paper: #eef0f2;
-  --sheet: #ffffff;
-  --ink: #1d2430;
-  --graphite: #5b6472;
-  --rule: #c9ced6;
-  --wash: #e2e6ea;
-  --thread: #c8102e;
-  --thread-soft: #f6dde1;
-  --cleared: #2f7d6d;
-  --cleared-soft: #dcefe9;
-  --unresolved: #a86a12;
-  --unresolved-soft: #f5e8d2;
-  --focus: #2b5cc4;
+/* Design tokens and base. The reasoning behind these choices is in context/design.md.
+   Dark is the default; [data-theme='light'] is the print/daylight treatment. */
 
-  --sans: 'Public Sans', system-ui, sans-serif;
-  --serif: 'Source Serif 4', Georgia, serif;
-  /* Type scale: 1.2 ratio on a 15px base */
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap');
+
+:root {
+  --desk: #0e1218;
+  --sheet: #171c24;
+  --sheet-raised: #1e242e;
+  --rule: #2a3240;          /* decorative hairlines only: never the sole carrier of meaning */
+  --rule-strong: #66738c;   /* lines that mean something (input borders, the thread ahead): 3.3:1 */
+  --ink: #e8ebf0;
+  --graphite: #9aa5b5;
+  --graphite-dim: #8992a3;  /* used at 12px, so it has to clear 4.5:1 (it reaches 4.98) */
+
+  /* Orange means fraud. Nothing else. */
+  --thread: #ff6d00;
+  --thread-dim: #8a4310;
+  --thread-wash: rgba(255, 109, 0, 0.12);
+
+  --cleared: #69b3a2;
+  --cleared-wash: rgba(105, 179, 162, 0.12);
+  --focus: #7aa2f7;
+  --warn: #d9a441;
+
+  --sans: 'Archivo', system-ui, -apple-system, sans-serif;
+  --serif: 'Newsreader', Georgia, serif;
+
+  /* 1.25 on a 15px base, rounded to whole pixels */
   --t-xs: 12px;
   --t-s: 13px;
   --t-m: 15px;
-  --t-l: 18px;
-  --t-xl: 22px;
-  --t-xxl: 30px;
+  --t-l: 19px;
+  --t-xl: 24px;
+  --t-xxl: 34px;
 
+  --measure: 68ch;
+  --gap: 20px;
+  --rail: 264px;
+
+  color-scheme: dark;
   font-family: var(--sans);
   font-size: var(--t-m);
-  line-height: 1.5;
+  line-height: 1.55;
   color: var(--ink);
-  background: var(--paper);
+  background: var(--desk);
   font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --paper: #151a22;
-    --sheet: #1c222c;
-    --ink: #e6e9ee;
-    --graphite: #9aa3b1;
-    --rule: #333c4a;
-    --wash: #252d39;
-    --thread: #ef4d63;
-    --thread-soft: #3a1f26;
-    --cleared: #5fb9a5;
-    --cleared-soft: #1d3330;
-    --unresolved: #e0a54a;
-    --unresolved-soft: #3a2e1c;
-    --focus: #7aa2ff;
-  }
+:root[data-theme='light'] {
+  --desk: #e9ecef;
+  --sheet: #ffffff;
+  --sheet-raised: #f4f6f8;
+  --rule: #ccd2da;
+  --rule-strong: #aab2bd;
+  --ink: #161c24;
+  --graphite: #5a6474;
+  --graphite-dim: #78828f;
+  --thread: #d85400;
+  --thread-dim: #f0c3a0;
+  --thread-wash: rgba(216, 84, 0, 0.1);
+  --cleared: #2c7d6c;
+  --cleared-wash: rgba(44, 125, 108, 0.1);
+  --focus: #2b5cc4;
+  --warn: #9a6b12;
+  color-scheme: light;
 }
 
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--paper); }
-button { font: inherit; color: inherit; cursor: pointer; }
-:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-h1, h2, h3, p { margin: 0; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--desk);
+  color: var(--ink);
+}
+
+h1, h2, h3, h4 {
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+p { margin: 0 0 0.8em; }
+
+a {
+  color: inherit;
+  text-decoration-color: var(--rule-strong);
+  text-underline-offset: 3px;
+}
+
+a:hover { text-decoration-color: currentColor; }
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+ul, ol { margin: 0; padding: 0; list-style: none; }
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Prose: the parts a person reads rather than scans. */
+.prose {
+  font-family: var(--serif);
+  font-size: 17px;
+  line-height: 1.6;
+  max-width: var(--measure);
+}
+
+.prose em { font-style: italic; }
+
+.num { font-variant-numeric: tabular-nums; }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

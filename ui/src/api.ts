@@ -9,6 +9,8 @@ export interface CaseRow {
   customer_id: string
   flagged_txn_id: string
   risk_score: number | null
+  /** 'bank_queue' for the graded alerts; a monitor name for the ones the agent raised itself. */
+  source: string
   status: string
   verdict?: Verdict
   fraud_probability?: number
@@ -25,8 +27,36 @@ export interface CaseAction extends ActionItem {
 }
 export interface Evidence { claim: string; source: string; ref: string; entity_ids: string[] }
 export interface Event { step: number; kind: string; detail: string; at: string; case_id?: string }
-export interface GraphNode { id: string; kind: string; label: string; role?: string; outcome?: string; pattern?: string; profile?: string; score?: number | null }
-export interface GraphEdge { source: string; target: string; kind: string }
+
+export interface GraphNode {
+  id: string; kind: string; label: string; step: number
+  role?: string; outcome?: string; pattern?: string; profile?: string; score?: number | null
+  ring?: number; cards_all_time?: number
+}
+export interface GraphEdge { source: string; target: string; kind: string; step: number }
+
+/** One line of the belief ledger: what it rests on, which way it points, and what it was worth. */
+export interface LedgerItem {
+  basis: string
+  direction: 'incriminating' | 'exculpatory'
+  strength: 'weak' | 'moderate' | 'strong' | 'decisive'
+  claim: string
+  counted: boolean
+  /** The likelihood ratio actually applied, after independence and correlation rules. */
+  lr: number
+  discounted?: boolean
+  entities?: string[]
+}
+
+export interface Belief {
+  prior: number
+  prior_reason: string
+  posterior: number
+  verdict: Verdict
+  independent_evidence: number
+  explanation: string
+  ledger: LedgerItem[]
+}
 
 export interface Answer {
   case_id: string
@@ -49,10 +79,61 @@ export interface CaseDetail {
   alert: CaseRow
   answer: Answer | null
   events: Event[]
-  assessment: { fraud_probability: number; verdict: Verdict; uncertainty: string; reasoning: string } | null
+  /** Tool digests keyed by tool name (or 'tool:{args}' for follow-ups). The backend always sent
+   *  these; the client used to drop them, which left the evidence panel with nothing to show. */
+  evidence: Record<string, Record<string, unknown>>
+  assessment: { evidence: Evidence[]; uncertainty?: string; reasoning?: string } | null
+  belief: Belief | null
+  signals: Record<string, unknown> | null
+  final_signals: Record<string, unknown> | null
+  request: { type: string; question: string; asked_after_step: number } | null
+  reply: { text: string; prior?: number; posterior?: number } | null
+  report: string | null
   actions: CaseAction[]
-  graph: { nodes: GraphNode[]; edges: GraphEdge[] }
+  graph: { nodes: GraphNode[]; edges: GraphEdge[]; steps: number }
 }
+
+export interface MonitoringAlert {
+  case_id: string; source: string; opened_at: string; card_id: string; flagged_txn_id: string
+  bank_risk_score: number | null; trigger_text: string
+  verdict?: Verdict; pattern?: string; exposure_usd?: number; sar?: boolean
+}
+
+export interface Monitoring {
+  alerts: MonitoringAlert[]
+  raised: number
+  confirmed_fraud: number
+  exposure_usd: number
+  by_source: Record<string, number>
+}
+
+export interface RingMember {
+  card_id: string; txns: number; max_model_score: number | null
+  confirmed_fraud_closed_cases: string[]; agent_cases: string[]
+}
+export interface Ring {
+  ring_id: number; cards: number; devices: string[]
+  members?: RingMember[]
+  device_profiles?: { device_id: string; profile: string; n_cards: number }[]
+}
+export interface CommunityStat { community: number; cards: number; fraud_cards: number; fraud_share: number }
+export interface Rings {
+  rings: Ring[]
+  communities: CommunityStat[]
+  communities_total: number
+  communities_ranked: number
+}
+
+export interface Evaluation {
+  model: Record<string, unknown> | null
+  patterns: Record<string, unknown> | null
+  calibration: Record<string, unknown> | null
+  community_lift: { n_fraud: number; n_cleared: number; bands: Record<string, { p_fraud: number; p_cleared: number; lr: number | null }> } | null
+  backtest: Record<string, unknown> | null
+  backtest_cases: Record<string, unknown>[] | null
+}
+
+export interface PolicyChunk { chunk_id: string; source: string; section: string; content: string }
 
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail ?? `Request failed (${res.status})`)
@@ -62,6 +143,10 @@ async function json<T>(res: Response): Promise<T> {
 export const api = {
   cases: () => fetch('/api/cases').then(json<CaseRow[]>),
   case: (id: string) => fetch(`/api/cases/${id}`).then(json<CaseDetail>),
+  monitoring: () => fetch('/api/monitoring').then(json<Monitoring>),
+  rings: () => fetch('/api/rings').then(json<Rings>),
+  evaluation: () => fetch('/api/evaluation').then(json<Evaluation>),
+  policy: () => fetch('/api/policy').then(json<{ chunks: PolicyChunk[]; by_source: Record<string, number> }>),
   investigate: (id: string) => fetch(`/api/cases/${id}/investigate`, { method: 'POST' }).then(json<{ started: string }>),
   approve: (id: string, body: { action: string; decision: string; approver: string; role: string; note: string }) =>
     fetch(`/api/cases/${id}/approvals`, {
