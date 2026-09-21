@@ -26,32 +26,46 @@ log = logging.getLogger("backtest")
 
 
 def build_alerts(n: int, month: int, seed: int) -> list[dict]:
-    """Rebuild the alert each closed case started from, balanced between fraud and cleared."""
+    """Rebuild the alert each closed case started from, balanced between fraud and cleared.
+
+    The trigger type is assigned independently of the outcome. It used to be derived from it -- every
+    confirmed case arrived as a customer report and every cleared one as a model alert -- which meant
+    an agent could score full marks by reading the trigger and never investigating, and made the
+    resulting accuracy meaningless. The benchmark case pack is deliberately balanced, so this is too:
+    each alert is a coin flip, and the reported accuracy is broken down by trigger so that reading
+    the trigger alone would be visible as a gap between the two strata.
+    """
     cases = pd.read_csv(paths.CLOSED_CASES_CSV)
     cases = cases[pd.to_datetime(cases["opened_at"]).dt.month == month]
     fraud = cases[cases["outcome"] == "confirmed_fraud"]
     cleared = cases[cases["outcome"] == "cleared"]
     picked = pd.concat([fraud.sample(n // 2, random_state=seed), cleared.sample(n - n // 2, random_state=seed)])
+    scores = (pd.read_parquet(paths.PROCESSED / "_all.parquet", columns=["tx_id", "risk_score"])
+              .set_index("tx_id")["risk_score"])
+    rng = random.Random(seed)
     alerts = []
     for c in picked.sort_values("opened_at").itertuples():
         txns = [t for t in str(c.txn_ids).split("|") if t]
         flagged = str(int(c.first_fraud_txn_id)) if not pd.isna(c.first_fraud_txn_id) else txns[0]
-        confirmed = c.outcome == "confirmed_fraud"
+        reported = rng.random() < 0.5
+        # The real legacy score on the flagged transaction, not a flattering constant.
+        risk = scores.get(int(flagged))
+        risk = round(float(risk), 4) if risk is not None and not pd.isna(risk) else 0.5
         alerts.append({
             "case_id": f"BT-{c.case_id}", "opened_at": c.opened_at, "card_id": c.card_id,
             "customer_id": c.customer_id, "flagged_txn_id": flagged,
-            "trigger_type": "customer_report" if confirmed else "risk_score",
+            "trigger_type": "customer_report" if reported else "risk_score",
             "trigger_text": (f"Customer {c.customer_id} message: 'I never made this purchase. Please check my "
-                             f"card.' Refers to {flagged}." if confirmed else
-                             f"Real-time model scored transaction {flagged} at 0.90. Review and decide."),
-            "risk_score": None if confirmed else 0.9,
+                             f"card.' Refers to {flagged}." if reported else
+                             f"Real-time model scored transaction {flagged} at {risk:.2f}. Review and decide."),
+            "risk_score": None if reported else risk,
             "truth": {"outcome": c.outcome, "pattern": c.pattern, "txn_ids": txns,
                       "exposure_usd": c.exposure_usd, "report_filed": c.report_filed},
         })
     return alerts
 
 
-def score(alert: dict, answer: dict) -> dict:
+def score(alert: dict, answer: dict, belief: dict | None = None) -> dict:
     truth, case = alert["truth"], answer["case"]
     fraud = truth["outcome"] == "confirmed_fraud"
     predicted, found = set(case["affected_txn_ids"]), set(truth["txn_ids"])
@@ -65,6 +79,9 @@ def score(alert: dict, answer: dict) -> dict:
         "txn_precision": round(overlap / len(predicted), 3) if predicted else None,
         "sar": answer["sar"]["file"], "truth_report_filed": truth["report_filed"] == "Yes",
         "actions": [a["action"] for a in answer["next_best_actions"]["final"]],
+        "trigger_type": alert["trigger_type"],
+        # The ledger is kept so aggregation can be recalibrated offline, without paying for a rerun.
+        "belief": belief,
     }
 
 
@@ -83,6 +100,10 @@ def report(rows: list[dict]) -> dict:
         "txn_precision_mean": round(fraud["txn_precision"].dropna().mean(), 3) if len(fraud) else None,
         "brier": round(float(brier), 4),
         "sar_agreement": round((frame["sar"] == frame["truth_report_filed"]).mean(), 3),
+        # If the agent were reading the trigger rather than investigating, these two would diverge.
+        "accuracy_by_trigger": {t: round(g["verdict_correct"].mean(), 3)
+                                for t, g in frame.groupby("trigger_type")},
+        "n_by_trigger": {t: int(len(g)) for t, g in frame.groupby("trigger_type")},
     }
 
 
@@ -99,7 +120,7 @@ async def main(n: int, month: int, seed: int, out: str) -> None:
                 log.exception("%s failed", alert["case_id"])
                 continue
             alert["truth"] = truth
-            row = score(alert, state["answer"])
+            row = score(alert, state["answer"], state.get("belief"))
             rows.append(row)
             log.info("%s truth=%s/%s -> %s/%s p=%.2f %s", row["case_id"], row["truth_outcome"][:9],
                      row["truth_pattern"][:16], row["verdict"][:9], row["pattern"][:16], row["probability"],
