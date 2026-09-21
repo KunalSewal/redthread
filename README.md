@@ -137,8 +137,9 @@ above, so treat the margin as unverified until it is re-run.
 
 ## The interface
 
-A fraud analyst's workbench, not a dashboard. Design notes and the reasoning behind every colour and
-type choice are in [`context/design.md`](context/design.md).
+A fraud analyst's workbench, not a dashboard. Orange encodes fraud and nothing else — never
+"selected", never "primary button" — and an uncertain verdict gets no hue at all, so it cannot compete
+with the accent.
 
 | Route | Answers |
 |---|---|
@@ -178,7 +179,6 @@ API key.
 | `ui/` | the workbench (React, Vite) |
 | `cases/` | the 20 answer files |
 | `cases_extra/` | alerts the agent raised by itself |
-| `context/` | design notes, data dictionary, decisions |
 
 ## Running it
 

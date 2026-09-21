@@ -20,7 +20,7 @@ def derive_card_ids(customer_id: pd.Series, card6: pd.Series) -> pd.Series:
     ``n`` is the 1-based rank of the transaction's ``card6`` value among the customer's distinct
     ``card6`` values, compared as plain strings with a null value sorting first. This reproduces
     every card ID in ``closed_cases_history.csv`` and ``case_pack.csv`` (see
-    ``context/data-dictionary.md``). Nulls are mapped to ``""`` explicitly so the result does not
+    the data dictionary). Nulls are mapped to ``""`` explicitly so the result does not
     depend on how a pandas version stringifies missing values.
     """
     key = card6.astype(object).where(card6.notna(), "").astype(str)

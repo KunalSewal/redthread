@@ -1,5 +1,6 @@
 // RedThread graph schema. Run with: python scripts/setup_graph.py schema
-// Design notes: context/graph-design.md
+// Transactions stay lean: fraud-relevant columns as typed attributes, shared device, email and
+// region as their own vertices so ring and community detection have edges to walk.
 
 // ---- Entities from the dataset --------------------------------------------------------
 CREATE VERTEX Customer (PRIMARY_ID customer_id STRING, n_cards INT) WITH primary_id_as_attribute="true"

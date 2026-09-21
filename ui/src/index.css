@@ -1,5 +1,11 @@
-/* Design tokens and base. The reasoning behind these choices is in context/design.md.
-   Dark is the default; [data-theme='light'] is the print/daylight treatment. */
+/* Design tokens and base.
+
+   A case file on an analyst's desk, late: the desk is cool and dark, the sheet on it warmer and
+   lifted, and nothing glows. Dark is the default; [data-theme='light'] is the print treatment.
+
+   The one rule that matters: --thread encodes fraud and nothing else. Not "selected", not
+   "primary button", not "a series in a chart". If everything can be orange, orange says nothing,
+   so an uncertain verdict gets no hue at all - a neutral outline and a glyph. */
 
 @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap');
 
