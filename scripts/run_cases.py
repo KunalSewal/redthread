@@ -20,6 +20,9 @@ from redthread import paths
 from redthread.agent.graph import investigate_alert
 from redthread.agent.mcp_graph import McpGraph
 
+sys.path.insert(0, str(paths.ROOT / "scripts"))
+import rings  # noqa: E402
+
 log = logging.getLogger("run_cases")
 TRACES = paths.ROOT / "runs"
 
@@ -36,6 +39,8 @@ def load_alerts(ids: list[str]) -> list[dict]:
 
 
 async def main(ids: list[str]) -> int:
+    # Rings as of the first benchmark alert, so no case sees a ring that formed after it.
+    rings.ensure(rings.benchmark_cutoff())
     paths.CASES_OUT.mkdir(exist_ok=True)
     TRACES.mkdir(exist_ok=True)
     failures = 0

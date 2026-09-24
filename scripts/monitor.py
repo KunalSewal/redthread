@@ -68,13 +68,22 @@ async def raise_alerts(graph: McpGraph, max_alerts: int) -> list[dict]:
     return sorted(picked, key=lambda c: c["opened_at"])
 
 
-async def main(max_alerts: int) -> None:
+async def main(max_alerts: int, resume: bool = False) -> None:
+    import rings  # the scripts directory is already on sys.path
+
+    rings.ensure(rings.benchmark_cutoff())
     OUT.mkdir(exist_ok=True)
     TRACES.mkdir(exist_ok=True)
     async with McpGraph() as graph:
-        alerts = await raise_alerts(graph, max_alerts)
-        (OUT / "alerts.json").write_text(json.dumps(alerts, indent=2), encoding="utf-8")
+        if resume and (OUT / "alerts.json").exists():
+            # Same alerts as the interrupted run; the agent's own case writes must not reshuffle them.
+            alerts = json.loads((OUT / "alerts.json").read_text(encoding="utf-8"))
+        else:
+            alerts = await raise_alerts(graph, max_alerts)
+            (OUT / "alerts.json").write_text(json.dumps(alerts, indent=2), encoding="utf-8")
         for alert in alerts:
+            if resume and (OUT / f"{alert['case_id']}.json").exists():
+                continue
             state = await investigate_alert(graph, alert, as_of=alert["opened_at"])
             (OUT / f"{alert['case_id']}.json").write_text(json.dumps(state["answer"], indent=2), encoding="utf-8")
             trace = {k: state.get(k) for k in ("alert", "events", "evidence", "llm_assessment", "belief",
@@ -93,4 +102,6 @@ if __name__ == "__main__":
         logging.getLogger(noisy).setLevel(logging.WARNING)
     parser = argparse.ArgumentParser()
     parser.add_argument("--max-alerts", type=int, default=6)
-    asyncio.run(main(parser.parse_args().max_alerts))
+    parser.add_argument("--resume", action="store_true", help="keep alerts.json and skip answered alerts")
+    args = parser.parse_args()
+    asyncio.run(main(args.max_alerts, args.resume))

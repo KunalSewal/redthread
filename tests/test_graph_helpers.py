@@ -17,3 +17,24 @@ def test_r10_counts_only_this_customers_cards_in_the_episode():
     assert _customer_cards_in_episode(alert, assessment, "fraud") == 2
     assert _customer_cards_in_episode(alert, assessment, "uncertain") == 0
     assert _customer_cards_in_episode(alert, SimpleNamespace(connected_card_ids=["C00001-K2"]), "legitimate") == 0
+
+
+def test_case_text_sent_to_the_graph_is_bounded():
+    """Case writes travel in the URL; an unbounded SAR once failed with 414 Request-URI Too Large."""
+    from redthread.agent.memory import MAX_TEXT, _bounded
+
+    long = "x" * 10_000
+    for field, limit in MAX_TEXT.items():
+        assert len(_bounded(field, long)) <= limit
+    assert _bounded("summary", "short") == "short"
+
+
+def test_a_cross_card_flag_needs_a_card_or_device_behind_it():
+    """A report once went to the regulator on a link to "another card's fraud" that named no card."""
+    from types import SimpleNamespace
+
+    from redthread.agent.graph import cross_card_backed
+
+    assert not cross_card_backed(SimpleNamespace(connected_card_ids=[], connected_device_ids=[]))
+    assert cross_card_backed(SimpleNamespace(connected_card_ids=["C05448-K2"], connected_device_ids=[]))
+    assert cross_card_backed(SimpleNamespace(connected_card_ids=[], connected_device_ids=["D004630"]))

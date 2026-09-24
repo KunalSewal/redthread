@@ -93,6 +93,7 @@ CREATE OR REPLACE QUERY device_neighbors(VERTEX<DeviceProfile> device, DATETIME 
   OrAccum @proxy;
   SetAccum<STRING> @tx_ids;
   SetAccum<STRING> @@case_summaries;
+  SetAccum<STRING> @@cards_before;
   start = {device};
   txns = SELECT t FROM start:d -(DEVICE_TXN:e)-> Txn:t WHERE t.ts >= from_ts AND t.ts <= to_ts;
   cards = SELECT c FROM txns:t -(MADE_BY:e)-> Card:c
@@ -104,18 +105,24 @@ CREATE OR REPLACE QUERY device_neighbors(VERTEX<DeviceProfile> device, DATETIME 
         ACCUM @@case_summaries += cc.case_id + "|" + cc.card_id + "|" + cc.outcome + "|" + cc.pattern + "|"
                                   + datetime_format(cc.opened_at, "%Y-%m-%d");
   agent_cases = SELECT f FROM start:d -(DEVICE_FRAUD_CASE:e)-> FraudCase:f WHERE f.opened_at < as_of;
+  // DeviceProfile.n_cards counts every card ever, including ones that used the device after the
+  // alert. How specific a device is has to be judged from what was visible at the time.
+  prior = SELECT t FROM all_txns:t WHERE t.ts < as_of;
+  tmp = SELECT c FROM prior:t -(MADE_BY:e)-> Card:c ACCUM @@cards_before += c.card_id;
   PRINT start[start.device_id, start.profile, start.device_info, start.os, start.browser, start.screen,
         start.device_type, start.first_seen, start.n_cards, start.ring_id, start.ring_size] AS device;
   PRINT cards[cards.card_id, cards.ring_id, cards.ring_size, cards.@n_txns, cards.@amount, cards.@max_model_score,
         cards.@first_ts, cards.@last_ts, cards.@new_device, cards.@proxy, cards.@tx_ids];
   PRINT @@case_summaries AS closed_cases_on_device;
   PRINT agent_cases[agent_cases.case_id, agent_cases.verdict, agent_cases.pattern, agent_cases.summary];
+  PRINT @@cards_before.size() AS cards_before_as_of;
 }
 
 // ---------------------------------------------------------------------------------------------
 // Policy R6 detector: for each element the flagged transaction shares (device profile, billing
 // region, recipient email), the other cards active on it in the window and how many look like fraud.
-CREATE OR REPLACE QUERY shared_origin(VERTEX<Txn> tx, INT window_days = 7, DOUBLE score_min = 0.5) FOR GRAPH RedThread {
+CREATE OR REPLACE QUERY shared_origin(VERTEX<Txn> tx, INT window_days = 7, DOUBLE score_min = 0.5,
+    DATETIME as_of = to_datetime("2099-01-01 00:00:00")) FOR GRAPH RedThread {
   MaxAccum<DATETIME> @@t0;
   SetAccum<STRING> @elems;
   MapAccum<STRING, SetAccum<STRING>> @@cards, @@hot_cards, @@case_cards;
@@ -127,6 +134,9 @@ CREATE OR REPLACE QUERY shared_origin(VERTEX<Txn> tx, INT window_days = 7, DOUBL
   tmp = SELECT t FROM start:t ACCUM @@t0 += t.ts;
   lo = datetime_sub(@@t0, INTERVAL window_days DAY);
   hi = datetime_add(@@t0, INTERVAL window_days DAY);
+  // Nothing after the alert: the bank's analysts never include a transaction that postdates the
+  // opening of the case, and an investigation at that moment could not have seen one.
+  IF hi > as_of THEN hi = as_of; END;
 
   devs = SELECT d FROM start:t -(FROM_DEVICE:e)-> DeviceProfile:d
          ACCUM @@element_cards_all_time += ("device:" + d.device_id -> d.n_cards);
@@ -148,7 +158,7 @@ CREATE OR REPLACE QUERY shared_origin(VERTEX<Txn> tx, INT window_days = 7, DOUBL
                   @@hot_cards += (el -> c.card_id), @@n_hot_txns += (el -> 1)
                 END
               END;
-  tmp = SELECT f FROM nb:t -(AFFECTED_IN_CASE:e)-> FraudCase:f WHERE f.verdict == "fraud"
+  tmp = SELECT f FROM nb:t -(AFFECTED_IN_CASE:e)-> FraudCase:f WHERE f.verdict == "fraud" AND f.opened_at < as_of
         ACCUM FOREACH el IN t.@elems DO @@case_cards += (el -> f.case_id) END;
   PRINT lo AS window_from, hi AS window_to;
   PRINT @@n_txns AS n_txns, @@n_hot_txns AS n_hot_txns, @@element_cards_all_time AS device_cards_all_time;
@@ -232,7 +242,12 @@ CREATE OR REPLACE QUERY policy_search(LIST<FLOAT> qv, INT k = 5) FOR GRAPH RedTh
 // Sharing a device is not suspicious by itself: popular phones are shared by ~100 cards, and partial
 // profiles ("unknown | chrome 66") by hundreds; linking through them chains unrelated fraud together. Writes ring_id/ring_size on Card and
 // DeviceProfile (-1 = not in a ring).
-CREATE OR REPLACE QUERY ring_wcc(DOUBLE score_min = 0.5, INT max_device_cards = 150, INT min_ring_cards = 2) FOR GRAPH RedThread {
+CREATE OR REPLACE QUERY ring_wcc(DOUBLE score_min = 0.5, INT max_device_cards = 150, INT min_ring_cards = 2,
+    DATETIME cutoff = to_datetime("2099-01-01 00:00:00")) FOR GRAPH RedThread {
+  // cutoff: rings are built only from what was known before it - confirmed cases opened earlier and
+  // suspicious transactions that had already happened. Set it to the first alert being investigated,
+  // so no investigation sees a ring that only formed afterwards, and a backtest never seeds a ring
+  // from the very outcomes it is replaying.
   SetAccum<STRING> @@generic_info;
   OrAccum @susp;
   SetAccum<VERTEX<Card>> @card;
@@ -248,8 +263,9 @@ CREATE OR REPLACE QUERY ring_wcc(DOUBLE score_min = 0.5, INT max_device_cards = 
   reset = SELECT c FROM Card:c POST-ACCUM c.ring_id = -1, c.ring_size = 1;
   reset = SELECT d FROM DeviceProfile:d POST-ACCUM d.ring_id = -1, d.ring_size = 0;
 
-  confirmed = SELECT t FROM ClosedCase:cc -(INVOLVES:e)-> Txn:t WHERE cc.outcome == "confirmed_fraud";
-  hot = SELECT t FROM Txn:t WHERE t.model_score >= score_min;
+  confirmed = SELECT t FROM ClosedCase:cc -(INVOLVES:e)-> Txn:t
+              WHERE cc.outcome == "confirmed_fraud" AND cc.opened_at < cutoff;
+  hot = SELECT t FROM Txn:t WHERE t.model_score >= score_min AND t.ts < cutoff;
   susp = confirmed UNION hot;
   tmp = SELECT c FROM susp:t -(MADE_BY:e)-> Card:c ACCUM t.@card += c;
   sdev = SELECT d FROM susp:t -(FROM_DEVICE:e)-> DeviceProfile:d
@@ -285,7 +301,8 @@ CREATE OR REPLACE QUERY ring_wcc(DOUBLE score_min = 0.5, INT max_device_cards = 
 }
 
 // A ring's cards and devices, with activity and fraud signals in a window.
-CREATE OR REPLACE QUERY ring_members(INT ring_id, DATETIME from_ts, DATETIME to_ts, INT max_members = 80) FOR GRAPH RedThread {
+CREATE OR REPLACE QUERY ring_members(INT ring_id, DATETIME from_ts, DATETIME to_ts, INT max_members = 80,
+    DATETIME as_of = to_datetime("2099-01-01 00:00:00")) FOR GRAPH RedThread {
   SumAccum<INT> @n_txns;
   MaxAccum<DOUBLE> @max_model_score = -1;
   SetAccum<STRING> @closed_fraud_cases;
@@ -294,9 +311,11 @@ CREATE OR REPLACE QUERY ring_members(INT ring_id, DATETIME from_ts, DATETIME to_
   devices = SELECT d FROM DeviceProfile:d WHERE d.ring_id == ring_id AND ring_id >= 0;
   tx = SELECT t FROM members:c -(MADE:e)-> Txn:t WHERE t.ts >= from_ts AND t.ts <= to_ts
        ACCUM c.@n_txns += 1, c.@max_model_score += t.model_score;
-  tmp = SELECT cc FROM members:c -(CARD_CLOSED_CASE:e)-> ClosedCase:cc WHERE cc.outcome == "confirmed_fraud"
+  tmp = SELECT cc FROM members:c -(CARD_CLOSED_CASE:e)-> ClosedCase:cc
+        WHERE cc.outcome == "confirmed_fraud" AND cc.opened_at < as_of
         ACCUM c.@closed_fraud_cases += cc.case_id;
-  tmp = SELECT f FROM members:c -(CARD_FRAUD_CASE:e)-> FraudCase:f ACCUM c.@agent_cases += f.case_id;
+  tmp = SELECT f FROM members:c -(CARD_FRAUD_CASE:e)-> FraudCase:f WHERE f.opened_at < as_of
+        ACCUM c.@agent_cases += f.case_id;
   PRINT members[members.card_id, members.ring_size, members.@n_txns, members.@max_model_score,
         members.@closed_fraud_cases, members.@agent_cases];
   PRINT devices[devices.device_id, devices.profile, devices.n_cards];
@@ -467,4 +486,27 @@ CREATE OR REPLACE QUERY policy_sections(STRING doc_source = "fraud_policy", INT 
   // policy is only about twenty chunks, so the whole document is cheap to return and match exactly.
   hits = SELECT c FROM DocChunk:c WHERE c.source == doc_source LIMIT k;
   PRINT hits[hits.chunk_id, hits.source, hits.section, hits.content] AS sections;
+}
+
+CREATE OR REPLACE QUERY record_analyst_decision(STRING case_id, STRING decision, DATETIME decided_at)
+    FOR GRAPH RedThread {
+  // A human's decision on the agent's recommendation becomes part of the case. The summary is what
+  // memory retrieval returns to later investigations, so the decision is appended there: the next
+  // time a similar case comes up, the agent sees not only what it recommended but whether a person
+  // with the authority to act agreed.
+  cases = SELECT f FROM FraudCase:f WHERE f.case_id == case_id
+          POST-ACCUM f.summary = f.summary + " Analyst decision: " + decision + ".", f.updated_at = decided_at;
+  PRINT cases.size() AS updated;
+}
+
+CREATE OR REPLACE QUERY reviewed_agent_cases(DATETIME as_of = to_datetime("2099-01-01 00:00:00"))
+    FOR GRAPH RedThread {
+  // The agent's cases a person has ruled on. Only these are memory a later investigation may read: the
+  // agent's own unreviewed verdict is an opinion, not an outcome, and feeding it back would let one
+  // investigation lean on another's guess. The bank's closed cases are unaffected.
+  SetAccum<STRING> @@ids;
+  cases = SELECT f FROM FraudCase:f
+          WHERE f.opened_at < as_of AND f.summary LIKE "%Analyst decision:%"
+          ACCUM @@ids += f.case_id;
+  PRINT @@ids AS case_ids;
 }

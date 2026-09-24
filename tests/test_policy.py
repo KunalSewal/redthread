@@ -122,3 +122,59 @@ def test_sar_agrees_with_file_report_action():
             recs = actions(recommend(a, response))
             if Action.FILE_REPORT in recs:
                 assert sar_required(a, response)[0] or a.shared_origin or a.coordinated_undocumented
+
+
+def test_an_undecided_dispute_asks_an_analyst_not_the_customer_again():
+    """The customer has already said they did not make it; asking them again adds nothing. What is
+    missing is what only the bank can see, which is a question for an analyst (policy section 5)."""
+    from redthread.policy import request_reason
+
+    a = base(verdict="uncertain", probability=0.6, independent_evidence=2, customer_disputed=True)
+    assert evidence_request(a) == "analyst_info"
+    assert "analyst" in request_reason(a, "analyst_info")
+
+
+def test_every_request_states_why():
+    from redthread.policy import request_reason
+
+    for a in (base(probability=0.45, single_signal=True),
+              base(verdict="legitimate", probability=0.05, independent_evidence=3, customer_disputed=True),
+              base(verdict="uncertain", probability=0.6, independent_evidence=2, customer_disputed=True)):
+        request = evidence_request(a)
+        assert request is not None
+        reason = request_reason(a, request)
+        assert reason and "not decisive" not in reason
+
+
+def test_a_ring_does_not_file_a_report_on_a_card_that_is_probably_legitimate():
+    """3a: a report needs fraud confirmed or strongly suspected, even when R6 or R9 applies."""
+    a = base(verdict="uncertain", probability=0.22, independent_evidence=3, shared_origin=True,
+             shared_element="device D1", connected_cards=("C1-K1", "C2-K1"))
+    acts = actions(recommend(a))
+    assert Action.FILE_REPORT not in acts
+    assert {Action.CREATE_CASE, Action.ESCALATE_TO_ANALYST, Action.MONITOR_CONNECTED_CARDS} <= set(acts)
+    assert sar_required(a)[0] is False
+
+
+def test_confirmed_fraud_linked_to_a_shared_device_files_a_report():
+    """3a and R2: connecting to a shared device profile or another card's fraud warrants a report."""
+    a = base(verdict="fraud", probability=0.94, independent_evidence=4, linked_to_other_fraud=True,
+             exposure_usd=350.0)
+    acts = actions(recommend(a))
+    assert Action.FILE_REPORT in acts and Action.CREATE_CASE in acts
+    assert sar_required(a)[0] is True
+
+
+def test_the_report_and_its_rule_always_agree():
+    """Whatever path produced the plan, FILE_REPORT appears exactly when 3a says a report is required."""
+    import itertools
+
+    for verdict, p, shared, coord, linked, exposure in itertools.product(
+            ("fraud", "uncertain", "legitimate"), (0.1, 0.5, 0.9), (False, True), (False, True),
+            (False, True), (200.0, 1500.0)):
+        a = base(verdict=verdict, probability=p, independent_evidence=3, shared_origin=shared,
+                 coordinated_undocumented=coord, linked_to_other_fraud=linked, exposure_usd=exposure,
+                 connected_cards=("C1-K1",) if shared or coord else ())
+        for response in (None, "denied", "confirmed"):
+            filed = Action.FILE_REPORT in actions(recommend(a, response))
+            assert filed == sar_required(a, response)[0], (verdict, p, shared, coord, linked, exposure, response)

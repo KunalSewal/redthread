@@ -142,7 +142,33 @@ def evidence_request(a: Assessment) -> RequestType | None:
         return None  # R6/R9 prescribe actions directly; the ring evidence does not hinge on one customer
     if a.card_testing:
         return "step_up_auth"  # R5
+    if a.customer_disputed and not _dispute_looks_legitimate(a):
+        # The customer has already told us they did not make it, so asking them again adds nothing.
+        # What is missing is what only the bank can see: whether anything on record contradicts the
+        # dispute. That is a question for an analyst (policy section 5).
+        return "analyst_info"
     return "customer_validation"  # R1 / 3b
+
+
+def request_reason(a: Assessment, request: RequestType) -> str:
+    """Why more evidence is needed, in the terms of the policy (section 7 asks for this)."""
+    if a.recurring_match:
+        return "R7: the disputed charge matches the holder's own recurring pattern, so confirm it with them"
+    if request == "step_up_auth":
+        return "R5: a card-testing sequence, so require step-up authentication before further activity"
+    if _dispute_looks_legitimate(a):
+        return (f"the customer disputes the charge but the evidence says it is theirs (probability "
+                f"{a.probability:.2f}); verify with them rather than close over their objection")
+    if request == "analyst_info":
+        return (f"the customer has already disputed it and the evidence leaves it undecided (probability "
+                f"{a.probability:.2f}); ask an analyst whether the bank's records contradict the dispute")
+    if a.probability < STOP_HIGH and a.probability > STOP_LOW:
+        return (f"probability {a.probability:.2f} is between the policy's thresholds of {STOP_LOW} and "
+                f"{STOP_HIGH}, so the question is not settled")
+    if a.single_signal:
+        return "R1: the case rests on a single signal, so verify before any block"
+    return (f"only {a.independent_evidence} independent piece(s) of evidence, and section 6 needs two "
+            f"before stopping")
 
 
 def _dispute_looks_legitimate(a: Assessment) -> bool:
@@ -171,7 +197,25 @@ def recommend(a: Assessment, response: Response | None = None) -> list[Recommend
     _ring_actions(plan, a, response)
     _escalation(plan, a, response)
     _block_all_guard(plan, a)
+    _report(plan, a, response)
     return plan.build()
+
+
+def _report(plan: _Plan, a: Assessment, response: Response | None) -> None:
+    """Section 3a decides the report, and decides it once.
+
+    R2, R6 and R9 each call for FILE_REPORT, but 3a conditions every report on fraud being confirmed
+    or strongly suspected, and on one of its aggravating conditions. Deciding it rule by rule let the
+    two drift apart in both directions: a ring alert the agent judged about 80% legitimate filed a
+    report to the regulator, while a confirmed fraud linked to a shared device filed none. Here the
+    report is added exactly when 3a says so, and removed otherwise.
+    """
+    file, reason = sar_required(a, response)
+    if file:
+        plan.add(Action.FILE_REPORT, reason)
+        plan.add(Action.CREATE_CASE, "3a: a report always has a case behind it")
+    else:
+        plan.drop(Action.FILE_REPORT)
 
 
 def _before_response(plan: _Plan, a: Assessment) -> None:
@@ -247,16 +291,23 @@ def _denied(plan: _Plan, a: Assessment, why: str) -> None:
 
 
 def _ring_actions(plan: _Plan, a: Assessment, response: Response | None) -> None:
+    """R6 and R9. Whether they also mean a report is section 3a's call (see _report): a ring can be
+    real while this card's part in it is not established, and then an analyst decides."""
     if response == "confirmed":
         return
+    suspected = sar_required(a, response)[0]
     if a.coordinated_undocumented:
         plan.add(Action.CREATE_CASE, "R9: coordinated abuse across customers fitting no known pattern")
-        plan.add(Action.FILE_REPORT, "R9")
-        plan.add(Action.ESCALATE_TO_ANALYST, "R9")
+        plan.add(Action.ESCALATE_TO_ANALYST, "R9" if suspected else (
+            f"R9 and 3a: coordinated abuse, but fraud on this card is not strongly suspected (probability "
+            f"{a.probability:.2f}); an analyst decides whether to report"))
     if a.shared_origin:
         element = a.shared_element or "a common origin"
         plan.add(Action.CREATE_CASE, f"R6: several cards show fraud from {element}")
-        plan.add(Action.FILE_REPORT, f"R6: shared origin {element}")
+        if not suspected:
+            plan.add(Action.ESCALATE_TO_ANALYST,
+                     f"R6 and 3a: {element} is shared with other cards' fraud, but fraud on this card is not "
+                     f"strongly suspected (probability {a.probability:.2f}); an analyst decides whether to report")
     if a.connected_cards and (a.shared_origin or a.coordinated_undocumented or a.linked_to_other_fraud):
         plan.add(Action.MONITOR_CONNECTED_CARDS,
                  f"R6: {len(a.connected_cards)} connected card(s) share the same origin")

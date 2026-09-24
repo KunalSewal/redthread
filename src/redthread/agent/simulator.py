@@ -48,7 +48,13 @@ def bayes(prior: float, likelihood_ratio: float) -> float:
 def simulate(request_type: str, prior: float, *, recurring: bool, customer_reported: bool) -> SimulatedReply:
     denies = prior >= 0.5 and not recurring
     response: Response = "denied" if denies else "confirmed"
-    if request_type == "step_up_auth":
+    if request_type == "analyst_info":
+        text = ("The fraud analyst checked the bank's own records for anything contradicting the "
+                "cardholder's dispute - a prior verification of this device, a contact-centre call "
+                "authorising the purchase - and found none" if denies else
+                "The fraud analyst found a record consistent with the cardholder's own activity, such as "
+                "this device previously verified on the account")
+    elif request_type == "step_up_auth":
         text = ("Step-up authentication was not completed: the one-time passcode sent to the cardholder's "
                 "registered phone was never entered, and the cardholder, contacted, did not recognise the activity"
                 if denies else "The cardholder completed step-up authentication on their registered device "

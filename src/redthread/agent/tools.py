@@ -18,7 +18,8 @@ HOT_SCORE = 0.5
 SMALL_AUTH_USD = 10.0
 MAX_ROWS = 70
 AS_OF_QUERIES = {"alert_context", "card_window", "device_neighbors", "linked_cases", "similar_closed_cases",
-                 "similar_fraud_cases", "community_profile"}
+                 "similar_fraud_cases", "community_profile", "shared_origin", "ring_members",
+                 "reviewed_agent_cases"}
 GENERIC_DEVICE_INFO = {"iOS Device", "MacOS", "Windows", "Trident/7.0", "Linux", "SAMSUNG", "unknown"}
 
 
@@ -71,11 +72,33 @@ class Tools:
         self.ledger = Ledger()
         self.as_of = as_of
         self._policy_sections: list[dict] | None = None  # the fraud policy, fetched once per case
+        # The agent's own earlier cases are shown only once a person has ruled on them. An unreviewed
+        # verdict is the agent's opinion, not an outcome; reading it back would let one investigation
+        # lean on another's guess. Loaded before the first query, so every tool filters the same way.
+        self._reviewed: set[str] | None = None
+
+    def _until(self, hi: datetime) -> datetime:
+        """End a window at the alert, never after it.
+
+        In the bank's 4,665 confirmed-fraud cases not one transaction happens after the case was
+        opened: the episode always ends before the alert. A transaction after it is information the
+        investigation could not have had, and counting it would be a shortcut - so every window the
+        tools build stops at as_of, whatever span was asked for.
+        """
+        return min(hi, _ts(self.as_of)) if self.as_of else hi
 
     async def _q(self, name: str, **params) -> list[dict]:
+        if self._reviewed is None and name != "reviewed_agent_cases":
+            res = await self._q("reviewed_agent_cases")
+            self._reviewed = set(res[0]["case_ids"])
         if self.as_of and name in AS_OF_QUERIES:
             params["as_of"] = self.as_of
         return await self.g.query(name, params)
+
+    def _reviewed_only(self, cases: list) -> list:
+        """Agent cases (rows or bare IDs) a person has ruled on; the rest stay out of the evidence."""
+        keep = self._reviewed or set()
+        return [c for c in cases if (c["case_id"] if isinstance(c, dict) else c) in keep]
 
     def _ref(self, tool: str, text: str) -> str:
         ref = f"query:{text}"
@@ -93,9 +116,10 @@ class Tools:
         }
         if row["model_score"] is not None:
             row["model_hist_fraud_rate"] = fraud_rate(row["model_score"])
-        for key in ("closed_cases", "agent_cases"):
-            if a.get(key):
-                row[key] = sorted(a[key])
+        if a.get("closed_cases"):
+            row["closed_cases"] = sorted(a["closed_cases"])
+        if self._reviewed_only(a.get("agent_cases") or []):
+            row["agent_cases"] = sorted(self._reviewed_only(a["agent_cases"]))
         m_flags = {k: a[k] for k in ("m4", "m6") if a.get(k)}
         if m_flags:
             row["match_flags"] = m_flags
@@ -116,7 +140,7 @@ class Tools:
         prior = sorted(_attrs(res[2]["prior_closed_cases"]), key=lambda c: c["opened_at"], reverse=True)
         for c in prior:
             self.ledger.closed_cases[c["case_id"]] = c
-        agent = _attrs(res[3]["prior_agent_cases"])
+        agent = self._reviewed_only(_attrs(res[3]["prior_agent_cases"]))
         self.ledger.agent_cases.update(c["case_id"] for c in agent)
         out = {
             "ref": self._ref("alert_context", f"alert_context(tx={tx_id})"),
@@ -147,14 +171,14 @@ class Tools:
     def _device_summary(self, d: dict) -> dict:
         self.ledger.devices[d["device_id"]] = d["profile"]
         generic = (d.get("device_info") or "unknown") in GENERIC_DEVICE_INFO or not d.get("screen")
-        return {"device_id": d["device_id"], "profile": d["profile"], "cards_all_time": d["n_cards"],
+        return {"device_id": d["device_id"], "profile": d["profile"],
                 "profile_specificity": "generic (shared by many unrelated people)" if generic else "specific",
                 "ring_id": d.get("ring_id"), "ring_cards": d.get("ring_size")}
 
     async def card_activity(self, card_id: str, center_ts: str, days_before: int = 10, days_after: int = 3,
                             flagged_tx: str | None = None) -> dict:
         center = _ts(center_ts)
-        lo, hi = center - timedelta(days=days_before), center + timedelta(days=days_after)
+        lo, hi = center - timedelta(days=days_before), self._until(center + timedelta(days=days_after))
         res = await self._q("card_window", card=card_id, from_ts=_fmt(lo), to_ts=_fmt(hi))
         rows = sorted((self._txn_row(a) for a in _attrs(res[0]["txns"])), key=lambda r: r["ts"])
         self.ledger.cards.add(card_id)
@@ -219,9 +243,10 @@ class Tools:
 
     async def device_check(self, device_id: str, center_ts: str, days: int = 30) -> dict:
         center = _ts(center_ts)
-        lo, hi = center - timedelta(days=days), center + timedelta(days=3)
+        lo, hi = center - timedelta(days=days), self._until(center + timedelta(days=3))
         res = await self._q("device_neighbors", device=device_id, from_ts=_fmt(lo), to_ts=_fmt(hi))
         device = self._device_summary(_attrs(res[0]["device"])[0])
+        device["cards_before_alert"] = res[4]["cards_before_as_of"]
         cards = _attrs(res[1]["cards"])
         self.ledger.cards.update(c["card_id"] for c in cards)
         for c in cards:
@@ -230,7 +255,7 @@ class Tools:
                  for s in res[2]["closed_cases_on_device"]]
         for c in cases:
             self.ledger.closed_cases.setdefault(c["case_id"], c)
-        agent = _attrs(res[3]["agent_cases"])
+        agent = self._reviewed_only(_attrs(res[3]["agent_cases"]))
         self.ledger.agent_cases.update(a["case_id"] for a in agent)
         ranked = sorted(cards, key=lambda c: (-(c["max_model_score"] or 0), c["card_id"]))
         return {
@@ -263,7 +288,7 @@ class Tools:
                 "txns_model_over_0.5": hot, "cards_model_over_0.5": sorted(hot_cards.get(el, []))[:20],
                 "hot_share": round(hot / n, 4) if n else 0,
                 "lift_vs_all_txns": round(hot / n / baseline, 2) if n else 0,
-                "agent_fraud_cases": sorted(cases.get(el, [])),
+                "agent_fraud_cases": sorted(self._reviewed_only(cases.get(el, []))),
             })
         return {
             "ref": self._ref("shared_origin", f"shared_origin(tx={tx_id}, window=+/-{window_days}d)"),
@@ -280,7 +305,7 @@ class Tools:
         closed = _attrs(res[0]["closed"])
         for c in closed:
             self.ledger.closed_cases[c["case_id"]] = c
-        agent = _attrs(res[1]["agent"])
+        agent = self._reviewed_only(_attrs(res[1]["agent"]))
         self.ledger.agent_cases.update(a["case_id"] for a in agent)
         closed = sorted(closed, key=lambda c: c["opened_at"], reverse=True)
         return {
@@ -303,7 +328,7 @@ class Tools:
         }
         try:
             agent = await self._q("similar_fraud_cases", qv=qv, k=3)
-            out["agent_cases"] = _attrs(agent[0]["hits"])
+            out["agent_cases"] = self._reviewed_only(_attrs(agent[0]["hits"]))
             self.ledger.agent_cases.update(a["case_id"] for a in out["agent_cases"])
         except GraphToolError:
             out["agent_cases"] = []  # no agent cases with vectors yet
@@ -311,7 +336,7 @@ class Tools:
 
     async def ring(self, ring_id: int, center_ts: str, days: int = 45) -> dict:
         center = _ts(center_ts)
-        lo, hi = center - timedelta(days=days), center + timedelta(days=days)
+        lo, hi = center - timedelta(days=days), self._until(center + timedelta(days=days))
         res = await self._q("ring_members", ring_id=ring_id, from_ts=_fmt(lo), to_ts=_fmt(hi))
         members = _attrs(res[0]["members"])
         devices = _attrs(res[1]["devices"])
@@ -322,12 +347,13 @@ class Tools:
             "ref": self._ref("ring", f"ring_members(ring={ring_id})"),
             "ring_id": ring_id,
             "definition": ("cards linked through a specific device that was new to each account in a suspicious "
-                           "transaction (confirmed fraud or model score >= 0.5); connected components via GSQL"),
-            "devices": devices,
+                           "transaction (confirmed fraud or model score >= 0.5), using only what was known before "
+                           "the first alert under investigation; connected components via GSQL"),
+            "devices": [{"device_id": d["device_id"], "profile": d["profile"]} for d in devices],
             "members": [{"card_id": m["card_id"], "txns_in_window": m["n_txns"],
                          "max_model_score": _score(m["max_model_score"]),
                          "confirmed_fraud_closed_cases": sorted(m["closed_fraud_cases"]),
-                         "agent_cases": sorted(m["agent_cases"])} for m in members],
+                         "agent_cases": sorted(self._reviewed_only(m["agent_cases"]))} for m in members],
         }
 
     async def community(self, card_id: str, center_ts: str, days: int = 30) -> dict:
@@ -363,7 +389,7 @@ class Tools:
             "fraud_rate_in_community": round(share, 3),
             "fraud_rate_all_cards": round(base, 3),
             "lift_vs_base_rate": round(share / base, 1) if base else None,
-            "shared_devices": [{"device_id": d["device_id"], "profile": d["profile"], "n_cards": d["n_cards"]}
+            "shared_devices": [{"device_id": d["device_id"], "profile": d["profile"]}
                                for d in devices[:6]],
             "members": [{"card_id": m["card_id"], "ring_id": m["ring_id"],
                          "txns_in_window": m["n_txns"], "max_model_score": _score(m["max_model_score"]),

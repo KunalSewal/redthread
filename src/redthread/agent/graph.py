@@ -27,7 +27,7 @@ from redthread.agent.tools import Tools
 from redthread.answer import Answer
 from redthread.belief import Belief, Judged, assess
 from redthread.patterns import classify
-from redthread.policy import Action, Assessment, evidence_request, recommend, sar_required
+from redthread.policy import Action, Assessment, evidence_request, recommend, request_reason, sar_required
 
 log = logging.getLogger(__name__)
 FOLLOW_UP_BUDGET = 5
@@ -52,6 +52,7 @@ class CaseState(TypedDict, total=False):
     written: bool
     belief: dict
     resolve_rounds: int
+    case_opened: bool
     policy_evidence: list[dict]
     investigation_calls: int
     answer: dict
@@ -237,14 +238,24 @@ class Investigation:
         affected = [] if belief.verdict == "legitimate" else a.affected_txn_ids
         exposure = round(sum(abs(led.txns[t]["amount"]) for t in affected), 2)
         s = a.signals
+        # A cross-card flag changes what the bank does - a report to the regulator, monitoring other
+        # people's cards - so it has to rest on entities the graph returned, not on the model's
+        # say-so. If no connected card or device survived validation, the flag is dropped. (It once
+        # filed a report on a "link to another card's fraud" that named no card at all.)
+        backed = cross_card_backed(a)
         return Assessment(
-            verdict=belief.verdict, probability=belief.posterior, pattern=a.pattern, exposure_usd=exposure,
+            # A legitimate verdict has no fraud episode, so no pattern (MON-010 once carried 'undocumented'
+            # into a legitimate answer with the description blanked, which the answer schema rejects).
+            verdict=belief.verdict, probability=belief.posterior,
+            pattern="none" if belief.verdict == "legitimate" else a.pattern, exposure_usd=exposure,
             independent_evidence=belief.independent_evidence,
             customer_disputed=state["alert"]["trigger_type"] == "customer_report",
             single_signal=s.single_signal, card_testing=s.card_testing,
             card_testing_purchase_cleared_over_100=s.card_testing_purchase_cleared_over_100,
-            recurring_match=s.recurring_match, shared_origin=s.shared_origin, shared_element=s.shared_element,
-            linked_to_other_fraud=s.linked_to_other_fraud, coordinated_undocumented=s.coordinated_undocumented,
+            recurring_match=s.recurring_match, shared_origin=s.shared_origin and backed,
+            shared_element=s.shared_element,
+            linked_to_other_fraud=s.linked_to_other_fraud and backed,
+            coordinated_undocumented=s.coordinated_undocumented and backed,
             connected_cards=tuple(a.connected_card_ids), evidence_conflicts=s.evidence_conflicts,
             # R10 inputs come from the episode, not the model's judgement: cards of THIS customer caught in the
             # fraud (the alert card if fraud, plus connected cards with the same customer prefix).
@@ -308,12 +319,59 @@ class Investigation:
         state["initial"] = [asdict(r) for r in recs]
         state["request"] = evidence_request(a)
         self._event(state, "recommendation", "Initial: " + ", ".join(f"{r.action} ({r.route})" for r in recs))
+        await self._open_case(state, a)
         return state
+
+    async def _open_case(self, state: CaseState, a: Assessment) -> None:
+        """Open the case in the graph as soon as policy says one is warranted, not only at the end.
+
+        Section 3a: a case opens whenever fraud probability reaches 0.30, whenever evidence is
+        requested, or whenever a customer disputes a charge. Written now, with status open and the
+        initial plan, it can be found by other investigations while this one is still gathering
+        evidence; write_back then updates it with the final status and actions.
+        """
+        why = [reason for ok, reason in (
+            (any(r["action"] == Action.CREATE_CASE for r in state["initial"]), "CREATE_CASE recommended"),
+            (a.probability >= 0.30, f"fraud probability {a.probability:.2f} reached 0.30"),
+            (bool(state.get("request")), f"evidence requested ({state.get('request')})"),
+            (a.customer_disputed, "the customer disputed the charge"),
+        ) if ok]
+        if not why:
+            return
+        la = state["llm_assessment"]
+        record = {
+            "case_id": state["case_id"], "alert_id": state["alert"]["case_id"],
+            "trigger_type": state["alert"]["trigger_type"], "status": "open",
+            "verdict": a.verdict, "fraud_probability": a.probability, "pattern": a.pattern,
+            "pattern_description": la.get("pattern_description", ""), "exposure_usd": a.exposure_usd,
+            "summary": (f"Opened after the initial assessment: {a.verdict}, probability {a.probability:.2f}. "
+                        f"Initial plan: {', '.join(r['action'] for r in state['initial'])}."),
+            "opened_at": state["alert"]["opened_at"], "sar_filed": False,
+            "final_actions": [r["action"] for r in state["initial"]],
+            "record_json": json.dumps({"stage": "initial", "assessment": state["assessment"],
+                                       "initial": state["initial"], "request": state.get("request")},
+                                      default=str)[:60000],
+            "flagged_txn_id": str(state["alert"]["flagged_txn_id"]),
+            "affected_txn_ids": la.get("affected_txn_ids", []), "card_id": state["alert"]["card_id"],
+            "connected_card_ids": la.get("connected_card_ids", []),
+            "device_ids": la.get("connected_device_ids", []),
+            "similar_prior_cases": la.get("similar_prior_cases", []),
+        }
+        try:
+            self._event(state, "case_opened",
+                        f"Case {state['case_id']} opened in the graph, status open: {'; '.join(why)}")
+            await memory.write_case(self.graph, record, state["events"])
+            state["case_opened"] = True
+        except Exception as exc:  # the investigation continues; the final write-back retries
+            log.exception("opening the case failed")
+            self._event(state, "memory_error", f"opening the case failed: {str(exc)[:300]}")
 
     async def request_evidence(self, state: CaseState) -> CaseState:
         a = state["assessment"]
-        self._event(state, "evidence_request", f"Requested {state['request']} (policy section 5; "
-                                               f"probability {a['probability']:.2f} not decisive)")
+        policy_a = Assessment(**{**a, "connected_cards": tuple(a["connected_cards"])})
+        self._event(state, "evidence_request",
+                    f"Requested {state['request']} (policy section 5): "
+                    f"{request_reason(policy_a, state['request'])}")
         reply = simulate(state["request"], a["probability"], recurring=a["recurring_match"],
                          customer_reported=a["customer_disputed"])
         state["reply"] = asdict(reply)
@@ -370,13 +428,21 @@ class Investigation:
             "pattern_description": final_la["pattern_description"], "exposure_usd": fa["exposure_usd"],
             "summary": state["report"]["summary"], "opened_at": state["alert"]["opened_at"],
             "sar_filed": answer["sar"]["file"], "final_actions": [r["action"] for r in state["final"]],
-            "record_json": json.dumps(answer)[:60000], "flagged_txn_id": str(state["alert"]["flagged_txn_id"]),
+            "record_json": json.dumps({
+                "answer_file": f"cases/{state['alert']['case_id']}.json", "status": answer["case"]["status"],
+                "verdict": fa["verdict"], "probability": fa["probability"], "pattern": fa["pattern"],
+                "affected_txn_ids": final_la["affected_txn_ids"][:20], "sar_filed": answer["sar"]["file"],
+                "final_actions": [r["action"] for r in state["final"]]}),
+            "flagged_txn_id": str(state["alert"]["flagged_txn_id"]),
             "affected_txn_ids": final_la["affected_txn_ids"], "card_id": state["alert"]["card_id"],
             "connected_card_ids": final_la["connected_card_ids"], "device_ids": la["connected_device_ids"],
             "similar_prior_cases": la["similar_prior_cases"],
         }
         try:
-            self._event(state, "memory", f"Case written to graph as {state['case_id']}")
+            self._event(state, "memory",
+                        f"Case {state['case_id']} updated in the graph: status open -> {record['status']}, "
+                        f"final actions {', '.join(record['final_actions'])}" if state.get("case_opened")
+                        else f"Case written to graph as {state['case_id']}")
             await memory.write_case(self.graph, record, state["events"])
             state["written"] = True
         except Exception as exc:  # keep the answer even if write-back fails; record why
@@ -418,7 +484,9 @@ class Investigation:
             status = "escalated"  # handed to a human analyst, whatever the verdict
         elif fa["verdict"] == "fraud":
             status = "closed_fraud"
-        elif fa["verdict"] == "legitimate":
+        elif fa["verdict"] == "legitimate" or Action.CLOSE_NO_FRAUD in final_actions:
+            # R3 closes an uncertain case once the cardholder confirms; `open` would mean evidence is
+            # still pending, and nothing is.
             status = "closed_legitimate"
         else:
             status = "open"
@@ -517,6 +585,7 @@ def _belief_dump(belief: Belief) -> dict:
         # line is struck out, rather than approximating it.
         "ledger": [{"basis": i.basis, "direction": i.direction, "strength": i.strength, "claim": i.claim,
                     "counted": i.counted, "lr": round(i.lr_applied, 3), "discounted": i.discounted,
+                    "as_prior": i.as_prior,
                     "entities": list(i.entities)} for i in belief.ledger],
     }
 
@@ -590,6 +659,11 @@ def _describe(alert: dict, flagged: dict, device: dict | None) -> str:
         parts.append("device shared with other cardholders in suspicious activity")
     return "; ".join(parts)
 
+
+
+def cross_card_backed(a) -> bool:
+    """Whether the case names at least one other card or linking device that survived validation."""
+    return bool(a.connected_card_ids or a.connected_device_ids)
 
 ID_IN_TEXT = re.compile(r"\b(?:D\d{4,}|C\d{4,}-K\d|CC-\d{3,}|CASE-[A-Za-z0-9-]+|\d{6,})\b")
 

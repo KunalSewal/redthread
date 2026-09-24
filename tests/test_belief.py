@@ -8,8 +8,8 @@ def item(basis, direction="incriminating", strength="strong"):
 
 
 def test_prior_comes_from_the_trigger():
-    # A denial opens the case but does not decide it: neutral, so the evidence moves it.
-    assert prior_for("customer_report", 0.004)[0] == 0.5
+    # A cardholder report starts from how often past reports were fraud, never at certainty.
+    assert 0.5 < prior_for("customer_report", 0.004)[0] <= 0.90
     assert prior_for("analyst_request", None)[0] == 0.5
     low = prior_for("risk_score", 0.001)[0]
     high = prior_for("risk_score", 0.99)[0]
@@ -32,7 +32,7 @@ def test_model_score_is_not_counted_twice_when_it_set_the_prior():
     assert not belief.ledger[0].counted
     # For a customer report the prior is the dispute, so the model score is evidence in its own right.
     disputed = assess("customer_report", 0.9, items)
-    assert disputed.independent_evidence == 2
+    assert disputed.independent_evidence == 3  # the model score, the device, and the denial itself
     assert disputed.ledger[0].lr_applied == pytest.approx(8.0)  # capped
 
 
@@ -83,7 +83,7 @@ def test_counterfactual_drops_a_line_and_recomputes():
 
 
 def test_explanation_is_readable():
-    belief = assess("customer_report", 0.02, [item("device"), item("holder_behaviour", direction="exculpatory")])
+    belief = assess("analyst_request", None, [item("device"), item("holder_behaviour", direction="exculpatory")])
     text = belief.explain()
     assert "prior 0.50" in text and "device strong up" in text and "->" in text
 
@@ -208,3 +208,35 @@ def test_tempering_leaves_the_direction_of_the_evidence_alone():
     up = assess("analyst_request", None, [item("device", strength="strong")])
     down = assess("analyst_request", None, [item("device", "exculpatory", "strong")])
     assert up.posterior > 0.5 > down.posterior
+
+
+def test_a_customer_denial_is_counted_once_not_twice():
+    """When the alert is the customer reporting the charge, the prior already is the denial. The
+    ledger's customer_statement line is that same denial and must not multiply the odds again."""
+    items = [Judged("customer_statement", "incriminating", "decisive"),
+             Judged("amount_or_timing", "incriminating", "moderate")]
+    reported = assess("customer_report", 0.001, items)
+    denial = next(w for w in reported.ledger if w.basis == "customer_statement")
+    assert not denial.counted and denial.as_prior
+    # ... yet it still counts once as a piece of evidence for the stopping rule
+    assert reported.independent_evidence == 2
+    # and a denial on its own leaves the probability at the prior, not pushed on towards certainty
+    alone = assess("customer_report", 0.001, [Judged("customer_statement", "incriminating", "decisive")])
+    assert alone.posterior == pytest.approx(prior_for("customer_report", 0.001)[0])
+
+
+def test_a_replay_with_random_triggers_can_neutralise_the_report_prior(monkeypatch):
+    from redthread.belief import REPORT_PRIOR_ENV
+
+    monkeypatch.setenv(REPORT_PRIOR_ENV, "0.5")
+    assert prior_for("customer_report", None)[0] == 0.5
+
+
+def test_the_model_score_counts_once_whatever_the_trigger():
+    """Skipped only when it set the prior. An analyst request's prior is fixed, so there it is evidence."""
+    score = Judged("flagged_transaction_model", "exculpatory", "moderate")
+    alert = assess("risk_score", 0.006, [score])
+    asked = assess("analyst_request", 0.006, [score])
+    assert alert.ledger[0].as_prior and not alert.ledger[0].counted
+    assert asked.ledger[0].counted and not asked.ledger[0].as_prior
+    assert asked.posterior < prior_for("analyst_request", 0.006)[0]

@@ -1,5 +1,6 @@
 """Case memory: write each investigation into the graph so later investigations can retrieve it."""
 
+import json
 import logging
 from datetime import datetime
 
@@ -8,6 +9,17 @@ from redthread.rag.embed import embed_passages
 from redthread.tg import connection
 
 log = logging.getLogger(__name__)
+
+# The installed write queries take vertex parameters, which the client can only send as a GET, so
+# every parameter travels in the URL. A full answer (a long SAR, nineteen connected cards) once pushed
+# a case past the server's URL limit and the write failed with 414. Free text is bounded here, in the
+# one place every case write goes through; the complete answer is the file in cases/.
+MAX_TEXT = {"summary": 1500, "pattern_description": 800, "record_json": 1500}
+
+
+def _bounded(field: str, value: str) -> str:
+    limit = MAX_TEXT[field]
+    return value if len(value) <= limit else value[: limit - 1] + "…"
 
 
 async def write_case(graph: McpGraph, record: dict, events: list[dict]) -> None:
@@ -18,14 +30,20 @@ async def write_case(graph: McpGraph, record: dict, events: list[dict]) -> None:
     to the agent.
     """
     cid = record["case_id"]
+    record_json = record["record_json"]
+    if len(record_json) > MAX_TEXT["record_json"]:  # never cut JSON mid-token: keep a valid pointer
+        record_json = json.dumps({"answer_file": f"cases/{record['alert_id']}.json",
+                                  "status": record["status"], "verdict": record["verdict"]})
     await graph.query("delete_case", {"case_id": cid})
     await graph.query("write_case", {
         "case_id": cid, "alert_id": record["alert_id"], "trigger_type": record["trigger_type"],
         "status": record["status"], "verdict": record["verdict"],
         "fraud_probability": record["fraud_probability"], "pattern": record["pattern"],
-        "pattern_description": record["pattern_description"], "exposure_usd": record["exposure_usd"],
-        "summary": record["summary"], "opened_at": record["opened_at"], "sar_filed": record["sar_filed"],
-        "final_actions": "|".join(record["final_actions"]), "record_json": record["record_json"],
+        "pattern_description": _bounded("pattern_description", record["pattern_description"]),
+        "exposure_usd": record["exposure_usd"],
+        "summary": _bounded("summary", record["summary"]), "opened_at": record["opened_at"],
+        "sar_filed": record["sar_filed"],
+        "final_actions": "|".join(record["final_actions"]), "record_json": record_json,
         "flagged": record["flagged_txn_id"], "card": record["card_id"],
     })
     links = ([("affects", t) for t in record["affected_txn_ids"]]

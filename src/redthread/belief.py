@@ -25,10 +25,11 @@ what happens to the recommendation if one line is struck out.
 """
 
 import math
+import os
 from dataclasses import dataclass
 from typing import Literal
 
-from redthread.model.calibration import fraud_rate
+from redthread.model.calibration import customer_report_rate, fraud_rate
 
 Direction = Literal["incriminating", "exculpatory"]
 Strength = Literal["weak", "moderate", "strong", "decisive"]
@@ -50,7 +51,8 @@ BASES: tuple[str, ...] = (
     "region",                     # billing region against the card's home region
 )
 
-PRIOR_CUSTOMER_REPORT = 0.5  # a denial is strong evidence, but R7 disputes are real
+# Replays that assign the trigger by coin flip set this, because there the trigger carries no information.
+REPORT_PRIOR_ENV = "REDTHREAD_PRIOR_CUSTOMER_REPORT"
 PRIOR_ANALYST_REQUEST = 0.5
 PRIOR_BOUNDS = (0.05, 0.90)  # never start an investigation certain of its own conclusion
 P_FLOOR = 0.03  # calibration is scored; claiming 0 or 1 is never supported by evidence this noisy
@@ -99,6 +101,7 @@ class Weighed(Judged):
     counted: bool = True
     lr_applied: float = 1.0
     discounted: bool = False  # shared an entity with a stronger counted item
+    as_prior: bool = False  # not counted because the same fact already set the prior
 
 
 @dataclass(frozen=True)
@@ -130,10 +133,15 @@ class Belief:
 def prior_for(trigger_type: str, model_score: float | None) -> tuple[float, str]:
     """Where the investigation starts, before any graph evidence."""
     if trigger_type == "customer_report":
-        # Neutral on purpose. Every customer-report alert in the closed-case history turned out to
-        # be fraud, but that reflects how the bank routed work, and the benchmark pack is
-        # deliberately balanced. A denial opens the case; the evidence decides it.
-        return PRIOR_CUSTOMER_REPORT, "a cardholder disputing a charge"
+        # Measured, like the score prior: how often a cardholder's report turned out to be fraud in
+        # the closed cases. It sits at the same ceiling as every prior, so an R7 dispute (their own
+        # recurring charge) or a known device can still bring it down.
+        if os.environ.get(REPORT_PRIOR_ENV):
+            return float(os.environ[REPORT_PRIOR_ENV]), "a cardholder report, in a replay where the trigger is random"
+        rate, fraud, n = customer_report_rate()
+        low, high = PRIOR_BOUNDS
+        return (min(max(rate, low), high),
+                f"a cardholder report: {fraud:,} of {n:,} past reports were confirmed fraud")
     if trigger_type == "analyst_request":
         return PRIOR_ANALYST_REQUEST, "an analyst asking for a review"
     rate = fraud_rate(model_score) if model_score is not None else None
@@ -143,11 +151,17 @@ def prior_for(trigger_type: str, model_score: float | None) -> tuple[float, str]
     return min(max(rate, low), high), f"the calibrated fraud rate for a model score of {model_score:.3f}"
 
 
-def weigh(items: list[Judged], *, model_is_prior: bool,
+def weigh(items: list[Judged], *, model_is_prior: bool, denial_is_prior: bool = False,
           subject: frozenset[str] = frozenset()) -> list[Weighed]:
     """Mark the strongest item in each basis as counted; everything else is corroboration.
 
-    When the model score has already set the prior, items resting on it are never counted again.
+    When the model score has already set the prior, items resting on it are never counted again. The
+    same holds for a customer's denial: when the alert *is* the customer reporting the charge, the
+    prior is already "a cardholder disputing a charge", and the ledger's customer_statement line is
+    that same denial. Counting it again was the largest single source of false accusations - on a
+    60-case backtest it turned five cleared customers into confident fraud (one at a model fraud
+    rate of 1%) - and removing it cut wrongly accused customers from 6 to 1 with no fraud missed
+    that had been caught.
 
     ``subject`` is the card, holder and transaction the case is about. Those IDs appear in almost
     every claim by construction, so they never make two findings correlated.
@@ -155,13 +169,17 @@ def weigh(items: list[Judged], *, model_is_prior: bool,
     ranked = sorted(range(len(items)), key=lambda i: abs(_log_lr(items[i])), reverse=True)
     counted_bases: set[str] = set()
     spoken_for: set[str] = set()  # entities a stronger counted item already rests on
-    decisions: dict[int, tuple[bool, float, bool]] = {}
+    decisions: dict[int, tuple[bool, float, bool, bool]] = {}
     for i in ranked:
         item = items[i]
         basis = item.basis if item.basis in BASES else "amount_or_timing"
-        double_counts_prior = model_is_prior and basis == "flagged_transaction_model"
-        if basis in counted_bases or double_counts_prior:
-            decisions[i] = (False, 1.0, False)
+        double_counts_prior = ((model_is_prior and basis == "flagged_transaction_model")
+                               or (denial_is_prior and basis == "customer_statement"))
+        if double_counts_prior:
+            decisions[i] = (False, 1.0, False, True)
+            continue
+        if basis in counted_bases:
+            decisions[i] = (False, 1.0, False, False)
             continue
         counted_bases.add(basis)
         lr = item.likelihood_ratio
@@ -177,26 +195,32 @@ def weigh(items: list[Judged], *, model_is_prior: bool,
         if discounted:
             lr = lr ** CORRELATED_ENTITY_WEIGHT
         spoken_for |= entities
-        decisions[i] = (True, lr, discounted)
+        decisions[i] = (True, lr, discounted, False)
     return [Weighed(basis=item.basis, direction=item.direction, strength=item.strength, claim=item.claim,
                     entities=item.entities, counted=decisions[i][0], lr_applied=decisions[i][1],
-                    discounted=decisions[i][2]) for i, item in enumerate(items)]
+                    discounted=decisions[i][2], as_prior=decisions[i][3]) for i, item in enumerate(items)]
 
 
 def assess(trigger_type: str, model_score: float | None, items: list[Judged],
            subject: frozenset[str] = frozenset()) -> Belief:
     """Prior from the trigger, likelihood ratios from the evidence, posterior by Bayes."""
     prior, reason = prior_for(trigger_type, model_score)
-    model_is_prior = trigger_type != "customer_report" and model_score is not None
-    ledger = weigh(items, model_is_prior=model_is_prior, subject=subject)
+    # The score is "already the prior" only when the prior was read from it. An analyst request starts
+    # at a fixed prior, so there the score is evidence like any other (HHG-014 once used it nowhere).
+    model_is_prior = (trigger_type == "risk_score" and model_score is not None
+                      and fraud_rate(model_score) is not None)
+    denial_is_prior = trigger_type == "customer_report"
+    ledger = weigh(items, model_is_prior=model_is_prior, denial_is_prior=denial_is_prior, subject=subject)
     log_odds = math.log(prior / (1 - prior))
     for item in ledger:
         log_odds += EVIDENCE_TEMPERING * math.log(item.lr_applied)
     odds = math.exp(log_odds)
     posterior = min(max(odds / (1 + odds), P_FLOOR), 1 - P_FLOOR)
+    # The denial is still a piece of evidence for the stopping rule (section 6); it is counted once
+    # in the probability, as the prior, and once here.
+    independent = sum(1 for i in ledger if i.counted) + (1 if denial_is_prior else 0)
     return Belief(prior=round(prior, 3), prior_reason=reason, posterior=round(posterior, 3),
-                  independent_evidence=sum(1 for i in ledger if i.counted), ledger=tuple(ledger),
-                  subject=subject)
+                  independent_evidence=independent, ledger=tuple(ledger), subject=subject)
 
 
 def without(belief: Belief, dropped: set[int], trigger_type: str, model_score: float | None) -> Belief:
