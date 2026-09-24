@@ -25,6 +25,7 @@ from redthread.agent.mcp_graph import McpGraph
 from redthread.api.casegraph import case_graph
 from redthread.belief import Judged, assess
 from redthread.policy import AUTO_ACTIONS, Action, Assessment, recommend
+from redthread.tg import GRAPH, connection
 
 log = logging.getLogger(__name__)
 RUNS = paths.ROOT / "runs"
@@ -135,12 +136,34 @@ def approve(case_id: str, body: Approval) -> dict:
     if ROUTE_RANK[body.role] < ROUTE_RANK[item["route"]]:
         raise HTTPException(403, f"{body.action} requires {item['route']} approval; {body.role} is not sufficient")
     approvals = _approvals()
-    approvals.setdefault(case_id, {})[body.action] = {
-        "decision": body.decision, "approver": body.approver, "role": body.role, "note": body.note,
-        "at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+    at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    record = {"decision": body.decision, "approver": body.approver, "role": body.role, "note": body.note,
+              "at": at}
+    record["in_graph"] = _record_decision_in_graph(case_id, body, at, len(approvals.get(case_id, {})) + 1)
+    approvals.setdefault(case_id, {})[body.action] = record
     RUNS.mkdir(exist_ok=True)
     APPROVALS.write_text(json.dumps(approvals, indent=2), encoding="utf-8")
-    return approvals[case_id][body.action]
+    return record
+
+
+def _record_decision_in_graph(case_id: str, body: "Approval", at: str, n: int) -> bool:
+    """Write the decision onto the case in the graph, so it becomes memory later cases retrieve.
+
+    The approval is recorded locally either way; if the workspace is suspended the graph simply is
+    not updated, and the response says so rather than failing the approval.
+    """
+    cid = f"CASE-{case_id}"
+    text = f"{body.role} {body.approver} {body.decision} {body.action}" + (f" ({body.note})" if body.note else "")
+    try:
+        conn = connection(GRAPH)
+        conn.runInstalledQuery("record_analyst_decision", {"case_id": cid, "decision": text, "decided_at": at})
+        conn.runInstalledQuery("add_case_event", {
+            "case_id": cid, "event_id": f"{cid}-D{n:02d}", "step": 900 + n, "kind": "analyst_decision",
+            "detail": text, "occurred_at": at})
+        return True
+    except Exception:
+        log.exception("could not record the decision on %s in the graph", cid)
+        return False
 
 
 @app.post("/api/cases/{case_id}/investigate")
@@ -161,7 +184,10 @@ async def _run(alert: dict, queue: asyncio.Queue) -> None:
     try:
         async with McpGraph() as graph:
             state = await investigate_alert(graph, alert, on_event=queue.put_nowait, as_of=alert["opened_at"])
-        (paths.CASES_OUT / f"{case_id}.json").write_text(json.dumps(state["answer"], indent=2), encoding="utf-8")
+        # A self-raised alert's answer belongs with the others in cases_extra/; cases/ holds exactly the
+        # twenty graded files.
+        folder = paths.CASES_OUT if alert.get("source", "bank_queue") == "bank_queue" else EXTRA
+        (folder / f"{case_id}.json").write_text(json.dumps(state["answer"], indent=2), encoding="utf-8")
         trace = {k: state.get(k) for k in ("alert", "events", "evidence", "llm_assessment", "belief", "assessment",
                                            "initial", "request", "reply", "final_assessment", "final", "report",
                                            "policy_evidence")}
@@ -261,13 +287,15 @@ def evaluation() -> dict:
     """Everything measured about this agent, including where it fails."""
     # Newest measurement first. backtest_final.json is the one the README and blog quote.
     backtest = next((b for b in (_read(RUNS / name) for name in
-                                 ("backtest_final.json", "backtest_after.json", "backtest_60.json",
+                                 ("backtest_pit.json", "backtest_final.json", "backtest_after.json",
+                                  "backtest_60.json",
                                   "backtest.json")) if b), None)
     return {
         "model": _read(paths.PROCESSED / "model_metrics.json"),
         "patterns": _read(paths.PROCESSED / "pattern_eval.json"),
         "calibration": _read(paths.PROCESSED / "score_calibration.json"),
         "community_lift": _read(paths.PROCESSED / "community_lift_lr.json"),
+        "baselines": _read(paths.PROCESSED / "baselines.json"),
         "backtest": (backtest or {}).get("summary"),
         "backtest_cases": (backtest or {}).get("cases"),
     }

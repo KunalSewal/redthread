@@ -73,7 +73,7 @@ def case_graph(trace: dict, answer: dict | None) -> dict:
         at(dev)
         d = dev["device"]
         node(d["device_id"], "device", d["device_id"], profile=d["profile"], ring=d.get("ring_id"),
-             cards_all_time=d["cards_all_time"])
+             cards_before_alert=d.get("cards_before_alert", d.get("cards_all_time")))
         edge(card, d["device_id"], "used_device")
         edge(flagged.get("tx_id"), d["device_id"], "from_device")
         for c in dev["cards"][:18 if key == "device_check" else 8]:

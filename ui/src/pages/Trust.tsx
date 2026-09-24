@@ -26,7 +26,8 @@ function Backtest({ b }: { b: Record<string, unknown> }) {
   return (
     <>
       <dl className="stats-grid">
-        <Stat label="Verdict accuracy" value={pct(b.verdict_accuracy)} note={`on ${String(b.n)} replayed closed cases`} />
+        <Stat label="Right on whom to accuse" value={pct(b.verdict_accuracy)}
+          note={`fraud called fraud, a cleared case not called fraud; ${String(b.n)} replayed closed cases`} />
         <Stat label="Fraud caught" value={pct(b.fraud_recall)} />
         <Stat label="Cleared cases left alone" value={pct(b.cleared_accuracy)} />
         <Stat label="Calibration (Brier)" value={typeof b.brier === 'number' ? b.brier.toFixed(3) : '—'}
@@ -110,6 +111,47 @@ export function Trust() {
             </tbody>
           </table>
           <p className="hint">Rows in orange are where this agent is weakest. They are here on purpose.</p>
+        </section>
+      )}
+
+      {data.baselines && data.baselines.length > 0 && (
+        <section aria-labelledby="base-title">
+          <h3 id="base-title">Is the graph doing the work, or a score?</h3>
+          <p className="prose">
+            The same replayed cases, judged three ways that use no graph evidence and no language model,
+            next to the agent. Each probability becomes a verdict by the policy&rsquo;s own thresholds. If the
+            agent did no better than our fraud model alone, the investigation would be decoration.
+          </p>
+          <table className="digest-table">
+            <thead>
+              <tr>
+                <th>Method</th><th className="col-num">Right on whom to accuse</th>
+                <th className="col-num">Exact verdict</th><th className="col-num">Fraud caught</th>
+                <th className="col-num">Wrongly accused</th><th className="col-num">Fraud missed</th>
+                <th className="col-num">Brier</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.baselines.map((b) => (
+                <tr key={b.method} className={b.method.startsWith('RedThread') ? 'is-ours' : undefined}>
+                  <td>{b.method}</td>
+                  <td className="col-num num">{pct(b.verdict_accuracy)}</td>
+                  <td className="col-num num">{b.exact_verdicts ?? '—'} of {b.n}</td>
+                  <td className="col-num num">{pct(b.fraud_caught)}</td>
+                  <td className="col-num num">{b.wrongly_accused}</td>
+                  <td className="col-num num">{b.missed_fraud}</td>
+                  <td className="col-num num">{b.brier.toFixed(3)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="hint">
+            Wrongly accused: a cleared customer called fraud. Missed: a confirmed fraud closed as legitimate.
+            Cases left uncertain are escalated to an analyst and count as neither; the exact verdict counts
+            them as misses. Most of the agent&rsquo;s are customer disputes of charges the analysts cleared, a
+            combination the replay deals at random and the bank&rsquo;s real history never contains: it will not
+            close a dispute on a low score alone.
+          </p>
         </section>
       )}
 

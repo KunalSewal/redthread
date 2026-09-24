@@ -23,7 +23,7 @@ export interface CaseRow {
 export interface ActionItem { action: string; route: 'auto' | 'L1' | 'L2'; reason: string }
 export interface CaseAction extends ActionItem {
   state: string
-  approval?: { decision: string; approver: string; role: string; note: string; at: string } | null
+  approval?: { decision: string; approver: string; role: string; note: string; at: string; in_graph?: boolean } | null
 }
 export interface Evidence { claim: string; source: string; ref: string; entity_ids: string[] }
 export interface Event { step: number; kind: string; detail: string; at: string; case_id?: string }
@@ -31,7 +31,7 @@ export interface Event { step: number; kind: string; detail: string; at: string;
 export interface GraphNode {
   id: string; kind: string; label: string; step: number
   role?: string; outcome?: string; pattern?: string; profile?: string; score?: number | null
-  ring?: number; cards_all_time?: number
+  ring?: number; cards_before_alert?: number
 }
 export interface GraphEdge { source: string; target: string; kind: string; step: number }
 
@@ -45,6 +45,8 @@ export interface LedgerItem {
   /** The likelihood ratio actually applied, after independence and correlation rules. */
   lr: number
   discounted?: boolean
+  /** Not counted because the same fact already set the prior (the model score, or the denial). */
+  as_prior?: boolean
   entities?: string[]
 }
 
@@ -129,8 +131,15 @@ export interface Evaluation {
   patterns: Record<string, unknown> | null
   calibration: Record<string, unknown> | null
   community_lift: { n_fraud: number; n_cleared: number; bands: Record<string, { p_fraud: number; p_cleared: number; lr: number | null }> } | null
+  baselines: Baseline[] | null
   backtest: Record<string, unknown> | null
   backtest_cases: Record<string, unknown>[] | null
+}
+
+export interface Baseline {
+  method: string; n: number; verdict_accuracy: number; fraud_caught: number | null
+  cleared_left_alone: number | null; brier: number; wrongly_accused: number; missed_fraud: number
+  uncertain: number; exact_verdicts?: number
 }
 
 export interface PolicyChunk { chunk_id: string; source: string; section: string; content: string }

@@ -69,8 +69,10 @@ export function Rings({ ringId }: { ringId?: string }) {
       <header className="page-head">
         <h2 id="rings-title">Rings and communities</h2>
         <p className="prose">
-          Connected components over suspicious, new-to-account device use found{' '}
-          <strong className="num">{data.rings.length}</strong> tight rings. Louvain over the whole
+          Connected components over suspicious, new-to-account device use in the July&ndash;October
+          history found <strong className="num">{data.rings.length}</strong> tight rings &mdash; built from
+          that history alone, so no November or December alert leans on a ring that formed after it.
+          Louvain over the whole
           card-device graph sorted <strong className="num">{data.communities_total?.toLocaleString()}</strong>{' '}
           communities, of which <strong className="num">{data.communities_ranked}</strong> hold five cards
           or more. The rings are what the agent cites as evidence; the communities are the wider

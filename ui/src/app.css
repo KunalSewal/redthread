@@ -761,3 +761,6 @@ code, .ref {
   stroke-width: 3px;
   stroke-linejoin: round;
 }
+
+/* The agent's own row in a comparison: marked by weight, not by the fraud accent. */
+.digest-table tr.is-ours td { font-weight: 600; color: var(--ink); }

@@ -40,6 +40,7 @@ function Approval({ caseId, a, onDone }: { caseId: string; a: CaseAction; onDone
   if (a.approval) {
     return <span className={`state state-${a.approval.decision}`}>
       {a.approval.decision === 'approved' ? 'Approved' : 'Rejected'} by {a.approval.approver} ({a.approval.role})
+      {a.approval.in_graph ? ', recorded in the case in the graph' : ''}
     </span>
   }
   const decide = (decision: string) => {

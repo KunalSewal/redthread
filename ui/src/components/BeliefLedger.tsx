@@ -26,6 +26,7 @@ interface Counterfactual {
 }
 
 function Weight({ item }: { item: LedgerItem }) {
+  if (item.as_prior) return <span className="lr-none">already the prior</span>
   if (!item.counted) return <span className="lr-none">corroborates</span>
   const up = item.lr > 1
   const shown = up ? item.lr : 1 / item.lr

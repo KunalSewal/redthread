@@ -14,12 +14,13 @@ const KIND: Record<string, { label: string; node: 'dot' | 'ring' | 'diamond' | '
   analysis: { label: 'Stopped looking', node: 'ring' },
   assessment: { label: 'Weighed the evidence', node: 'diamond' },
   recommendation: { label: 'First recommendation', node: 'bar' },
+  case_opened: { label: 'Opened the case', node: 'ring' },
   evidence_request: { label: 'Asked for evidence', node: 'ask' },
-  reply: { label: 'Customer replied', node: 'ask' },
+  reply: { label: 'Reply received (assumed)', node: 'ask' },
   decision: { label: 'Revised recommendation', node: 'bar' },
   validation: { label: 'Checked itself', node: 'ring' },
   report: { label: 'Wrote the case', node: 'ring' },
-  memory: { label: 'Stored as memory', node: 'ring' },
+  memory: { label: 'Updated the case in the graph', node: 'ring' },
 }
 
 /** The query name, without the 'query:' prefix and its arguments: 'alert_context(tx=…)' → the name. */
