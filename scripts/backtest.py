@@ -108,28 +108,86 @@ def report(rows: list[dict]) -> dict:
 
 
 async def main(n: int, month: int, seed: int, out: str) -> None:
+    # Nothing the replay scores itself against may shape the evidence. The fraud model's scores for
+    # this month are already out-of-fold; the score calibration and the rings are made so here:
+    # calibrate only on earlier months, and build rings only from what was known before the month.
+    import os
+    import sys
+
+    sys.path.insert(0, str(paths.ROOT / "scripts"))
+    import rings
+
+    from redthread.belief import REPORT_PRIOR_ENV
+    from redthread.model.calibration import MAX_MONTH_ENV
+
+    os.environ[MAX_MONTH_ENV] = str(month - 1)
+    # The replay decides the trigger by coin flip, independent of the outcome, so here a customer
+    # report says nothing about fraud and the history's rate for real reports does not apply.
+    os.environ[REPORT_PRIOR_ENV] = "0.5"
+    rings.ensure(f"2016-{month:02d}-01 00:00:00")
+    try:
+        await _run(n, month, seed, out)
+    finally:
+        rings.ensure(rings.benchmark_cutoff())  # leave the graph as the benchmark expects it
+
+
+CASE_TIMEOUT_S = 900  # a request cut off by a dropped connection can otherwise wait forever
+ATTEMPTS = 3
+
+
+async def _run(n: int, month: int, seed: int, out: str) -> None:
+    from contextlib import AsyncExitStack
+
     alerts = build_alerts(n, month, seed)
     log.info("model=%s thinking=%s", config.REASONING_MODEL, config.THINKING_LEVEL or "default")
-    rows = []
-    async with McpGraph() as graph:
+    # Each finished case is appended here, so an interrupted run resumes instead of starting over.
+    partial = paths.ROOT / "runs" / f"{out.rsplit('.', 1)[0]}.partial.jsonl"
+    done = {}
+    if partial.exists():
+        for line in partial.read_text(encoding="utf-8").splitlines():
+            row = json.loads(line)
+            done[row["case_id"]] = row
+        log.info("resuming: %d of %d cases already scored", len(done), len(alerts))
+    rows = [done[a["case_id"]] for a in alerts if a["case_id"] in done]
+    stack = AsyncExitStack()
+    graph = await stack.enter_async_context(McpGraph())
+    try:
         for alert in alerts:
+            if alert["case_id"] in done:
+                continue
             truth = alert.pop("truth")
-            try:
-                state = await investigate_alert(graph, alert, as_of=alert["opened_at"])
-            except Exception:
-                log.exception("%s failed", alert["case_id"])
+            state = None
+            for attempt in range(1, ATTEMPTS + 1):
+                try:
+                    state = await asyncio.wait_for(investigate_alert(graph, dict(alert), as_of=alert["opened_at"]),
+                                                   CASE_TIMEOUT_S)
+                    break
+                except Exception:
+                    log.exception("%s failed (attempt %d of %d)", alert["case_id"], attempt, ATTEMPTS)
+                    # A dropped connection can leave the MCP session unusable: start a fresh one.
+                    await stack.aclose()
+                    await asyncio.sleep(20)
+                    stack = AsyncExitStack()
+                    graph = await stack.enter_async_context(McpGraph())
+            if state is None:
+                log.error("%s failed", alert["case_id"])
                 continue
             alert["truth"] = truth
             row = score(alert, state["answer"], state.get("belief"))
             rows.append(row)
+            with partial.open("a", encoding="utf-8") as f:
+                f.write(json.dumps(row) + "\n")
             log.info("%s truth=%s/%s -> %s/%s p=%.2f %s", row["case_id"], row["truth_outcome"][:9],
                      row["truth_pattern"][:16], row["verdict"][:9], row["pattern"][:16], row["probability"],
                      "OK" if row["verdict_correct"] else "WRONG")
         # Backtest cases are scratch: remove them so they cannot pollute the memory real cases retrieve.
         for alert in alerts:
             await graph.query("delete_case", {"case_id": f"CASE-{alert['case_id']}"})
+    finally:
+        await stack.aclose()
     summary = report(rows) | {"model": config.REASONING_MODEL, "thinking": config.THINKING_LEVEL or "default"}
     (paths.ROOT / "runs" / out).write_text(json.dumps({"summary": summary, "cases": rows}, indent=2), encoding="utf-8")
+    partial.unlink(missing_ok=True)
     log.info("summary: %s", json.dumps(summary))
 
 
