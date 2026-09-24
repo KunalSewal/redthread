@@ -32,8 +32,8 @@ the next investigation.
 violations &nbsp;·&nbsp; **1 in 30** legitimate customers wrongly accused on replayed cases &nbsp;·&nbsp;
 **4** frauds missed where our fraud model alone misses 7
 
-<sub>Replayed on cases the bank's analysts had already closed, with nothing the investigation could not
-have known at the time — see <a href="#does-it-work">Does it work?</a></sub>
+<em>Replayed on cases the bank's analysts had already closed, with nothing the investigation could
+not have known at the time. See <a href="#does-it-work">Does it work?</a></em>
 
 <br/>
 
@@ -88,13 +88,9 @@ flowchart TD
     class Q human
 ```
 
-<div align="center"><sub>
-
-Orange is where the model reasons. Grey is where deterministic code decides. The case is opened in
+*Orange is where the model reasons; grey is where deterministic code decides. The case is opened in
 the graph as soon as policy says one is warranted, updated when the investigation ends, and updated
-again when a person approves or rejects what the agent recommended.
-
-</sub></div>
+again when a person approves or rejects what the agent recommended.*
 
 ### One case, start to finish
 
@@ -456,14 +452,8 @@ cd ui && npm install && npx vite                  # http://localhost:5173
 | `cases_extra/` | 25 alerts the agent raised by itself |
 | `tests/` | policy, ledger, schema, simulator, tools and API tests |
 
-<div align="center">
-<br/>
-<sub>
-
-Ring detection is our own connected-components pass over *suspicious, new-to-account* device use —
-tuned so it finds tight rings (eight in the July–October history) rather than one 118-card blob formed
-by chaining through phones thousands of people share. TigerGraph's GDS `tg_louvain` runs on top of it
-for the wider neighbourhood.
-
-</sub>
-</div>
+> [!TIP]
+> Ring detection is our own connected-components pass over *suspicious, new-to-account* device use,
+> tuned so it finds tight rings (eight in the July–October history) rather than one 118-card blob
+> formed by chaining through phones thousands of people share. TigerGraph's GDS `tg_louvain` runs on
+> top of it for the wider neighbourhood.
