@@ -31,9 +31,6 @@ build/
 Thumbs.db
 ~$*
 
-# Claude Code personal settings
-.claude/settings.local.json
-
 # Personal reference notes and working material (kept locally, not published)
 Guide.md
 TigerGraph Stack Engineering Briefing*.md
@@ -43,7 +40,6 @@ runs/
 
 # Working notes, drafts and brand assets. The blog and social posts are published on their own
 # platforms and the demo script is for whoever records the video, so none of them belong in the repo.
-CLAUDE.md
 context/
 docs/
 references/
