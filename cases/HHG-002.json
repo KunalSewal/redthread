@@ -3,7 +3,7 @@
   "case": {
     "status": "closed_legitimate",
     "verdict": "legitimate",
-    "fraud_probability": 0.071,
+    "fraud_probability": 0.111,
     "pattern": "none",
     "pattern_description": "",
     "affected_txn_ids": [],
@@ -13,7 +13,7 @@
     "exposure_usd": 0,
     "evidence": [
       {
-        "claim": "Transaction 3478782 was flagged due to an elevated real-time legacy risk score of 0.79.",
+        "claim": "Transaction 3478782 triggered an alert based on a legacy real-time risk score of 0.79, although the bank's calibrated second-generation model score is low at 0.115 with a historical fraud rate of 21.17%.",
         "source": "graph",
         "ref": "query:alert_context(tx=3478782)",
         "entity_ids": [
@@ -22,17 +22,25 @@
         ]
       },
       {
-        "claim": "Holder C11891-K1|NA|-305 has zero prior transactions in confirmed fraud cases, and their prior transaction 3043555 on 2016-07-13 was also an online purchase for product C using hotmail.com, demonstrating consistent channel, product, and email use.",
+        "claim": "The transaction amount ($292.36) exceeds the holder's prior maximum of $121.32, but it is an isolated transaction with no card-testing sequence or rapid authorizations in the 10-day card window.",
+        "source": "graph",
+        "ref": "query:card_window(card=C11891-K1, 2016-11-12..2016-11-22)",
+        "entity_ids": [
+          "3478782",
+          "C11891-K1"
+        ]
+      },
+      {
+        "claim": "Holder C11891-K1|NA|-305 has zero prior transactions in confirmed fraud cases, and transaction 3478782 is consistent with the holder's baseline product C, online channel, and hotmail.com email domain observed in transaction 3043555.",
         "source": "graph",
         "ref": "query:holder_history(holder=C11891-K1|NA|-305, before=2016-11-22)",
         "entity_ids": [
           "3478782",
-          "3043555",
-          "C11891-K1"
+          "3043555"
         ]
       },
       {
-        "claim": "Transaction 3478782 exhibits no proxy or suspicious device profile, and card C11891-K1 has no association with any fraud ring (ring_id -1).",
+        "claim": "Transaction 3478782 has no device ID, no proxy, and card C11891-K1 has ring_id -1 with no connection to any suspicious device ring.",
         "source": "graph",
         "ref": "query:alert_context(tx=3478782)",
         "entity_ids": [
@@ -41,7 +49,7 @@
         ]
       },
       {
-        "claim": "The recipient email domain hotmail.com has 1,396 transactions across 251 cards in the 7-day window with a fraud lift of 0.97, below the 0.0206 baseline, showing no shared origin fraud pattern.",
+        "claim": "Recipient email domain hotmail.com shows an un-elevated lift of 0.97 across 795 transactions in the 7-day window, indicating no shared-origin fraud cluster.",
         "source": "graph",
         "ref": "query:shared_origin(tx=3478782, window=+/-7d)",
         "entity_ids": [
@@ -49,44 +57,12 @@
         ]
       },
       {
-        "claim": "Prior closed fraud case CC-4160 on card C11891-K1 from 2016-09-29 was an isolated incident involving device D000594 and a different holder identity, resolved two months prior with no connection to transaction 3478782.",
-        "source": "graph",
-        "ref": "query:linked_cases(tx=3478782)",
-        "entity_ids": [
-          "3478782",
-          "C11891-K1",
-          "CC-4160"
-        ]
-      },
-      {
-        "claim": "Six similar closed cases triggered by high legacy model scores (CC-2037, CC-4237, CC-3639, CC-3092, CC-4158, CC-3761) were investigated and cleared as legitimate customer transactions.",
+        "claim": "Similar closed cases CC-4158 and CC-3639 indicate that isolated transactions flagged solely by high risk scores without corroborating graph anomalies were confirmed legitimate cardholder activity and cleared.",
         "source": "graph",
         "ref": "query:similar_closed_cases(\"risk score: Real-time model scored transaction 3478782 ($292...\", k=6)",
         "entity_ids": [
-          "CC-2037",
-          "CC-4237",
-          "CC-3639",
-          "CC-3092",
           "CC-4158",
-          "CC-3761"
-        ]
-      },
-      {
-        "claim": "Card activity in the 14-day window surrounding 2016-11-22 contains only one transaction (3478782), with no card testing sequence, rapid authorizations, or bursts.",
-        "source": "graph",
-        "ref": "query:card_window(card=C11891-K1, 2016-11-12..2016-11-25)",
-        "entity_ids": [
-          "3478782",
-          "C11891-K1"
-        ]
-      },
-      {
-        "claim": "Transaction 3478782 was an online transaction without a billing region, matching the baseline where 34 of 35 historical transactions on card C11891-K1 were online with unrecorded region.",
-        "source": "graph",
-        "ref": "query:alert_context(tx=3478782)",
-        "entity_ids": [
-          "3478782",
-          "C11891-K1"
+          "CC-3639"
         ]
       },
       {
@@ -97,15 +73,11 @@
       }
     ],
     "similar_prior_cases": [
-      "CC-2037",
-      "CC-4237",
-      "CC-3639",
-      "CC-3092",
       "CC-4158",
-      "CC-3761",
+      "CC-3639",
       "CC-4160"
     ],
-    "summary": "Transaction 3478782 for $292.36 on card C11891-K1 was flagged by an elevated legacy real-time risk score of 0.79. The calibrated second-generation model scored the transaction low at 0.115, and holder history demonstrated consistent channel, product category, and email domain usage with no prior fraud. Graph analysis identified no connection to fraud rings, no suspicious device sharing, and no velocity or card-testing anomalies in the 14-day window. The alert is determined to be a false alarm and the activity is cleared as legitimate.",
+    "summary": "Transaction 3478782 ($292.36, online) on card C11891-K1 was flagged due to an elevated legacy real-time risk score of 0.79. In contrast, the calibrated second-generation model scored the transaction at 0.115, corresponding to a historical fraud rate of only 21.17%. The holder identity shows no history of confirmed fraud and matches baseline channel, product code, and email domain attributes. There are no device anomalies, proxy indicators, card-testing patterns, or associations with known fraud rings. The transaction was determined to be legitimate cardholder activity and closed without fraud.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHG-002"
   },
@@ -115,14 +87,14 @@
       {
         "action": "CLOSE_NO_FRAUD",
         "route": "auto",
-        "reason": "Section 6: probability 0.07 <= 0.15 on 6 independent signals"
+        "reason": "Section 6: probability 0.11 <= 0.15 on 5 independent signals"
       }
     ],
     "final": [
       {
         "action": "CLOSE_NO_FRAUD",
         "route": "auto",
-        "reason": "Section 6: probability 0.07 <= 0.15 on 6 independent signals"
+        "reason": "Section 6: probability 0.11 <= 0.15 on 5 independent signals"
       }
     ],
     "what_changed": "nothing"
@@ -135,8 +107,8 @@
     "total_amount_usd": 0,
     "activity_dates": []
   },
-  "stop_reason": "The investigation stopped pursuant to policy section 6 because the fraud probability of 0.071 fell decisively below the 0.15 closure threshold across multiple independent exculpatory evidence bases, and further inquiries would not change the outcome.",
-  "tool_calls": 16,
-  "tokens": 116935,
-  "latency_s": 102.2
+  "stop_reason": "The investigation was concluded under policy section 6 as the fraud probability reached 0.11, well below the 0.15 threshold across five independent evidentiary bases, confirming that further investigative steps would not alter the decision.",
+  "tool_calls": 17,
+  "tokens": 121581,
+  "latency_s": 150.4
 }

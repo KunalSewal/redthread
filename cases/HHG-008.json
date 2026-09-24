@@ -3,16 +3,18 @@
   "case": {
     "status": "closed_fraud",
     "verdict": "fraud",
-    "fraud_probability": 0.892,
-    "pattern": "card_not_present_fraud",
+    "fraud_probability": 0.97,
+    "pattern": "card_not_present_new_device",
     "pattern_description": "",
     "affected_txn_ids": [
+      "3557979",
+      "3557987",
       "3558054"
     ],
-    "first_suspicious_txn_id": "3558054",
+    "first_suspicious_txn_id": "3557979",
     "connected_card_ids": [],
     "connected_device_profiles": [],
-    "exposure_usd": 55.68,
+    "exposure_usd": 166.97,
     "evidence": [
       {
         "claim": "Customer reported: Customer C13171 message: 'I never made this $55.68 purchase. Please check my card.' Refers to 3558054.",
@@ -23,63 +25,40 @@
         ]
       },
       {
-        "claim": "Customer C13171 explicitly reported that they never made the $55.68 purchase (transaction 3558054) and requested an investigation into their card.",
+        "claim": "Flagged transaction 3558054 ($55.68) occurred as part of a 20-minute burst of three nearly identical online authorizations on 2016-12-19: 3557979 ($55.60 at 21:48:32), 3557987 ($55.69 at 21:50:54), and 3558054 ($55.68 at 22:08:56), all sharing device D008431 and recipient domain hotmail.com.",
+        "source": "graph",
+        "ref": "query:card_window(card=C13171-K2, 2016-12-09..2016-12-20)",
+        "entity_ids": [
+          "3558054",
+          "3557979",
+          "3557987",
+          "C13171-K2"
+        ]
+      },
+      {
+        "claim": "Card C13171-K2 has 18 prior confirmed fraud closed cases out of 19 total closed cases, including CC-3422, CC-3566, CC-3728, and CC-5010, establishing recurring card-not-present fraud vulnerability reported by customer C13171.",
         "source": "graph",
         "ref": "query:alert_context(tx=3558054)",
-        "entity_ids": [
-          "C13171",
-          "3558054"
-        ]
-      },
-      {
-        "claim": "Disputed transaction 3558054 does not match any recurring payment pattern for holder C13171-K2|NA|170 (fewer than two prior similar charges) and was executed on device D008431, which was not present in the holder's 3 prior baseline transactions.",
-        "source": "graph",
-        "ref": "query:holder_history(holder=C13171-K2|NA|170, before=2016-12-19)",
-        "entity_ids": [
-          "3558054"
-        ]
-      },
-      {
-        "claim": "Disputed transaction 3558054 has an amount of $55.68 within the holder's prior observed maximum of $65.36 and matched the channel (online) and product category C of their baseline activity.",
-        "source": "graph",
-        "ref": "query:holder_history(holder=C13171-K2|NA|170, before=2016-12-19)",
-        "entity_ids": [
-          "3558054"
-        ]
-      },
-      {
-        "claim": "The bank's calibrated fraud model scored transaction 3558054 low at 0.105, reflecting a historical fraud rate of 21.17% in past cases with comparable scores (legacy real-time risk score 0.38).",
-        "source": "graph",
-        "ref": "query:alert_context(tx=3558054)",
-        "entity_ids": [
-          "3558054"
-        ]
-      },
-      {
-        "claim": "Card C13171-K2 has a substantial history of 18 confirmed-fraud closed cases between July and October 2016 (including CC-5010, CC-4485, CC-4163, CC-3728, CC-3566, CC-3422), primarily involving card-not-present fraud, compared to only 1 cleared case (CC-4819).",
-        "source": "graph",
-        "ref": "query:linked_cases(tx=3558054)",
         "entity_ids": [
           "C13171-K2",
-          "CC-5010",
-          "CC-4485",
-          "CC-4163",
-          "CC-3728",
-          "CC-3566",
+          "C13171",
           "CC-3422",
-          "CC-4819"
+          "CC-3566",
+          "CC-3728",
+          "CC-5010"
         ]
       },
       {
-        "claim": "Device D008431 has a generic desktop browser profile ('unknown | unknown | chrome 66.0 | unknown') associated with 175 cards all-time and 145 cards in the window, with zero closed fraud cases and no connection to a fraud ring (ring_id -1).",
+        "claim": "Transaction 3558054 does not match any recurring charge pattern for holder C13171-K2|NA|170, and device D008431 is flagged as new to this specific holder baseline.",
         "source": "graph",
-        "ref": "query:device_neighbors(device=D008431, 2016-11-19..2016-12-22)",
+        "ref": "query:holder_history(holder=C13171-K2|NA|170, before=2016-12-19)",
         "entity_ids": [
-          "3558054"
+          "3558054",
+          "C13171-K2"
         ]
       },
       {
-        "claim": "Card C13171-K2 belongs to Louvain community 163578122 with 4 cards, of which 2 carry confirmed-fraud cases, giving a community fraud rate of 50.0% and a lift vs base rate of 5.0.",
+        "claim": "Card C13171-K2 is located in Louvain community 163578122 exhibiting a fraud lift of 5.0 vs base rate (2 of 4 cards carry confirmed fraud, including C06988-K1 with 9 confirmed fraud cases).",
         "source": "graph",
         "ref": "query:community_profile(card=C13171-K2)",
         "entity_ids": [
@@ -88,21 +67,29 @@
         ]
       },
       {
-        "claim": "Disputed transaction 3558054 occurred online without billing region data, which is typical for card C13171-K2 where 845 of 899 prior transactions also lacked regional information.",
+        "claim": "The second-generation fraud model score for transaction 3558054 is low at 0.105 with a historical fraud rate of 21.17%, and legacy risk score is 0.38, yielding no automated model alert.",
         "source": "graph",
         "ref": "query:alert_context(tx=3558054)",
         "entity_ids": [
-          "C13171-K2",
-          "3558054"
+          "3558054",
+          "C13171-K2"
         ]
       },
       {
-        "claim": "Disputed charge 3558054 ($55.68) occurred late in the evening at 22:08:56 on 2016-12-19, more than five hours after legitimate daytime purchases on the same holder identity.",
+        "claim": "Device D008431 possesses a generic profile ('unknown | unknown | chrome 66.0 | unknown') observed across 129 cards in the window, with ring_id -1 and zero confirmed fraud cases all-time.",
         "source": "graph",
-        "ref": "query:card_window(card=C13171-K2, 2016-12-09..2016-12-22)",
+        "ref": "query:device_neighbors(device=D008431, 2016-11-19..2016-12-20)",
         "entity_ids": [
-          "C13171-K2",
-          "3558054"
+          "C13171-K2"
+        ]
+      },
+      {
+        "claim": "The transaction amount of $55.68 is below the prior maximum transaction ($65.36) for holder C13171-K2|NA|170 and matches the holder's historical product code C and online channel.",
+        "source": "graph",
+        "ref": "query:holder_history(holder=C13171-K2|NA|170, before=2016-12-19)",
+        "entity_ids": [
+          "3558054",
+          "C13171-K2"
         ]
       },
       {
@@ -113,14 +100,12 @@
       }
     ],
     "similar_prior_cases": [
-      "CC-5010",
-      "CC-4485",
-      "CC-3728",
-      "CC-3566",
       "CC-3422",
-      "CC-4819"
+      "CC-3566",
+      "CC-3728",
+      "CC-5010"
     ],
-    "summary": "Customer C13171 disputed an online purchase of $55.68 (transaction 3558054) conducted on 2016-12-19 on card C13171-K2. The transaction utilized device D008431, which had not previously been associated with this holder, and did not reflect any recurring billing pattern. Card C13171-K2 carries significant prior compromise history, including 18 confirmed-fraud closed cases between July and October 2016. With direct customer denial and no positive exculpatory evidence of cardholder authorization, the charge is confirmed as card-not-present fraud. Card C13171-K2 was blocked and a case opened in accordance with bank policy.",
+    "summary": "Customer C13171 reported an unauthorized $55.68 online charge on card C13171-K2 under transaction 3558054. Graph analysis revealed the transaction was part of a 20-minute burst of three near-identical authorizations on 2016-12-19 totaling $166.97. Card C13171-K2 exhibits extensive documented vulnerability with 18 prior confirmed card-not-present fraud cases and no legitimate recurring billing baseline for these amounts. The activity was confirmed as fraudulent with a 0.97 probability, resulting in the card being blocked and a case created.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHG-008"
   },
@@ -130,7 +115,7 @@
       {
         "action": "BLOCK_CARD",
         "route": "L1",
-        "reason": "R2: customer states they did not make the transaction; exposure $55.68"
+        "reason": "R2: customer states they did not make the transaction; exposure $166.97"
       },
       {
         "action": "CREATE_CASE",
@@ -142,7 +127,7 @@
       {
         "action": "BLOCK_CARD",
         "route": "L1",
-        "reason": "R2: customer states they did not make the transaction; exposure $55.68"
+        "reason": "R2: customer states they did not make the transaction; exposure $166.97"
       },
       {
         "action": "CREATE_CASE",
@@ -154,14 +139,14 @@
   },
   "sar": {
     "file": false,
-    "reason": "3a: fraud suspected but exposure $55.68 is at most $1,000 and there is no shared device, region cluster or link to other customers' fraud; case only",
+    "reason": "3a: fraud suspected but exposure $166.97 is at most $1,000 and there is no shared device, region cluster or link to other customers' fraud; case only",
     "narrative": "",
     "subjects": [],
     "total_amount_usd": 0,
     "activity_dates": []
   },
-  "stop_reason": "The investigation concluded under policy section 6 because the decisive customer denial, supported by independent corroboration from extensive confirmed prior fraud cases on the card, established high fraud probability such that further investigative steps would not change the actions.",
-  "tool_calls": 18,
-  "tokens": 301341,
-  "latency_s": 153.9
+  "stop_reason": "The investigation ended under policy section 6 because the fraud probability reached a decisive 0.97 supported by multiple independent bases of evidence, and further steps would not change the decision.",
+  "tool_calls": 48,
+  "tokens": 283534,
+  "latency_s": 121.6
 }

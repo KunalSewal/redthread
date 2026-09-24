@@ -13,7 +13,36 @@
     "exposure_usd": 0,
     "evidence": [
       {
-        "claim": "The bank's calibrated second-generation fraud model scored transaction 3526826 at 0.006, with a historical fraud rate of 0.6% (0.006).",
+        "claim": "Calibrated second-generation fraud model scores transaction 3526826 at 0.006 with an empirical historical fraud rate of 0.006 (0.6%).",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3526826)",
+        "entity_ids": [
+          "3526826",
+          "C07671-K2",
+          "C07671"
+        ]
+      },
+      {
+        "claim": "Legacy real-time risk score flagged transaction 3526826 at 0.76.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3526826)",
+        "entity_ids": [
+          "3526826",
+          "C07671-K2",
+          "C07671"
+        ]
+      },
+      {
+        "claim": "Device D008387 used for transaction 3526826 has a generic profile ('Windows | unknown | chrome 66.0 | unknown') seen on 63 cards with zero confirmed fraud cases all-time and no proxy.",
+        "source": "graph",
+        "ref": "query:device_neighbors(device=D008387, 2016-11-09..2016-12-09)",
+        "entity_ids": [
+          "3526826",
+          "C07671-K2"
+        ]
+      },
+      {
+        "claim": "Identity record marked device D008387 as New for card C07671-K2 on transaction 3526826.",
         "source": "graph",
         "ref": "query:alert_context(tx=3526826)",
         "entity_ids": [
@@ -22,41 +51,42 @@
         ]
       },
       {
-        "claim": "Transaction 3526826 was alerted due to an elevated real-time legacy risk score of 0.76, which is an uncalibrated legacy metric.",
+        "claim": "Transaction 3526826 is an isolated $35.66 online purchase with no card testing sequence or velocity spikes.",
         "source": "graph",
-        "ref": "query:alert_context(tx=3526826)",
+        "ref": "query:card_window(card=C07671-K2, 2016-11-29..2016-12-09)",
         "entity_ids": [
           "3526826",
           "C07671-K2"
         ]
       },
       {
-        "claim": "Device D008387 is a generic Windows Chrome browser profile shared across 266 cards with no proxy, no ring association (ring_id -1), and zero confirmed fraud closed cases all-time.",
-        "source": "graph",
-        "ref": "query:device_neighbors(device=D008387, 2016-11-09..2016-12-12)",
-        "entity_ids": [
-          "3526826"
-        ]
-      },
-      {
-        "claim": "Device D008387 was recorded as device_status 'New' for this card on online transaction 3526826.",
-        "source": "graph",
-        "ref": "query:alert_context(tx=3526826)",
-        "entity_ids": [
-          "3526826",
-          "C07671-K2"
-        ]
-      },
-      {
-        "claim": "Analysis of shared origin for device D008387 over the 14-day window shows a low model lift of 1.45 relative to baseline with zero agent fraud cases.",
+        "claim": "Card C07671-K2 has ring_id -1 and device D008387 has ring_id -1 with a low lift vs baseline of 1.46 and zero confirmed fraud cases across 63 cards.",
         "source": "graph",
         "ref": "query:shared_origin(tx=3526826, window=+/-7d)",
         "entity_ids": [
-          "3526826"
+          "3526826",
+          "C07671-K2"
         ]
       },
       {
-        "claim": "Card C07671-K2 has three confirmed fraud closed cases from July to October 2016 (CC-1475, CC-3216, CC-4294) and one cleared case (CC-3761).",
+        "claim": "Card C07671-K2 belongs to a single-card Louvain community with a lift of 9.9 based entirely on historical closed fraud cases from July to October 2016.",
+        "source": "graph",
+        "ref": "query:community_profile(card=C07671-K2)",
+        "entity_ids": [
+          "C07671-K2"
+        ]
+      },
+      {
+        "claim": "Holder identity for transaction 3526826 has zero prior transactions in confirmed fraud cases.",
+        "source": "graph",
+        "ref": "query:holder_history(holder=C07671-K2|NA|160, before=2016-12-09)",
+        "entity_ids": [
+          "3526826",
+          "C07671-K2"
+        ]
+      },
+      {
+        "claim": "Card C07671-K2 had three historical confirmed fraud cases (CC-1475, CC-3216, CC-4294) between July and October 2016, but all were resolved over two months prior.",
         "source": "graph",
         "ref": "query:linked_cases(tx=3526826)",
         "entity_ids": [
@@ -68,21 +98,16 @@
         ]
       },
       {
-        "claim": "Holder C07671-K2|NA|160 has zero prior transactions in confirmed fraud cases, indicating no compromise of this holder identity.",
+        "claim": "Prior alerts triggered by elevated model or risk scores without cardholder disputes or cross-card links (e.g. CC-3521, CC-2444) cleared as legitimate activity.",
         "source": "graph",
-        "ref": "query:holder_history(holder=C07671-K2|NA|160, before=2016-12-09)",
+        "ref": "query:similar_closed_cases(\"risk score: Real-time model scored transaction 3526826 ($35....\", k=6)",
         "entity_ids": [
-          "3526826",
-          "C07671-K2"
-        ]
-      },
-      {
-        "claim": "Transaction 3526826 is for a normal amount of $35.66, with card activity showing steady legitimate in-person transactions and no card testing sequences or velocity spikes.",
-        "source": "graph",
-        "ref": "query:card_window(card=C07671-K2, 2016-11-29..2016-12-12)",
-        "entity_ids": [
-          "3526826",
-          "C07671-K2"
+          "CC-3521",
+          "CC-2444",
+          "CC-0526",
+          "CC-2956",
+          "CC-2534",
+          "CC-3639"
         ]
       },
       {
@@ -93,12 +118,13 @@
       }
     ],
     "similar_prior_cases": [
-      "CC-3761",
       "CC-3521",
-      "CC-4294",
-      "CC-3216"
+      "CC-2444",
+      "CC-0526",
+      "CC-3761",
+      "CC-4294"
     ],
-    "summary": "Transaction 3526826 ($35.66, online) on card C07671-K2 was alerted due to an uncalibrated legacy risk score of 0.76. In contrast, the calibrated second-generation fraud model assigned a very low score of 0.006, indicating an empirical historical fraud likelihood of 0.6%. The transaction utilized device D008387, a generic non-proxy Windows Chrome profile shared across 266 cards with zero fraud ring links and no confirmed fraud cases. Although card C07671-K2 had historical fraud cases earlier in the year, the specific cardholder identity has no compromised history, and card activity shows continuous normal spending without testing sequences or velocity spikes. The transaction is determined to be legitimate cardholder activity.",
+    "summary": "Alert HHG-013 was triggered by a legacy real-time risk score of 0.76 on transaction 3526826 ($35.66, online) on card C07671-K2. The bank's calibrated second-generation fraud model scored this transaction at 0.006, reflecting a 0.6% historical fraud rate. Device D008387 exhibits a generic browser profile with no proxy, no ring association, and zero fraud across 63 cards in the preceding 30 days. No testing sequences, velocity spikes, or disputes were observed, and the current holder identity has no confirmed fraud history. The transaction is ruled legitimate cardholder activity and closed as a false alarm.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHG-013"
   },
@@ -128,8 +154,8 @@
     "total_amount_usd": 0,
     "activity_dates": []
   },
-  "stop_reason": "Investigation concluded pursuant to Policy Section 6 as the posterior fraud probability reached 0.03 (below the 0.15 closure threshold) based on five independent evidentiary bases, confirming further inquiry would not alter the outcome.",
+  "stop_reason": "Investigation concluded pursuant to Policy Section 6 because the fraud probability reached 0.03 (well below the 0.15 threshold) across multiple independent signals, confirming further steps would not alter the decision.",
   "tool_calls": 16,
-  "tokens": 207635,
-  "latency_s": 66.1
+  "tokens": 162284,
+  "latency_s": 91.5
 }

@@ -13,38 +13,68 @@
     "exposure_usd": 0,
     "evidence": [
       {
-        "claim": "The calibrated second-generation fraud model scored transaction 3509359 at 0.006 with a historical fraud rate of 0.6%, strongly diverging from the legacy risk score of 0.52.",
+        "claim": "The bank's second-generation calibrated fraud model scored flagged transaction 3509359 at 0.006 with a historical fraud rate of 0.6% (0.006).",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3509359)",
+        "entity_ids": [
+          "3509359"
+        ]
+      },
+      {
+        "claim": "Legacy real-time risk score for transaction 3509359 was 0.52, triggering the alert, but legacy risk scores are noisy and uncalibrated.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3509359)",
+        "entity_ids": [
+          "3509359"
+        ]
+      },
+      {
+        "claim": "Flagged transaction 3509359 occurred in region 264, which accounts for 100% of card C12265-K2's 82 historical transactions, and region 264 has a below-average fraud lift of 0.46.",
+        "source": "graph",
+        "ref": "query:shared_origin(tx=3509359, window=+/-7d)",
+        "entity_ids": [
+          "3509359",
+          "C12265-K2"
+        ]
+      },
+      {
+        "claim": "Device D000140 has a generic desktop profile (Windows 10 IE 11) shared across 232 cards prior to the alert, with zero confirmed fraud cases, two cleared closed cases (CC-0487 and CC-1447), and zero shared-origin fraud lift.",
+        "source": "graph",
+        "ref": "query:device_neighbors(device=D000140, 2016-11-03..2016-12-03)",
+        "entity_ids": [
+          "CC-0487",
+          "CC-1447"
+        ]
+      },
+      {
+        "claim": "Device status for transaction 3509359 is recorded as New for card C12265-K2.",
         "source": "graph",
         "ref": "query:alert_context(tx=3509359)",
         "entity_ids": [
           "3509359",
-          "C12265-K2",
-          "C12265"
+          "C12265-K2"
         ]
       },
       {
-        "claim": "Device D000140 has a generic desktop profile seen across 253 cards all-time, has no ring affiliation (ring_id -1), and has two prior closed cases that both cleared with no fraud (CC-1447, CC-0487).",
+        "claim": "Transaction amount of $125.08 aligns closely with card C12265-K2's recent baseline of 10 in-person transactions ($25.95 to $161.05) in region 264 between 2016-11-23 and 2016-11-30, all scoring under 0.015.",
         "source": "graph",
-        "ref": "query:device_neighbors(device=D000140, 2016-11-03..2016-12-06)",
+        "ref": "query:card_window(card=C12265-K2, 2016-11-23..2016-12-03)",
         "entity_ids": [
-          "CC-1447",
-          "CC-0487"
+          "3509359",
+          "C12265-K2"
         ]
       },
       {
-        "claim": "Card C12265-K2 belongs to Louvain community 39845908 with a high fraud lift of 9.9 linked to card C05472-K1 via device D001844, though device D001844 had zero transactions in the current window.",
+        "claim": "Card C12265-K2 belongs to Louvain community 39845908 with a lift of 9.9 due to historical device overlap with card C05472-K1 (CC-0866), but card C12265-K2 is not in any suspicious device ring (ring_id -1).",
         "source": "graph",
         "ref": "query:community_profile(card=C12265-K2)",
         "entity_ids": [
           "C12265-K2",
-          "C05472-K1",
-          "CC-0866",
-          "CC-2277",
-          "CC-2447"
+          "C05472-K1"
         ]
       },
       {
-        "claim": "Card C12265-K2 had two confirmed fraud cases in August 2016 (CC-2277 and CC-2447) involving account takeover, but both occurred over three months prior on a different holder anchor day (|46) and were resolved by reissuance.",
+        "claim": "Card C12265-K2 had two confirmed account takeover cases in August 2016 (CC-2277 and CC-2447), but both were resolved over three months prior with card reissuance, and the current holder baseline has zero confirmed fraud history.",
         "source": "graph",
         "ref": "query:linked_cases(tx=3509359)",
         "entity_ids": [
@@ -54,31 +84,12 @@
         ]
       },
       {
-        "claim": "Holder baseline confirms that holder identity C12265-K2|264|154 has zero prior transactions in confirmed fraud cases, indicating that this specific holder identity is not compromised.",
+        "claim": "Prior closed cases triggered by model score alerts on card purchases (CC-1254 and CC-2956) were investigated and cleared as legitimate customer activity.",
         "source": "graph",
-        "ref": "query:holder_history(holder=C12265-K2|264|154, before=2016-12-03)",
+        "ref": "query:similar_closed_cases(\"risk score: Real-time model scored transaction 3509359 ($125...\", k=6)",
         "entity_ids": [
-          "C12265-K2"
-        ]
-      },
-      {
-        "claim": "Transaction 3509359 for $125.08 aligns with the card's typical transaction amounts ($25.95 to $214.92), with ongoing in-person transactions continuing smoothly in region 264 shortly after (e.g. 3510096, 3510577) and no testing pattern.",
-        "source": "graph",
-        "ref": "query:card_window(card=C12265-K2, 2016-11-23..2016-12-06)",
-        "entity_ids": [
-          "3509359",
-          "C12265-K2",
-          "3510096",
-          "3510577"
-        ]
-      },
-      {
-        "claim": "Billing region 264 matches all 82 prior card transactions and shows a low fraud lift of 0.4 in the 7-day window, indicating no localized fraud outbreak.",
-        "source": "graph",
-        "ref": "query:shared_origin(tx=3509359, window=+/-7d)",
-        "entity_ids": [
-          "3509359",
-          "C12265-K2"
+          "CC-1254",
+          "CC-2956"
         ]
       },
       {
@@ -89,12 +100,12 @@
       }
     ],
     "similar_prior_cases": [
-      "CC-1447",
       "CC-0487",
-      "CC-2277",
-      "CC-2447"
+      "CC-1447",
+      "CC-1254",
+      "CC-2956"
     ],
-    "summary": "Transaction 3509359 ($125.08, online) on card C12265-K2 was flagged by a legacy risk score of 0.52, but the calibrated fraud model evaluated it at 0.006 with an empirical fraud rate of only 0.6%. The transaction was conducted via a generic desktop device profile with no fraud ring associations and two prior cleared cases. Although the card experienced account takeover compromises three months earlier, those incidents preceded card reissuance under a different holder anchor day, and the current holder identity has no confirmed fraud history. Regular in-person spending in the cardholder's home billing region continued without disruption before and after the purchase, with no card testing or dispute reported. The alert was determined to be a false alarm and the transaction was cleared as legitimate.",
+    "summary": "Alert HHG-020 was triggered by a legacy real-time risk score of 0.52 on online transaction 3509359 ($125.08) on card C12265-K2. The bank's calibrated second-generation fraud model evaluated the transaction at 0.006, with a historical fraud rate of only 0.6%. All 82 historical transactions on the card have occurred in billing region 264, matching the flagged transaction, and the amount aligns with the cardholder's recent spending baseline. Device D000140 is a common desktop configuration with zero confirmed fraud cases, and the card has no association with any suspicious device ring. The transaction is assessed as legitimate cardholder activity, and the case is closed with no fraud.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHG-020"
   },
@@ -104,14 +115,14 @@
       {
         "action": "CLOSE_NO_FRAUD",
         "route": "auto",
-        "reason": "Section 6: probability 0.03 <= 0.15 on 6 independent signals"
+        "reason": "Section 6: probability 0.03 <= 0.15 on 5 independent signals"
       }
     ],
     "final": [
       {
         "action": "CLOSE_NO_FRAUD",
         "route": "auto",
-        "reason": "Section 6: probability 0.03 <= 0.15 on 6 independent signals"
+        "reason": "Section 6: probability 0.03 <= 0.15 on 5 independent signals"
       }
     ],
     "what_changed": "nothing"
@@ -124,8 +135,8 @@
     "total_amount_usd": 0,
     "activity_dates": []
   },
-  "stop_reason": "The investigation was concluded under policy section 6 because the evaluated fraud probability (0.03) is decisively below the 0.15 clearance threshold across six independent evidentiary bases, meaning further investigation would not change the outcome.",
-  "tool_calls": 16,
-  "tokens": 150283,
-  "latency_s": 61.9
+  "stop_reason": "The investigation ended pursuant to Policy Section 6 as the calculated fraud probability of 0.03 fell below the 0.15 clearance threshold across five independent lines of evidence, confirming that further investigation would not alter the decision.",
+  "tool_calls": 14,
+  "tokens": 65281,
+  "latency_s": 56.9
 }

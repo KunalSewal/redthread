@@ -3,112 +3,93 @@
   "case": {
     "status": "escalated",
     "verdict": "uncertain",
-    "fraud_probability": 0.343,
+    "fraud_probability": 0.192,
     "pattern": "undocumented",
-    "pattern_description": "Coordinated multi-card fraud syndicate utilizing a specific mobile device (Samsung SM-G935F) operating behind an anonymous IP proxy to execute unauthorized online purchases across dozens of unrelated cardholder accounts. The device consistently registers as New on each victim account while evading individual transaction scoring thresholds. The modus operandi exactly mirrors confirmed fraud cases CC-2649, CC-2971, CC-2985, and CC-3035.",
+    "pattern_description": "Coordinated multi-card abuse conducted through a specific mobile device profile (Samsung SM-G935F on Chrome 62) operating behind an anonymous proxy. The device connects to multiple unrelated customer cards in rapid succession, generating one or two mid-value online purchases per card with 'New' device status. This behavior bypasses conventional real-time model scoring but matches an established device ring with 100% historical fraud confirmation.",
     "affected_txn_ids": [
-      "3467346"
+      "3467764"
     ],
-    "first_suspicious_txn_id": "3467346",
+    "first_suspicious_txn_id": "3467764",
     "connected_card_ids": [
-      "C09906-K1",
       "C01996-K2",
       "C04108-K2",
       "C10326-K1",
-      "C10193-K2",
-      "C04274-K1",
-      "C13291-K1",
-      "C09049-K1",
+      "C01289-K1",
       "C02975-K1",
-      "C06710-K1",
       "C13487-K1",
-      "C12796-K1",
-      "C02910-K1",
-      "C11670-K2",
       "C09975-K1",
-      "C11082-K1",
       "C08168-K1"
     ],
     "connected_device_profiles": [
       "SM-G935F Build/NRD90M | Android 7.0 | chrome 62.0 for android | 1920x1080"
     ],
-    "exposure_usd": 89.53,
+    "exposure_usd": 156.58,
     "evidence": [
       {
-        "claim": "Flagged transaction 3467346 on card C01289-K1 generated a low model score of 0.027 with a historical fraud rate of 0.006 and legacy risk score of 0.15.",
+        "claim": "All four prior closed cases associated with device D004630 (CC-2649, CC-2985, CC-2971, CC-3035) were confirmed fraud involving unauthorized online purchases from a new device behind an anonymous proxy classified as undocumented fraud.",
         "source": "graph",
-        "ref": "query:alert_context(tx=3467346)",
+        "ref": "query:linked_cases(tx=3467764)",
         "entity_ids": [
-          "3467346",
-          "C01289-K1",
-          "C01289"
+          "3467764",
+          "CC-2649",
+          "CC-2985",
+          "CC-2971",
+          "CC-3035",
+          "C03528-K1",
+          "C06617-K1",
+          "C09998-K1",
+          "C09733-K1"
         ]
       },
       {
-        "claim": "Flagged transaction 3467346 originated from device D004630, which was marked as New for cardholder account C01289-K1 and operated behind an anonymous IP proxy (IP_PROXY:ANONYMOUS).",
+        "claim": "Device D004630 belongs to ring 57672119 and was utilized across 9 distinct card accounts within the 30-day window, appearing as a new device behind an anonymous proxy on every single card.",
         "source": "graph",
-        "ref": "query:alert_context(tx=3467346)",
+        "ref": "query:device_neighbors(device=D004630, 2016-10-19..2016-11-18)",
         "entity_ids": [
-          "3467346",
-          "C01289-K1"
-        ]
-      },
-      {
-        "claim": "Device D004630 is an anchor device in fraud ring 36700632 and was used across 18 distinct cards in the 30-day window (29 transactions across 20 cards in +/-7 days), appearing as a new device behind an anonymous proxy on every card.",
-        "source": "graph",
-        "ref": "query:device_neighbors(device=D004630, 2016-10-19..2016-11-21)",
-        "entity_ids": [
-          "C01289-K1",
-          "C09906-K1",
           "C01996-K2",
           "C04108-K2",
           "C10326-K1",
           "C10193-K2",
-          "C04274-K1",
-          "C13291-K1",
-          "C09049-K1",
+          "C01289-K1",
           "C02975-K1",
-          "C06710-K1",
           "C13487-K1",
-          "C12796-K1",
-          "C02910-K1",
-          "C11670-K2",
           "C09975-K1",
-          "C11082-K1",
-          "C08168-K1"
+          "C08168-K1",
+          "3467764"
         ]
       },
       {
-        "claim": "Device D004630 is directly implicated in four prior confirmed-fraud closed cases (CC-2649, CC-2971, CC-2985, and CC-3035), where victims reported unauthorized card-not-present transactions executed from this exact device profile behind an anonymous proxy under an undocumented fraud pattern.",
+        "claim": "Flagged transaction 3467764 was conducted online from device D004630 with device status New for card C10193-K2 and routed via an anonymous proxy (IP_PROXY:ANONYMOUS).",
         "source": "graph",
-        "ref": "query:linked_cases(tx=3467346)",
+        "ref": "query:alert_context(tx=3467764)",
         "entity_ids": [
-          "CC-2649",
-          "CC-2971",
-          "CC-2985",
-          "CC-3035",
-          "C03528-K1",
-          "C06617-K1",
-          "C09733-K1",
-          "C09998-K1"
+          "3467764",
+          "C10193-K2"
         ]
       },
       {
-        "claim": "Card C01289-K1 has an established baseline consisting almost exclusively of in-person purchases (24 of 25 transactions, all in product category W), making an online purchase for product C from a new device an abrupt departure from established cardholder behaviour.",
+        "claim": "Flagged transaction 3467764 was assigned a low model score of 0.036 (historical fraud rate 0.006) and a legacy risk score of 0.13.",
         "source": "graph",
-        "ref": "query:alert_context(tx=3467346)",
+        "ref": "query:alert_context(tx=3467764)",
         "entity_ids": [
-          "3467346",
-          "C01289-K1"
+          "3467764",
+          "C10193-K2"
         ]
       },
       {
-        "claim": "Flagged transaction 3467346 was billed in region 472, matching the billing region of all 25 prior transactions on card C01289-K1.",
+        "claim": "Holder C10193-K2|157|139 has 0 prior transactions, which is common for online transactions and provides no established baseline or recurring match.",
         "source": "graph",
-        "ref": "query:alert_context(tx=3467346)",
+        "ref": "query:holder_history(holder=C10193-K2|157|139, before=2016-11-18)",
         "entity_ids": [
-          "3467346",
-          "C01289-K1"
+          "C10193-K2"
+        ]
+      },
+      {
+        "claim": "Region 157 is an established region for card C10193-K2 (42 prior transactions), but shared origin analysis for region 157 in the 7-day window showed a hot share of 0.0 with 0.0 lift.",
+        "source": "graph",
+        "ref": "query:shared_origin(tx=3467764, window=+/-7d)",
+        "entity_ids": [
+          "3467764"
         ]
       },
       {
@@ -137,12 +118,14 @@
       }
     ],
     "similar_prior_cases": [
-      "CC-3035",
+      "CC-2649",
       "CC-2985",
       "CC-2971",
-      "CC-2649"
+      "CC-3035",
+      "CC-4808",
+      "CC-4952"
     ],
-    "summary": "On November 18, 2016, transaction 3467346 ($89.53) on card C01289-K1 was flagged during monitoring due to its association with device D004630 and fraud ring 36700632. Although automated risk models scored the transaction low, graph analysis revealed that device D004630 has been utilized across 18 cards in a 30-day window and is directly linked to four prior confirmed-fraud cases (CC-2649, CC-2971, CC-2985, and CC-3035). Card C01289-K1 had established a consistent baseline of in-person purchases in product category W, making this online transaction in product category C an abrupt behavioral departure. The alert was confirmed as an undocumented coordinated multi-card syndicate, leading to case creation, analyst escalation, monitoring of 17 connected cards, and regulatory reporting.",
+    "summary": "Online transaction 3467764 ($156.58) on card C10193-K2 was flagged for utilizing device D004630, which is associated with fraud ring 57672119. Device D004630 is linked to four prior confirmed-fraud closed cases (CC-2649, CC-2985, CC-2971, CC-3035) and has appeared as a new device behind an anonymous proxy across nine cards in 30 days. Although the transaction produced a low model score of 0.036 and cardholder non-authorization has not yet been reported, the cross-card device pattern indicates coordinated multi-account abuse. The finding is assessed as uncertain with a 0.192 probability, escalating to an analyst for cardholder verification while monitoring eight connected cards.",
     "written_to_graph": true,
     "graph_case_id": "CASE-MON-013"
   },
@@ -155,19 +138,14 @@
         "reason": "3a: fraud probability at or above 0.30; R9: coordinated abuse across customers fitting no known pattern; R6: several cards show fraud from device:D004630"
       },
       {
-        "action": "FILE_REPORT",
-        "route": "L2",
-        "reason": "R9; R6: shared origin device:D004630"
-      },
-      {
         "action": "MONITOR_CONNECTED_CARDS",
         "route": "auto",
-        "reason": "R6: 17 connected card(s) share the same origin"
+        "reason": "R6: 8 connected card(s) share the same origin"
       },
       {
         "action": "ESCALATE_TO_ANALYST",
         "route": "auto",
-        "reason": "R9"
+        "reason": "R9 and 3a: coordinated abuse, but fraud on this card is not strongly suspected (probability 0.19); an analyst decides whether to report; R6 and 3a: device:D004630 is shared with other cards' fraud, but fraud on this card is not strongly suspected (probability 0.19); an analyst decides whether to report"
       }
     ],
     "final": [
@@ -177,56 +155,28 @@
         "reason": "3a: fraud probability at or above 0.30; R9: coordinated abuse across customers fitting no known pattern; R6: several cards show fraud from device:D004630"
       },
       {
-        "action": "FILE_REPORT",
-        "route": "L2",
-        "reason": "R9; R6: shared origin device:D004630"
-      },
-      {
         "action": "MONITOR_CONNECTED_CARDS",
         "route": "auto",
-        "reason": "R6: 17 connected card(s) share the same origin"
+        "reason": "R6: 8 connected card(s) share the same origin"
       },
       {
         "action": "ESCALATE_TO_ANALYST",
         "route": "auto",
-        "reason": "R9"
+        "reason": "R9 and 3a: coordinated abuse, but fraud on this card is not strongly suspected (probability 0.19); an analyst decides whether to report; R6 and 3a: device:D004630 is shared with other cards' fraud, but fraud on this card is not strongly suspected (probability 0.19); an analyst decides whether to report"
       }
     ],
     "what_changed": "nothing"
   },
   "sar": {
-    "file": true,
-    "reason": "R9; R6: shared origin device:D004630",
-    "narrative": "This Suspicious Activity Report details suspected card-not-present fraud conducted by an organized multi-card syndicate involving customer C01289 and primary card C01289-K1. On November 18, 2016, at 10:59:00 UTC, flagged transaction 3467346 for $89.53 was executed in the online channel for product category C in billing region 472. The transaction originated from mobile device D004630, identified by user agent string \"SM-G935F Build/NRD90M | Android 7.0 | chrome 62.0 for android | 1920x1080\", operating behind an anonymous IP proxy. Device D004630 appeared as a new device on card C01289-K1, departing sharply from the cardholder's prior established profile of 24 in-person retail transactions in product category W. Internal network graph analysis confirmed that device D004630 serves as an anchor device in fraud ring 36700632 and has transacted across 18 distinct payment cards within the preceding 30 days, including cards C09906-K1, C01996-K2, and C04108-K2. The modus operandi across all connected accounts involves registering device D004630 as a new mobile device behind an anonymous IP proxy to execute unauthorized online purchases while evading automated fraud scoring thresholds. Furthermore, device D004630 is directly tied to four prior confirmed-fraud investigations (CC-2649, CC-2971, CC-2985, and CC-3035), where cardholders formally disputed identical unauthorized online charges. The identified direct financial exposure on card C01289-K1 is $89.53. In response, the institution has flagged the affected transaction, escalated the syndicate activity for analyst intervention, initiated monitoring on 17 connected cards, and submitted this report under Bank Rules R6 and R9.",
-    "subjects": [
-      "C01289",
-      "C01289-K1",
-      "C09906-K1",
-      "C01996-K2",
-      "C04108-K2",
-      "C10326-K1",
-      "C10193-K2",
-      "C04274-K1",
-      "C13291-K1",
-      "C09049-K1",
-      "C02975-K1",
-      "C06710-K1",
-      "C13487-K1",
-      "C12796-K1",
-      "C02910-K1",
-      "C11670-K2",
-      "C09975-K1",
-      "C11082-K1",
-      "C08168-K1"
-    ],
-    "total_amount_usd": 89.53,
-    "activity_dates": [
-      "2016-11-18",
-      "2016-11-18"
-    ]
+    "file": false,
+    "reason": "3a: fraud is not confirmed or strongly suspected, so no report is required",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0,
+    "activity_dates": []
   },
-  "stop_reason": "Under policy section 6, the investigation was concluded because multiple independent lines of decisive evidence\u2014specifically cross-card links and prior confirmed fraud cases CC-2649, CC-2971, CC-2985, and CC-3035 tied to device D004630\u2014established a fraud probability of 0.343, and further investigative steps would not alter the required escalation and reporting actions.",
-  "tool_calls": 15,
-  "tokens": 149694,
-  "latency_s": 96.1
+  "stop_reason": "Further automated steps would not change the decision under policy section 6, as the cross-card ring evidence is documented and direct cardholder verification via analyst escalation is required to resolve the uncertain outcome.",
+  "tool_calls": 59,
+  "tokens": 216739,
+  "latency_s": 268.3
 }

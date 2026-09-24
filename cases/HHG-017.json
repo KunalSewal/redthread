@@ -13,44 +13,36 @@
     "exposure_usd": 0,
     "evidence": [
       {
-        "claim": "The calibrated fraud model scored transaction 3450629 at 0.014 with a historical fraud rate of 0.006, indicating an extremely low probability of fraud despite a legacy real-time risk score of 0.57.",
+        "claim": "Transaction 3450629 was conducted behind a hidden proxy (IP_PROXY:HIDDEN) on device D006670, elevating the legacy real-time risk score to 0.57.",
         "source": "graph",
         "ref": "query:alert_context(tx=3450629)",
         "entity_ids": [
           "3450629",
-          "C04570-K1",
-          "C04570"
+          "C04570-K1"
         ]
       },
       {
-        "claim": "Flagged transaction 3450629 exactly matches the holder baseline in region (204), channel (online), product (R), device (D006670), and amount ($100.09), directly continuing a session that included transactions 3450436 ($100.09) and 3450503 ($99.96) earlier that hour with no prior confirmed fraud.",
+        "claim": "The calibrated second-generation fraud model scored transaction 3450629 at 0.014 with a historical fraud rate of only 0.006 (0.6%).",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3450629)",
+        "entity_ids": [
+          "3450629",
+          "C04570-K1"
+        ]
+      },
+      {
+        "claim": "Transaction 3450629 ($100.09, product R, online, region 204) matches the holder's baseline established by transactions 3450436 ($100.09) and 3450503 ($99.96) earlier that evening on device D006670, with zero prior fraud cases on this holder.",
         "source": "graph",
         "ref": "query:holder_history(holder=C04570-K1|204|132, before=2016-11-11)",
         "entity_ids": [
           "3450629",
           "3450436",
-          "3450503"
+          "3450503",
+          "C04570-K1"
         ]
       },
       {
-        "claim": "Device D006670 is a generic desktop profile (Windows 10, Chrome 65.0) used by 299 cards all-time and was previously used legitimately on card C04570-K1 on 2016-10-27 (tx 3403833), appearing with status 'Found' for this holder.",
-        "source": "graph",
-        "ref": "query:device_neighbors(device=D006670, 2016-10-12..2016-11-14)",
-        "entity_ids": [
-          "C04570-K1",
-          "3403833"
-        ]
-      },
-      {
-        "claim": "Transaction 3450629 was conducted behind an IP proxy (IP_PROXY:HIDDEN), unlike the earlier transactions in the same evening session, which prompted the elevated legacy risk score.",
-        "source": "graph",
-        "ref": "query:card_window(card=C04570-K1, 2016-11-01..2016-11-14)",
-        "entity_ids": [
-          "3450629"
-        ]
-      },
-      {
-        "claim": "Card C04570-K1 belongs to community 125829305 containing 0 confirmed fraud cases and a lift of 0.0 vs base rate, and has ring_id -1.",
+        "claim": "Card C04570-K1 belongs to a community of 1 card with 0 confirmed fraud cases and a lift vs base rate of 0.0, and has no ring membership (ring_id -1).",
         "source": "graph",
         "ref": "query:community_profile(card=C04570-K1)",
         "entity_ids": [
@@ -58,7 +50,16 @@
         ]
       },
       {
-        "claim": "In the +/-7 day window around transaction 3450629, device D006670, recipient email anonymous.com, and region 204 show fraud lifts of 0.21, 0.66, and 0.36 respectively, all well below the network baseline rate.",
+        "claim": "The only prior closed case on card C04570-K1 was CC-1383, which was cleared as legitimate travel after a model alert on a similar $99.98 purchase.",
+        "source": "graph",
+        "ref": "query:linked_cases(tx=3450629)",
+        "entity_ids": [
+          "CC-1383",
+          "C04570-K1"
+        ]
+      },
+      {
+        "claim": "Shared origin analysis indicates that device D006670 (lift 0.41) and billing region 204 (lift 0.34) under-index for fraud relative to the baseline rate.",
         "source": "graph",
         "ref": "query:shared_origin(tx=3450629, window=+/-7d)",
         "entity_ids": [
@@ -66,12 +67,14 @@
         ]
       },
       {
-        "claim": "Card C04570-K1 has only one prior closed case (CC-1383), which was fully cleared as legitimate travel with pattern 'none' and zero confirmed fraud.",
+        "claim": "Card window shows three consecutive authorizations of approximately $100 within 70 minutes with no micro-authorization testing sequence.",
         "source": "graph",
-        "ref": "query:linked_cases(tx=3450629)",
+        "ref": "query:card_window(card=C04570-K1, 2016-11-01..2016-11-12)",
         "entity_ids": [
-          "C04570-K1",
-          "CC-1383"
+          "3450436",
+          "3450503",
+          "3450629",
+          "C04570-K1"
         ]
       },
       {
@@ -84,7 +87,7 @@
     "similar_prior_cases": [
       "CC-1383"
     ],
-    "summary": "Alert HHG-017 was triggered by a legacy real-time risk score of 0.57 on online transaction 3450629 ($100.09), elevated due to the use of an IP proxy. In contrast, the calibrated second-generation fraud model scored the transaction at 0.014 with a historical fraud rate of 0.006. The purchase perfectly aligns with the cardholder's normal behavior, directly continuing an evening session that included two other identical-amount purchases on known device D006670. Graph analysis shows no connection to fraud rings, an uncompromised community with zero fraud lift, and an exclusively clean prior case history. The transaction is verified as legitimate cardholder activity and closed as a false positive.",
+    "summary": "Alert HHG-017 was triggered by a legacy real-time risk score of 0.57 on online transaction 3450629 ($100.09) on card C04570-K1, elevated by a hidden proxy flag. In contrast, the calibrated second-generation fraud model scored the transaction at 0.014 with an expected historical fraud rate of only 0.6%. The purchase matches the holder's established baseline, directly aligning with two earlier purchases of approximately $100 for product R on the same device (D006670) within the preceding 70 minutes. Furthermore, the device and billing region under-index for fraud, the card has no association with any fraud ring or high-risk community, and its sole prior case (CC-1383) was cleared. The transaction is determined to be legitimate cardholder activity.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHG-017"
   },
@@ -94,14 +97,14 @@
       {
         "action": "CLOSE_NO_FRAUD",
         "route": "auto",
-        "reason": "Section 6: probability 0.03 <= 0.15 on 5 independent signals"
+        "reason": "Section 6: probability 0.03 <= 0.15 on 6 independent signals"
       }
     ],
     "final": [
       {
         "action": "CLOSE_NO_FRAUD",
         "route": "auto",
-        "reason": "Section 6: probability 0.03 <= 0.15 on 5 independent signals"
+        "reason": "Section 6: probability 0.03 <= 0.15 on 6 independent signals"
       }
     ],
     "what_changed": "nothing"
@@ -114,8 +117,8 @@
     "total_amount_usd": 0,
     "activity_dates": []
   },
-  "stop_reason": "The investigation stopped pursuant to Policy Section 6 because the assessed fraud probability reached a decisive threshold (0.03 <= 0.15) supported by five independent exculpatory evidence bases, rendering further inquiries unnecessary.",
-  "tool_calls": 14,
-  "tokens": 107011,
-  "latency_s": 80.5
+  "stop_reason": "Investigation concluded under policy section 6 because the evaluated fraud probability of 0.03 is well below the 0.15 threshold, supported by six independent exculpatory evidence bases confirming further steps would not change the decision.",
+  "tool_calls": 17,
+  "tokens": 121385,
+  "latency_s": 157.6
 }

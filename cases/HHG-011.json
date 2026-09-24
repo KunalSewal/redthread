@@ -3,7 +3,7 @@
   "case": {
     "status": "closed_fraud",
     "verdict": "fraud",
-    "fraud_probability": 0.926,
+    "fraud_probability": 0.97,
     "pattern": "card_not_present_new_device",
     "pattern_description": "",
     "affected_txn_ids": [
@@ -12,8 +12,7 @@
     "first_suspicious_txn_id": "3583368",
     "connected_card_ids": [
       "C05595-K1",
-      "C03938-K1",
-      "C05678-K1"
+      "C03938-K1"
     ],
     "connected_device_profiles": [
       "SM-G610F Build/NRD90M | unknown | chrome 66.0 for android | unknown"
@@ -29,70 +28,59 @@
         ]
       },
       {
-        "claim": "Customer C11923 reported never making the $131.30 purchase (transaction 3583368) on card C11923-K2 and requested an account check.",
+        "claim": "Device D009621 was used across three cards within five hours for similar amounts ($125.59 to $131.30), including card C05595-K1 on transaction 3582730 with a model score of 0.90 (historical fraud rate 0.921) and card C03938-K1 on transaction 3582750, yielding a shared origin lift of 16.14.",
         "source": "graph",
-        "ref": "query:alert_context(tx=3583368)",
+        "ref": "query:device_neighbors(device=D009621, 2016-11-29..2016-12-29)",
         "entity_ids": [
           "3583368",
-          "C11923",
-          "C11923-K2"
-        ]
-      },
-      {
-        "claim": "Device D009621 connects transaction 3583368 to 3 other cards (C05595-K1, C03938-K1, C05678-K1) making online purchases of similar amounts ($125-$131) within three days, with transaction 3582730 on C05595-K1 scoring 0.90 on the fraud model and yielding a shared-origin lift of 12.11.",
-        "source": "graph",
-        "ref": "query:device_neighbors(device=D009621, 2016-11-29..2017-01-01)",
-        "entity_ids": [
-          "3583368",
-          "C05595-K1",
           "3582730",
-          "C03938-K1",
-          "C05678-K1",
-          "C11923-K2"
+          "3582750",
+          "C11923-K2",
+          "C05595-K1",
+          "C03938-K1"
         ]
       },
       {
-        "claim": "The bank fraud model evaluated transaction 3583368 at 0.011 with a historical fraud rate of 0.006, and legacy risk score was 0.39.",
-        "source": "graph",
-        "ref": "query:alert_context(tx=3583368)",
-        "entity_ids": [
-          "3583368"
-        ]
-      },
-      {
-        "claim": "Transaction 3583368 was conducted online from device D009621, which was recorded as New for this account holder.",
-        "source": "graph",
-        "ref": "query:alert_context(tx=3583368)",
-        "entity_ids": [
-          "3583368",
-          "C11923-K2"
-        ]
-      },
-      {
-        "claim": "The disputed transaction of $131.30 is significantly above the cardholder's prior maximum transaction amount ($47.02) across 3 prior transactions and does not match any recurring charge pattern.",
-        "source": "graph",
-        "ref": "query:holder_history(holder=C11923-K2|NA|180, before=2016-12-29)",
-        "entity_ids": [
-          "3583368"
-        ]
-      },
-      {
-        "claim": "Card C11923-K2 has 10 prior confirmed fraud closed cases, including CC-3905, CC-4501, and CC-3206 involving card-not-present fraud from new devices and card testing, with only 1 cleared case (CC-4743).",
+        "claim": "Card C11923-K2 has 10 prior confirmed fraud closed cases, including 6 cases of card-not-present fraud from a new device (CC-3905, CC-3206, CC-3039, CC-2799, CC-1056, CC-0031) and 4 cases of card testing (CC-4501, CC-2673, CC-2247, CC-0290).",
         "source": "graph",
         "ref": "query:linked_cases(tx=3583368)",
         "entity_ids": [
-          "C11923-K2",
           "CC-3905",
-          "CC-4501",
           "CC-3206",
-          "CC-4743"
+          "CC-3039",
+          "CC-4501",
+          "C11923-K2"
         ]
       },
       {
-        "claim": "The specific cardholder identity has zero prior transactions in confirmed fraud cases.",
+        "claim": "Transaction 3583368 was conducted online from device D009621, which was flagged with device status New for card C11923-K2.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3583368)",
+        "entity_ids": [
+          "3583368",
+          "C11923-K2"
+        ]
+      },
+      {
+        "claim": "The transaction amount of $131.30 exceeds the prior maximum amount ($47.02) observed for holder C11923-K2|NA|180, and does not match any recurring charge pattern.",
         "source": "graph",
         "ref": "query:holder_history(holder=C11923-K2|NA|180, before=2016-12-29)",
-        "entity_ids": []
+        "entity_ids": [
+          "3583368",
+          "3583199",
+          "3583101",
+          "3583229"
+        ]
+      },
+      {
+        "claim": "Transaction 3583368 scored 0.011 on the fraud model with a historical fraud rate of 0.006, and match flag M4 is M2.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3583368)",
+        "entity_ids": [
+          "3583368",
+          "C11923-K2",
+          "C11923"
+        ]
       },
       {
         "claim": "Rule R5: Card testing: Rule R5: Card testing. Three or more small online authorizations on one card within an hour, followed by a larger purchase: recommend `DECLINE_TRANSACTION` and `STEP_UP_AUTH`. If a purchase over $100 has already cleared, recommend `BLOCK_CARD`.",
@@ -115,11 +103,11 @@
     ],
     "similar_prior_cases": [
       "CC-3905",
-      "CC-4501",
-      "CC-4743",
-      "CC-3206"
+      "CC-3206",
+      "CC-3039",
+      "CC-4501"
     ],
-    "summary": "Customer C11923 reported an unauthorized $131.30 online transaction (ID 3583368) on card C11923-K2. The charge was conducted via device D009621, which was marked as new for this account and substantially exceeded the cardholder's previous maximum transaction of $47.02. Network analysis revealed that device D009621 was shared across three other cards within a three-day window for similar amounts, including a transaction scoring 0.90 on the bank's fraud model. Given the customer's explicit denial, the cross-card device compromise, and ten prior confirmed fraud cases on the card, the transaction was confirmed as card-not-present fraud from a new device.",
+    "summary": "Alert HHG-011 was opened following a customer dispute from customer C11923 regarding an online transaction of $131.30 (ID 3583368) on card C11923-K2. Although the isolated transaction model score was low at 0.011, graph analysis revealed that device D009621 was used within five hours across two other cards (C05595-K1 and C03938-K1) for similar amounts, with one linked transaction scoring 0.90. Card C11923-K2 also has ten prior confirmed fraud cases, six of which involved card-not-present fraud from new devices. The alert is confirmed as card-not-present fraud from a new device with a probability of 0.97, leading to transaction decline and monitoring of connected cards.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHG-011"
   },
@@ -132,11 +120,6 @@
         "reason": "R5: card-testing sequence; decline pending authorizations"
       },
       {
-        "action": "BLOCK_CARD",
-        "route": "L1",
-        "reason": "R5: a purchase over $100 has already cleared after the test sequence"
-      },
-      {
         "action": "STEP_UP_AUTH",
         "route": "auto",
         "reason": "R5: require step-up authentication before further activity"
@@ -144,17 +127,17 @@
       {
         "action": "CREATE_CASE",
         "route": "auto",
-        "reason": "3a: fraud probability at or above 0.30; R6: several cards show fraud from device:D009621"
+        "reason": "3a: fraud probability at or above 0.30; R6: several cards show fraud from device:D009621; 3a: a report always has a case behind it"
       },
       {
         "action": "FILE_REPORT",
         "route": "L2",
-        "reason": "R6: shared origin device:D009621"
+        "reason": "3a and R6: fraud across several cards sharing device:D009621"
       },
       {
         "action": "MONITOR_CONNECTED_CARDS",
         "route": "auto",
-        "reason": "R6: 3 connected card(s) share the same origin"
+        "reason": "R6: 2 connected card(s) share the same origin"
       }
     ],
     "final": [
@@ -164,11 +147,6 @@
         "reason": "R5: card-testing sequence; decline pending authorizations"
       },
       {
-        "action": "BLOCK_CARD",
-        "route": "L1",
-        "reason": "R5: a purchase over $100 has already cleared after the test sequence"
-      },
-      {
         "action": "STEP_UP_AUTH",
         "route": "auto",
         "reason": "R5: require step-up authentication before further activity"
@@ -176,17 +154,17 @@
       {
         "action": "CREATE_CASE",
         "route": "auto",
-        "reason": "3a: fraud probability at or above 0.30; R6: several cards show fraud from device:D009621"
+        "reason": "3a: fraud probability at or above 0.30; R6: several cards show fraud from device:D009621; 3a: a report always has a case behind it"
       },
       {
         "action": "FILE_REPORT",
         "route": "L2",
-        "reason": "R6: shared origin device:D009621"
+        "reason": "3a and R6: fraud across several cards sharing device:D009621"
       },
       {
         "action": "MONITOR_CONNECTED_CARDS",
         "route": "auto",
-        "reason": "R6: 3 connected card(s) share the same origin"
+        "reason": "R6: 2 connected card(s) share the same origin"
       }
     ],
     "what_changed": "nothing"
@@ -194,13 +172,12 @@
   "sar": {
     "file": true,
     "reason": "3a and R6: fraud across several cards sharing device:D009621",
-    "narrative": "This Suspicious Activity Report details unauthorized card-not-present activity identified on card C11923-K2 under customer C11923. On December 29, 2016, at 03:27:44 UTC, an unauthorized online transaction (ID 3583368) totaling $131.30 was processed against the card. The transaction was conducted via device D009621 (device profile: SM-G610F Build/NRD90M | unknown | chrome 66.0 for android | unknown), which was new to the cardholder's account. Customer C11923 contacted the financial institution to dispute the charge, stating that they never authorized or made the $131.30 purchase. The disputed charge significantly deviated from the cardholder's established history, where the previous highest charge was $47.02. Knowledge graph analysis identified that device D009621 was concurrently utilized across three other distinct cards (C05595-K1, C03938-K1, and C05678-K1) within a three-day window to conduct online transactions of similar amounts between $125.00 and $131.30. A linked transaction on connected card C05595-K1 generated a high fraud model score of 0.90, indicating coordinated multi-card exploitation by a shared actor. Furthermore, card C11923-K2 carries ten prior confirmed fraud closed cases, reflecting recurrent compromise vulnerability. Total unauthorized exposure for this alert is $131.30. The financial institution has blocked card C11923-K2, declined pending activity, and initiated monitoring across all connected cards.",
+    "narrative": "This suspicious activity report details unauthorized card-not-present transactions identified across multiple cardholder accounts on December 29, 2016. The primary subject is cardholder C11923, holder of card C11923-K2, who initiated a direct fraud dispute regarding unauthorized online activity. On December 29, 2016, at 03:27:44 UTC, an unauthorized online transaction (ID 3583368) for $131.30 was processed on card C11923-K2. The transaction originated via the online channel from device D009621, identified by profile SM-G610F Build/NRD90M | unknown | chrome 66.0 for android | unknown, which was flagged as a new device for this card. Cardholder C11923 confirmed non-authorization of the $131.30 purchase, which exceeded the cardholder's previous maximum transaction of $47.02 and lacked any recurring billing pattern. Internal graph analysis revealed that device D009621 was concurrently utilized within a five-hour window to conduct similar online transactions across two unrelated cards, C05595-K1 and C03938-K1. Specifically, device D009621 executed transaction 3582730 for $125.72 on card C05595-K1 and transaction 3582750 for $125.59 on card C03938-K1, with transaction 3582730 yielding a 0.90 fraud model score. Further review showed that card C11923-K2 had ten previous confirmed fraud cases on record, including six prior card-not-present compromises from new devices. Total fraudulent exposure directly incurred on card C11923-K2 is $131.30, with aggregated exposure across the three device-linked cards totaling $382.61. The bank has declined pending authorizations, applied step-up authentication restrictions, and initiated active monitoring across all linked compromised cards.",
     "subjects": [
       "C11923",
       "C11923-K2",
       "C05595-K1",
-      "C03938-K1",
-      "C05678-K1"
+      "C03938-K1"
     ],
     "total_amount_usd": 131.3,
     "activity_dates": [
@@ -208,8 +185,8 @@
       "2016-12-29"
     ]
   },
-  "stop_reason": "Investigation concluded under policy section 6 because a decisive fraud probability (0.926) was established through multiple independent corroborating bases, including direct customer dispute, cross-card device links to suspicious activity, and prior compromise history, meaning further inquiry would not alter the outcome.",
-  "tool_calls": 18,
-  "tokens": 303207,
-  "latency_s": 149.1
+  "stop_reason": "The investigation ended pursuant to policy section 6 because the fraud probability reached a decisive level of 0.97, established by the customer dispute, multi-card device links to high-scoring transactions, and extensive prior fraud history, meaning further inquiries would not alter the decision.",
+  "tool_calls": 46,
+  "tokens": 263751,
+  "latency_s": 183.3
 }

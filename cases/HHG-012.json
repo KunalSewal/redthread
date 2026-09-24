@@ -13,34 +13,15 @@
     "exposure_usd": 0,
     "evidence": [
       {
-        "claim": "The calibrated second-generation fraud model scored transaction 3553342 at 0.008 with a historical fraud rate of 0.006, indicating very low risk.",
+        "claim": "Transaction 3553342 was flagged by a legacy real-time risk score of 0.55, triggering this alert.",
         "source": "graph",
         "ref": "query:alert_context(tx=3553342)",
         "entity_ids": [
-          "3553342",
-          "C05876-K2",
-          "C05876"
+          "3553342"
         ]
       },
       {
-        "claim": "The legacy real-time risk score scored transaction 3553342 at 0.55, which triggered the review queue but is an uncalibrated legacy metric.",
-        "source": "graph",
-        "ref": "query:alert_context(tx=3553342)",
-        "entity_ids": [
-          "3553342",
-          "C05876-K2"
-        ]
-      },
-      {
-        "claim": "Analysis of 106 card transactions between 2016-12-08 and 2016-12-21 shows consistent in-person activity with zero suspicious transactions and zero card testing sequences.",
-        "source": "graph",
-        "ref": "query:card_window(card=C05876-K2, 2016-12-08..2016-12-21)",
-        "entity_ids": [
-          "C05876-K2"
-        ]
-      },
-      {
-        "claim": "Transaction 3553342 is an in-person retail purchase for $30.91 (product W), matching standard retail patterns without rapid high-value depletion.",
+        "claim": "Card C05876-K2 has an established history of 849 in-person transactions for product W and 21 prior transactions in billing region 494, and the cardholder identity has zero prior transactions in confirmed fraud cases.",
         "source": "graph",
         "ref": "query:alert_context(tx=3553342)",
         "entity_ids": [
@@ -49,7 +30,16 @@
         ]
       },
       {
-        "claim": "Regional analysis in region 494 over the 14-day window shows 319 transactions with a model fraud lift of 0.3, well below the baseline fraud rate.",
+        "claim": "Flagged transaction 3553342 for $30.91 is consistent with recent in-person spending on card C05876-K2 ($21.04 to $112.92 across 13 transactions in the prior 48 hours), with no card testing sequence observed.",
+        "source": "graph",
+        "ref": "query:card_window(card=C05876-K2, 2016-12-16..2016-12-18)",
+        "entity_ids": [
+          "3553342",
+          "C05876-K2"
+        ]
+      },
+      {
+        "claim": "Billing region 494 exhibits a below-average fraud lift of 0.59 vs all transactions in the 7-day window, with only 2 of 164 transactions scoring >= 0.5, showing no geographic fraud clustering.",
         "source": "graph",
         "ref": "query:shared_origin(tx=3553342, window=+/-7d)",
         "entity_ids": [
@@ -57,22 +47,28 @@
         ]
       },
       {
-        "claim": "Card C05876-K2 is not assigned to any fraud ring (ring_id -1) and shares no device links with active fraud rings in this episode.",
+        "claim": "Flagged transaction 3553342 was conducted in person with null device ID, null proxy, and no suspicious digital fingerprint.",
         "source": "graph",
-        "ref": "query:community_profile(card=C05876-K2)",
+        "ref": "query:alert_context(tx=3553342)",
+        "entity_ids": [
+          "3553342"
+        ]
+      },
+      {
+        "claim": "Card C05876-K2 belongs to no suspicious device fraud ring (ring_id -1, ring_size 1) and connects to no other cards in the card-device graph.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3553342)",
         "entity_ids": [
           "C05876-K2"
         ]
       },
       {
-        "claim": "Card C05876-K2 experienced confirmed card-not-present fraud in August 2016 (CC-2370) involving online browser purchases, but the current holder identity has no prior confirmed fraud cases.",
+        "claim": "Prior closed cases triggered by model alerts on travel or in-person transactions without customer dispute, including CC-0003 on card C05876-K2 and CC-5371, were confirmed legitimate and cleared.",
         "source": "graph",
-        "ref": "query:linked_cases(tx=3553342)",
+        "ref": "query:similar_closed_cases(\"risk score: Real-time model scored transaction 3553342 ($30....\", k=6)",
         "entity_ids": [
-          "3553342",
-          "C05876-K2",
-          "CC-2370",
-          "CC-0003"
+          "CC-0003",
+          "CC-5371"
         ]
       },
       {
@@ -84,10 +80,10 @@
     ],
     "similar_prior_cases": [
       "CC-0003",
-      "CC-2370",
-      "CC-5371"
+      "CC-5371",
+      "CC-2370"
     ],
-    "summary": "Alert HHG-012 was triggered by an elevated legacy real-time risk score of 0.55 on transaction 3553342 for $30.91 on card C05876-K2. The bank's calibrated second-generation fraud model evaluated the purchase with a score of 0.008, reflecting an expected historical fraud rate of only 0.006. A review of 106 card transactions across the 14-day window demonstrated consistent in-person retail spending with no testing patterns or suspicious velocity. Furthermore, billing region 494 shows an exculpatory fraud lift of 0.3, and the card has no association with any active fraud ring. The transaction represents legitimate cardholder spending, and the alert is resolved as a false alarm.",
+    "summary": "Alert HHG-012 was triggered by a legacy real-time risk score of 0.55 on in-person transaction 3553342 ($30.91) on card C05876-K2. Graph investigation revealed the transaction aligns with the cardholder's established pattern, including 849 prior in-person purchases and 21 prior transactions in billing region 494. The calibrated model scored the transaction at 0.008 with a 0.6% historical fraud rate, and the card possesses no fraud ring associations or device anomalies. Additionally, prior closed cases such as CC-0003 on this card were resolved as legitimate. The alert was determined to be a false alarm, and the case was closed with no fraud found.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHG-012"
   },
@@ -97,14 +93,14 @@
       {
         "action": "CLOSE_NO_FRAUD",
         "route": "auto",
-        "reason": "Section 6: probability 0.03 <= 0.15 on 5 independent signals"
+        "reason": "Section 6: probability 0.03 <= 0.15 on 6 independent signals"
       }
     ],
     "final": [
       {
         "action": "CLOSE_NO_FRAUD",
         "route": "auto",
-        "reason": "Section 6: probability 0.03 <= 0.15 on 5 independent signals"
+        "reason": "Section 6: probability 0.03 <= 0.15 on 6 independent signals"
       }
     ],
     "what_changed": "nothing"
@@ -117,8 +113,8 @@
     "total_amount_usd": 0,
     "activity_dates": []
   },
-  "stop_reason": "The investigation stopped under Policy Section 6 because the final fraud probability of 0.03 is well below the 0.15 clearance threshold, corroborated by five independent evidence bases, meaning further steps would not alter the decision.",
-  "tool_calls": 13,
-  "tokens": 90869,
-  "latency_s": 44.2
+  "stop_reason": "The investigation concluded under policy section 6 because the assessed fraud probability of 0.03 is well below the 0.15 threshold, supported by multiple independent exculpatory evidence bases confirming legitimate activity.",
+  "tool_calls": 15,
+  "tokens": 118619,
+  "latency_s": 96.1
 }

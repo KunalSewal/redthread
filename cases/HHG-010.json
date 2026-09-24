@@ -13,35 +13,7 @@
     "exposure_usd": 0,
     "evidence": [
       {
-        "claim": "Real-time legacy risk score flagged transaction 3506725 with an elevated score of 0.90.",
-        "source": "graph",
-        "ref": "query:alert_context(tx=3506725)",
-        "entity_ids": [
-          "3506725",
-          "C10434-K1",
-          "C10434"
-        ]
-      },
-      {
-        "claim": "The bank's second-generation calibrated fraud model scored transaction 3506725 at 0.019, with an expected historical fraud rate of only 0.006 (0.6%).",
-        "source": "graph",
-        "ref": "query:alert_context(tx=3506725)",
-        "entity_ids": [
-          "3506725",
-          "C10434-K1"
-        ]
-      },
-      {
-        "claim": "The flagged transaction occurred in region 469, which is the cardholder's primary billing region accounting for 24 of 33 prior transactions, and shows zero fraud lift (lift 0.0) across 206 transactions in the 7-day window.",
-        "source": "graph",
-        "ref": "query:shared_origin(tx=3506725, window=+/-7d)",
-        "entity_ids": [
-          "3506725",
-          "C10434-K1"
-        ]
-      },
-      {
-        "claim": "Device D000126 is marked as New for this account, though it represents a generic browser configuration.",
+        "claim": "Flagged transaction 3506725 triggered the alert with an elevated legacy real-time risk score of 0.90, which is known to be noisy with only 37% of scores above 0.85 confirmed as fraud.",
         "source": "graph",
         "ref": "query:alert_context(tx=3506725)",
         "entity_ids": [
@@ -49,15 +21,26 @@
         ]
       },
       {
-        "claim": "Device D000126 is a generic desktop browser profile (Windows 10, Edge 16.0) used by 208 cards all time, operated without a proxy, and carries no ring association (ring_id -1).",
+        "claim": "Flagged transaction 3506725 has a well-calibrated second-generation model score of 0.019 with a historical fraud rate of 0.006 (0.6%).",
         "source": "graph",
-        "ref": "query:device_neighbors(device=D000126, 2016-11-02..2016-12-05)",
+        "ref": "query:alert_context(tx=3506725)",
         "entity_ids": [
           "3506725"
         ]
       },
       {
-        "claim": "Louvain community detection places card C10434-K1 in an isolated single-card community (community 146800700) with 0 confirmed fraud cases and a lift vs base rate of 0.0.",
+        "claim": "Flagged transaction 3506725 occurred in billing region 469, which is the primary region for card C10434-K1 (24 of 33 historical transactions) and matches both previous transactions within the 30-day window (3475344 and 3492086).",
+        "source": "graph",
+        "ref": "query:card_window(card=C10434-K1, 2016-11-02..2016-12-02)",
+        "entity_ids": [
+          "3506725",
+          "3475344",
+          "3492086",
+          "C10434-K1"
+        ]
+      },
+      {
+        "claim": "Card C10434-K1 has no ring association (ring_id -1) and belongs to a single-card community (community 146800700) with zero confirmed fraud cases and a lift vs base rate of 0.0.",
         "source": "graph",
         "ref": "query:community_profile(card=C10434-K1)",
         "entity_ids": [
@@ -65,34 +48,41 @@
         ]
       },
       {
-        "claim": "Card C10434-K1 has regular established activity in online channels (16 prior transactions) and product category R (9 prior transactions), with no card testing sequences.",
-        "source": "graph",
-        "ref": "query:card_window(card=C10434-K1, 2016-11-02..2016-12-05)",
-        "entity_ids": [
-          "3506725",
-          "C10434-K1",
-          "3475344",
-          "3492086"
-        ]
-      },
-      {
-        "claim": "While the $1,000.03 charge is higher than recent online transactions, card C10434-K1 has prior substantial purchases reaching $670.04 (tx 3306585) and $670.00 (tx 3217858) without anomalies.",
-        "source": "graph",
-        "ref": "query:card_window(card=C10434-K1, 2016-08-04..2016-12-05)",
-        "entity_ids": [
-          "3506725",
-          "C10434-K1",
-          "3306585",
-          "3217858"
-        ]
-      },
-      {
-        "claim": "Prior closed alert CC-0873 on card C10434-K1 was triggered by an elevated model score of 0.93 and was cleared as legitimate activity.",
+        "claim": "Card C10434-K1 has only one prior closed case, CC-0873, which was cleared as legitimate cardholder activity following a high model score alert of 0.93.",
         "source": "graph",
         "ref": "query:linked_cases(tx=3506725)",
         "entity_ids": [
-          "C10434-K1",
-          "CC-0873"
+          "CC-0873",
+          "C10434-K1"
+        ]
+      },
+      {
+        "claim": "Flagged transaction 3506725 was conducted on device D000126, which is marked as New for card C10434-K1, though it has a generic profile (Windows 10, Edge 16.0, 1366x768) used by 185 cards before the alert with no proxy and zero lift in the 7-day window.",
+        "source": "graph",
+        "ref": "query:device_neighbors(device=D000126, 2016-11-02..2016-12-02)",
+        "entity_ids": [
+          "3506725",
+          "C10434-K1"
+        ]
+      },
+      {
+        "claim": "The amount of flagged transaction 3506725 ($1,000.03) is significantly higher than recent purchases on card C10434-K1, which were $100.04 in transaction 3492086 and $96.98 in transaction 3475344.",
+        "source": "graph",
+        "ref": "query:card_window(card=C10434-K1, 2016-11-02..2016-12-02)",
+        "entity_ids": [
+          "3506725",
+          "3492086",
+          "3475344",
+          "C10434-K1"
+        ]
+      },
+      {
+        "claim": "Holder baseline for the anchor period of transaction 3506725 has zero prior transactions in confirmed fraud cases, indicating no prior compromise of the holder identity.",
+        "source": "graph",
+        "ref": "query:holder_history(holder=C10434-K1|469|153, before=2016-12-02)",
+        "entity_ids": [
+          "3506725",
+          "C10434-K1"
         ]
       },
       {
@@ -106,12 +96,9 @@
       "CC-0873",
       "CC-5371",
       "CC-2444",
-      "CC-0339",
-      "CC-0362",
-      "CC-5368",
       "CC-3092"
     ],
-    "summary": "Transaction 3506725 ($1,000.03, online) on card C10434-K1 was flagged due to an elevated legacy real-time risk score of 0.90. In contrast, the bank's calibrated second-generation fraud model evaluated the transaction at 0.019, reflecting a historical fraud rate of only 0.6%. The purchase occurred in region 469, which represents the cardholder's primary billing region, using a generic desktop browser profile with no proxy use or fraud ring connections. In addition, the cardholder possesses an established history of online transactions, sits in an isolated community with zero fraud lift, and had a prior alert (CC-0873) cleared as legitimate. The alert is determined to be a false alarm, and the case is closed with no fraud.",
+    "summary": "Alert HHG-010 was triggered by an elevated legacy risk score of 0.90 on online transaction 3506725 ($1,000.03) on card C10434-K1. Although the purchase amount was higher than recent transactions and made on a newly seen generic device, the calibrated second-generation model score was exceptionally low at 0.019 with a 0.6% historical fraud rate. The transaction occurred in the cardholder's primary billing region 469, and the account has no association with fraud rings or elevated-risk communities. In addition, the card's sole prior closed case (CC-0873) was cleared as a false alarm, and the cardholder profile exhibits no compromise history. The transaction was ruled legitimate cardholder activity and closed with no fraud identified.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHG-010"
   },
@@ -141,8 +128,8 @@
     "total_amount_usd": 0,
     "activity_dates": []
   },
-  "stop_reason": "The investigation concluded pursuant to policy section 6 because the evaluated fraud probability reached 0.03 (below the 0.15 threshold for closure) supported by six independent exculpatory evidence bases, such that further investigative steps would not change the outcome.",
-  "tool_calls": 16,
-  "tokens": 148609,
-  "latency_s": 58.3
+  "stop_reason": "Investigation closed under Policy Section 6 because the assessed probability of 0.03 is decisively below the 0.15 threshold across six independent evidence bases, confirming that further investigative steps would not change the outcome.",
+  "tool_calls": 15,
+  "tokens": 100353,
+  "latency_s": 93.6
 }

@@ -3,7 +3,7 @@
   "case": {
     "status": "closed_fraud",
     "verdict": "fraud",
-    "fraud_probability": 0.93,
+    "fraud_probability": 0.97,
     "pattern": "out_of_region_use",
     "pattern_description": "",
     "affected_txn_ids": [
@@ -24,16 +24,7 @@
         ]
       },
       {
-        "claim": "Customer C02354 explicitly reported and disputed transaction 3491361, stating 'I never made this $39.08 purchase. Please check my card.'",
-        "source": "graph",
-        "ref": "query:alert_context(tx=3491361)",
-        "entity_ids": [
-          "C02354",
-          "3491361"
-        ]
-      },
-      {
-        "claim": "Holder C02354-K2|126|-185 has 11 of 13 historical transactions confirmed as fraudulent in closed cases CC-0631, CC-1450, CC-2589, CC-3537, CC-4436, CC-4721, and CC-4942, confirming this holder profile is compromised.",
+        "claim": "Holder C02354-K2|126|-185 identity is compromised: 11 of 13 prior transactions were confirmed fraud in closed cases CC-0631, CC-1450, CC-2589, CC-3537, CC-4436, CC-4721, and CC-4942, establishing that activity matching this baseline represents cloned card abuse.",
         "source": "graph",
         "ref": "query:holder_history(holder=C02354-K2|126|-185, before=2016-11-27)",
         "entity_ids": [
@@ -48,58 +39,53 @@
         ]
       },
       {
-        "claim": "Card C02354-K2 has 19 confirmed fraud closed cases, including CC-4436, CC-4721, CC-4942, and CC-5441 which established recurring out-of-region card-present cloning fraud while the customer retained possession of the card.",
+        "claim": "Card C02354-K2 has 19 confirmed fraud closed cases, including 7 confirmed cases of out-of-region card-present fraud (such as CC-5441, CC-4942, CC-4721, CC-4436, CC-3537, and CC-2589) linked to this exact holder where card-present purchases were executed in region 126 while the cardholder retained the physical card.",
         "source": "graph",
         "ref": "query:linked_cases(tx=3491361)",
         "entity_ids": [
           "C02354-K2",
-          "CC-4436",
-          "CC-4721",
+          "CC-5441",
           "CC-4942",
-          "CC-5441"
+          "CC-4721",
+          "CC-4436",
+          "CC-3537",
+          "CC-2589"
         ]
       },
       {
-        "claim": "Card activity shows transaction 3485990 on 2016-11-25 13:26:35 under the same holder identity for $40.96 scoring 0.953 on the fraud model (historical fraud rate 0.921) 48 hours before the flagged transaction.",
+        "claim": "Flagged transaction 3491361 ($39.08) was preceded 48 hours earlier on the same compromised holder identity by transaction 3485990 ($40.96) on 2016-11-25, which received a high model fraud score of 0.953 (92.1% historical fraud rate).",
         "source": "graph",
-        "ref": "query:card_window(card=C02354-K2, 2016-11-17..2016-11-30)",
+        "ref": "query:card_window(card=C02354-K2, 2016-11-17..2016-11-27)",
         "entity_ids": [
-          "C02354-K2",
+          "3491361",
           "3485990",
-          "3491361"
+          "C02354-K2"
         ]
       },
       {
-        "claim": "Flagged transaction 3491361 received a model score of 0.359 with historical fraud rate 0.4983 and legacy risk score 0.48.",
-        "source": "graph",
-        "ref": "query:alert_context(tx=3491361)",
-        "entity_ids": [
-          "3491361"
-        ]
-      },
-      {
-        "claim": "Card C02354-K2 is a member of Louvain community 152043696 with 5 cards and 2 confirmed fraud cards, showing a lift of 4.0 vs base rate, while ring_id is -1.",
+        "claim": "Card C02354-K2 belongs to community 152043696 with a fraud lift of 4.0 vs base rate (40% fraud rate vs 10.1% baseline across 5 cards), although it is not part of a device ring (ring_id -1).",
         "source": "graph",
         "ref": "query:community_profile(card=C02354-K2)",
         "entity_ids": [
-          "C02354-K2",
-          "C10084-K1"
+          "C02354-K2"
         ]
       },
       {
-        "claim": "Shared origin analysis for billing region 126 shows a low lift of 0.19 with 4 out of 1031 transactions scoring over 0.5, indicating no localized fraud outbreak.",
-        "source": "graph",
-        "ref": "query:shared_origin(tx=3491361, window=+/-7d)",
-        "entity_ids": [
-          "3491361"
-        ]
-      },
-      {
-        "claim": "Transaction 3491361 was executed in-person with no digital device ID or IP proxy captured.",
+        "claim": "Flagged transaction 3491361 has an intermediate model score of 0.359 (historical fraud rate 49.83%) and legacy risk score of 0.48, which does not independently breach the high-risk threshold.",
         "source": "graph",
         "ref": "query:alert_context(tx=3491361)",
         "entity_ids": [
-          "3491361"
+          "3491361",
+          "C02354-K2"
+        ]
+      },
+      {
+        "claim": "Region 126 has a low fraud lift of 0.19 with only 2 of 522 transactions scoring over 0.5 across 148 cards in the 7-day window, indicating no broader regional fraud outbreak.",
+        "source": "graph",
+        "ref": "query:shared_origin(tx=3491361, window=+/-7d)",
+        "entity_ids": [
+          "3491361",
+          "C02354-K2"
         ]
       },
       {
@@ -107,22 +93,17 @@
         "source": "document",
         "ref": "query:policy_sections(section=Rule R2: Customer denies the transaction)",
         "entity_ids": []
-      },
-      {
-        "claim": "Matches published guidance \u2014 FFIEC: Suspicious Activity Reporting (part 36): \"and Guidance,\"\" The SAR Activity Review \u2014 Trends",
-        "source": "external",
-        "ref": "query:policy_search(\"red flags for out of region use: Whether the compromise resu\", regulator)",
-        "entity_ids": []
       }
     ],
     "similar_prior_cases": [
-      "CC-4436",
-      "CC-4721",
       "CC-4942",
-      "CC-5441",
-      "CC-5558"
+      "CC-4721",
+      "CC-4436",
+      "CC-3537",
+      "CC-2589",
+      "CC-5441"
     ],
-    "summary": "Alert HHG-018 was initiated following a customer dispute from C02354 regarding an unauthorized $39.08 in-person purchase (tx 3491361) in region 126 on card C02354-K2. Graph analysis confirmed that the holder profile in region 126 is extensively compromised, with 11 of 13 historical transactions confirmed as fraud across seven closed cases involving physical card cloning. Furthermore, companion transaction 3485990 ($40.96) took place 48 hours earlier under the same holder identity with a 0.953 model score. Both transactions totaling $80.04 were determined to be fraudulent out-of-region card cloning, resulting in card blockage and case creation.",
+    "summary": "Alert HHG-018 was initiated after customer C02354 disputed an in-person charge of $39.08 (transaction 3491361) on card C02354-K2 in region 126. An investigation of the holder identity revealed it is heavily compromised, with 11 of 13 prior transactions confirmed as fraud across seven closed cases. Furthermore, an unauthorized in-person purchase of $40.96 (transaction 3485990) was executed on the same holder identity 48 hours prior with a high model fraud score of 0.953. The card has a documented history of out-of-region card-present clone activity in region 126 while the customer retained possession of the card. The dispute is confirmed as out-of-region fraud totaling $80.04, resulting in the card being blocked and an investigation case created.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHG-018"
   },
@@ -162,8 +143,8 @@
     "total_amount_usd": 0,
     "activity_dates": []
   },
-  "stop_reason": "Investigation concluded under policy section 6 as the fraud probability reached a decisive 0.93 supported by multiple independent pieces of strong evidence (explicit cardholder dispute, compromised holder baseline with multiple confirmed fraud cases, and an adjacent high-scoring transaction), meaning further inquiry would not alter the decision.",
-  "tool_calls": 17,
-  "tokens": 369824,
-  "latency_s": 101.8
+  "stop_reason": "The investigation concluded under policy section 6 because the fraud probability reached a decisive level of 0.97, corroborated by multiple independent pieces of incriminating evidence including the compromised holder baseline, prior confirmed clone cases, and high-scoring contiguous transaction activity, ensuring further steps would not alter the decision.",
+  "tool_calls": 45,
+  "tokens": 346607,
+  "latency_s": 140.4
 }

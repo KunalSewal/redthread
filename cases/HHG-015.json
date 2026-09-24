@@ -3,7 +3,7 @@
   "case": {
     "status": "closed_legitimate",
     "verdict": "legitimate",
-    "fraud_probability": 0.031,
+    "fraud_probability": 0.03,
     "pattern": "none",
     "pattern_description": "",
     "affected_txn_ids": [],
@@ -13,7 +13,7 @@
     "exposure_usd": 0,
     "evidence": [
       {
-        "claim": "Flagged transaction 3464869 was evaluated by the calibrated second-generation fraud model at a score of 0.016 with a historical fraud rate of only 0.006 (0.6%), showing the legacy risk_score of 0.77 to be an uncalibrated false alarm.",
+        "claim": "Transaction 3464869 triggered an alert based on an elevated legacy real-time risk_score of 0.77.",
         "source": "graph",
         "ref": "query:alert_context(tx=3464869)",
         "entity_ids": [
@@ -22,7 +22,7 @@
         ]
       },
       {
-        "claim": "Transaction 3464869 was conducted online using a device marked as 'New' for card C03042-K1.",
+        "claim": "The calibrated second-generation fraud model scored transaction 3464869 at 0.016, with a historical fraud rate of only 0.006 (0.6%).",
         "source": "graph",
         "ref": "query:alert_context(tx=3464869)",
         "entity_ids": [
@@ -31,41 +31,60 @@
         ]
       },
       {
-        "claim": "Shared origin analysis shows device D001825 has a fraud lift of 0.0, email anonymous.com has a lift of 0.64, and region 327 has a lift of 0.60, with no ring connections (ring_id -1) or linked fraud.",
+        "claim": "Device D001825 has a generic desktop profile (Windows 8.1 / IE 11), is not behind a proxy, has no ring membership (ring_id -1), and has zero closed fraud cases all-time.",
         "source": "graph",
-        "ref": "query:shared_origin(tx=3464869, window=+/-7d)",
+        "ref": "query:device_neighbors(device=D001825, 2016-10-18..2016-11-17)",
         "entity_ids": [
-          "3464869"
+          "3464869",
+          "C03042-K1"
         ]
       },
       {
-        "claim": "Holder C03042-K1|327|138 has zero prior confirmed fraud cases, indicating the holder identity is not compromised, while card C03042-K1 maintained regular in-person transactions across adjacent days.",
+        "claim": "The transaction amount of $599.94 is consistent with recent spending on card C03042-K1, which included multiple in-person transactions on 2016-11-16 totaling over $1,500 (3462385, 3462387, 3462404).",
+        "source": "graph",
+        "ref": "query:card_window(card=C03042-K1, 2016-11-07..2016-11-17)",
+        "entity_ids": [
+          "3464869",
+          "3462385",
+          "3462387",
+          "3462404",
+          "C03042-K1"
+        ]
+      },
+      {
+        "claim": "Card C03042-K1 has an established baseline of online purchases (56 prior online txns, 23 in product R), and holder C03042-K1|327|138 has zero prior confirmed fraud cases.",
         "source": "graph",
         "ref": "query:holder_history(holder=C03042-K1|327|138, before=2016-11-17)",
         "entity_ids": [
+          "3464869",
           "C03042-K1"
         ]
       },
       {
-        "claim": "The flagged transaction amount of $599.94 is consistent with recent cardholder spending on card C03042-K1, including in-person purchases of $550.03 (transaction 3462387), $550.01 (transaction 3462404), and $444.97 (transaction 3444271).",
+        "claim": "Shared origin analysis for transaction 3464869 shows device D001825 has a lift of 0.0 with no high-scoring transactions, and card C03042-K1 has ring_id -1 with no links to coordinated rings.",
         "source": "graph",
-        "ref": "query:card_window(card=C03042-K1, 2016-11-07..2016-11-20)",
+        "ref": "query:shared_origin(tx=3464869, window=+/-7d)",
         "entity_ids": [
           "3464869",
-          "3462387",
-          "3462404",
-          "3444271",
           "C03042-K1"
         ]
       },
       {
-        "claim": "Prior confirmed fraud on card C03042-K1 in closed cases CC-0615 and CC-3886 was customer-reported and tied to mobile Safari on iOS devices, unlike the current desktop IE 11 transaction; furthermore, previous model score alert CC-1313 on card C03042-K1 was cleared as legitimate travel.",
+        "claim": "Card C03042-K1 was subject to confirmed fraud cases CC-0615 and CC-3886 in July and September 2016, though both were customer disputes involving mobile Safari iOS devices.",
         "source": "graph",
         "ref": "query:linked_cases(tx=3464869)",
         "entity_ids": [
           "CC-0615",
           "CC-3886",
-          "CC-1313",
+          "C03042-K1"
+        ]
+      },
+      {
+        "claim": "Billing region 327 transactions in the 7-day window have a hot-share lift of 1.0 against baseline, indicating no anomalous regional fraud cluster.",
+        "source": "graph",
+        "ref": "query:shared_origin(tx=3464869, window=+/-7d)",
+        "entity_ids": [
+          "3464869",
           "C03042-K1"
         ]
       },
@@ -79,11 +98,11 @@
     "similar_prior_cases": [
       "CC-1313",
       "CC-5371",
-      "CC-5368",
+      "CC-2037",
       "CC-3886",
       "CC-0615"
     ],
-    "summary": "Transaction 3464869 for $599.94 was flagged for review based on an elevated legacy risk score of 0.77. Investigation revealed this was a false alarm, as the bank's calibrated second-generation model scored the transaction at 0.016 with a historical fraud rate of only 0.6%. The online purchase was completed using a standard desktop browser with no proxy, no ring association, and zero fraud lift across shared attributes. The purchase amount is consistent with the cardholder's established pattern of recent $500-range purchases, alongside regular ongoing in-person transactions. The transaction is determined to be legitimate, and the alert is closed.",
+    "summary": "Transaction 3464869 ($599.94, online) on card C03042-K1 was flagged due to an elevated legacy real-time risk score of 0.77. However, the bank's calibrated second-generation fraud model evaluated the transaction at 0.016, reflecting a historical fraud rate of only 0.6%. The purchase originated from device D001825, a clean desktop device with no proxy usage, no ring associations, and zero fraud history. Card C03042-K1 exhibits an established baseline of online purchases in product category R that is consistent with the transaction amount and recent legitimate spending. With no customer dispute and no cross-card links, the transaction is determined to be legitimate and the alert is closed.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHG-015"
   },
@@ -93,14 +112,14 @@
       {
         "action": "CLOSE_NO_FRAUD",
         "route": "auto",
-        "reason": "Section 6: probability 0.03 <= 0.15 on 5 independent signals"
+        "reason": "Section 6: probability 0.03 <= 0.15 on 6 independent signals"
       }
     ],
     "final": [
       {
         "action": "CLOSE_NO_FRAUD",
         "route": "auto",
-        "reason": "Section 6: probability 0.03 <= 0.15 on 5 independent signals"
+        "reason": "Section 6: probability 0.03 <= 0.15 on 6 independent signals"
       }
     ],
     "what_changed": "nothing"
@@ -113,8 +132,8 @@
     "total_amount_usd": 0,
     "activity_dates": []
   },
-  "stop_reason": "The investigation ended under policy section 6 because the calculated fraud probability of 0.031 is well below the 0.15 clearance threshold, established across five independent evidentiary bases indicating legitimate cardholder activity.",
-  "tool_calls": 16,
-  "tokens": 128639,
-  "latency_s": 94.8
+  "stop_reason": "The investigation stopped under policy section 6 because the evaluated fraud probability of 0.03 is well below the 0.15 threshold, corroborated by multiple independent exculpatory signals such that further investigative steps would not alter the decision.",
+  "tool_calls": 19,
+  "tokens": 127276,
+  "latency_s": 75.1
 }

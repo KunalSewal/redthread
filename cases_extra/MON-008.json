@@ -1,132 +1,81 @@
 {
   "case_id": "MON-008",
   "case": {
-    "status": "closed_fraud",
-    "verdict": "fraud",
-    "fraud_probability": 0.97,
-    "pattern": "card_not_present_new_device",
-    "pattern_description": "",
+    "status": "escalated",
+    "verdict": "uncertain",
+    "fraud_probability": 0.492,
+    "pattern": "undocumented",
+    "pattern_description": "Coordinated cross-card online fraud originating from a specific device profile (Samsung SM-G935F Build/NRD90M on Chrome Android) routing through an anonymous proxy. The perpetrator executes unauthorized online purchases across multiple unrelated card accounts without fitting documented typologies, matching the undocumented pattern previously confirmed on this device in CC-2649, CC-2971, CC-2985, and CC-3035.",
     "affected_txn_ids": [
-      "3459139",
-      "3459152",
-      "3459154",
-      "3459158"
+      "3462447"
     ],
-    "first_suspicious_txn_id": "3459139",
-    "connected_card_ids": [],
-    "connected_device_profiles": [],
-    "exposure_usd": 600.1,
+    "first_suspicious_txn_id": "3462447",
+    "connected_card_ids": [
+      "C10326-K1",
+      "C13487-K1",
+      "C08168-K1"
+    ],
+    "connected_device_profiles": [
+      "SM-G935F Build/NRD90M | Android 7.0 | chrome 62.0 for android | 1920x1080"
+    ],
+    "exposure_usd": 225.36,
     "evidence": [
       {
-        "claim": "Flagged transaction 3459158 has a second-generation model score of 0.998, with a calibrated historical fraud rate of 0.921.",
+        "claim": "Flagged transaction 3462447 was conducted online for $225.36 using device D004630, which was new to this account and masked behind an anonymous proxy (IP_PROXY:ANONYMOUS).",
         "source": "graph",
-        "ref": "query:alert_context(tx=3459158)",
+        "ref": "query:alert_context(tx=3462447)",
         "entity_ids": [
-          "3459158",
-          "C01104-K2",
-          "C01104"
+          "3462447",
+          "C01996-K2"
         ]
       },
       {
-        "claim": "Legacy risk score on transaction 3459158 was 0.19, which prevented an immediate real-time alert.",
+        "claim": "Device D004630 belongs to fraud ring 57672119 and was used within 48 hours to make online purchases on three other cards (C10326-K1, C13487-K1, and C08168-K1), appearing as a new device behind an anonymous proxy on each account.",
         "source": "graph",
-        "ref": "query:alert_context(tx=3459158)",
+        "ref": "query:device_neighbors(device=D004630, 2016-10-17..2016-11-16)",
         "entity_ids": [
-          "3459158",
-          "C01104-K2"
+          "C01996-K2",
+          "C10326-K1",
+          "C13487-K1",
+          "C08168-K1"
         ]
       },
       {
-        "claim": "Transaction 3459158 ($149.92) is part of a rapid 18-minute burst of four online purchases of product H totaling $600.10 (txns 3459139, 3459152, 3459154, 3459158 between 04:00:52 and 04:18:01), each around $150.",
+        "claim": "Device D004630 is directly tied to four confirmed-fraud closed cases (CC-2649, CC-2985, CC-2971, CC-3035) where analysts confirmed unauthorized online purchases from this specific Samsung SM-G935F profile behind an anonymous proxy.",
         "source": "graph",
-        "ref": "query:card_window(card=C01104-K2, 2016-11-05..2016-11-18)",
+        "ref": "query:linked_cases(tx=3462447)",
         "entity_ids": [
-          "3459139",
-          "3459152",
-          "3459154",
-          "3459158",
-          "C01104-K2"
+          "CC-2649",
+          "CC-2985",
+          "CC-2971",
+          "CC-3035"
         ]
       },
       {
-        "claim": "The four burst transactions occurred across four distinct billing regions within 18 minutes (region 184, 441, 299, and 494), indicating impossible physical velocity.",
+        "claim": "Holder C01996-K2|441|110 had only one prior transaction (tx 3382692 for $49.97, in-person, product W), making flagged online transaction 3462447 for $225.36 in product C an unprecedented channel and product departure.",
         "source": "graph",
-        "ref": "query:card_window(card=C01104-K2, 2016-11-05..2016-11-18)",
+        "ref": "query:holder_history(holder=C01996-K2|441|110, before=2016-11-16)",
         "entity_ids": [
-          "3459139",
-          "3459152",
-          "3459154",
-          "3459158",
-          "C01104-K2"
+          "3462447",
+          "3382692"
         ]
       },
       {
-        "claim": "The transaction burst was initiated on device D007387, marked as New for card C01104-K2 during this episode on transaction 3459154.",
+        "claim": "The bank's second-generation fraud model gave transaction 3462447 a low score of 0.061 (historical fraud rate of 0.1138) and a legacy risk score of 0.33, indicating that intrinsic transaction features did not trigger standard alert thresholds.",
         "source": "graph",
-        "ref": "query:card_window(card=C01104-K2, 2016-11-05..2016-11-18)",
+        "ref": "query:alert_context(tx=3462447)",
         "entity_ids": [
-          "3459154",
-          "3459158",
-          "C01104-K2"
+          "3462447",
+          "C01996-K2"
         ]
       },
       {
-        "claim": "Device D007387 has a generic profile (iOS Device | iOS 11.3.0 | mobile safari generic | 1334x750) shared by 127 cards all-time and is not in a fraud ring (ring_id: -1).",
+        "claim": "The billing region on flagged transaction 3462447 is region 441, which matches the billing region of holder C01996-K2|441|110 and their prior in-person transaction 3382692.",
         "source": "graph",
-        "ref": "query:device_neighbors(device=D007387, 2016-10-16..2016-11-18)",
+        "ref": "query:holder_history(holder=C01996-K2|441|110, before=2016-11-16)",
         "entity_ids": [
-          "C01104-K2"
-        ]
-      },
-      {
-        "claim": "Card C01104-K2 has 6 confirmed fraud closed cases out of 7, including four prior card_not_present_new_device cases (CC-5037, CC-2828, CC-2375, CC-2165); CC-5037 involved an identical $149.91 online purchase from an iOS mobile safari generic profile.",
-        "source": "graph",
-        "ref": "query:alert_context(tx=3459158)",
-        "entity_ids": [
-          "CC-5037",
-          "CC-2828",
-          "CC-2375",
-          "CC-2165",
-          "C01104-K2",
-          "C01104"
-        ]
-      },
-      {
-        "claim": "Card C01104-K2 had one prior alert cleared as legitimate travel in closed case CC-0862 after a high model score of 0.94.",
-        "source": "graph",
-        "ref": "query:alert_context(tx=3459158)",
-        "entity_ids": [
-          "CC-0862",
-          "C01104-K2",
-          "C01104"
-        ]
-      },
-      {
-        "claim": "Card C01104-K2 belongs to fraud ring 40894916 alongside confirmed fraud cards C09933-K2, C03278-K2, and C08234-K1, and sits in Louvain community 139460788 with a 25% fraud rate (lift 2.5).",
-        "source": "graph",
-        "ref": "query:ring_members(ring=40894916)",
-        "entity_ids": [
-          "C01104-K2",
-          "C09933-K2",
-          "C03278-K2",
-          "C08234-K1"
-        ]
-      },
-      {
-        "claim": "The holder profile for the flagged charge (C01104-K2|494|136) has zero prior transactions, indicating an unestablished holder baseline.",
-        "source": "graph",
-        "ref": "query:holder_history(holder=C01104-K2|494|136, before=2016-11-15)",
-        "entity_ids": [
-          "C01104-K2"
-        ]
-      },
-      {
-        "claim": "Disputed transaction 3459158 is for product category H, which card C01104-K2 has purchased 110 times historically.",
-        "source": "graph",
-        "ref": "query:alert_context(tx=3459158)",
-        "entity_ids": [
-          "3459158",
-          "C01104-K2"
+          "3462447",
+          "3382692"
         ]
       },
       {
@@ -134,15 +83,34 @@
         "source": "document",
         "ref": "query:policy_sections(section=Section 3a. A case is not a report)",
         "entity_ids": []
+      },
+      {
+        "claim": "Rule R9: Undocumented patterns: Rule R9: Undocumented patterns. When activity fits none of the known patterns but the evidence shows coordinated or repeated abuse across customers, recommend `CREATE_CASE`, `FILE_REPORT`, and `ESCALATE_TO_ANALYST`, and describe the pattern in your own words. Do not force it into a known category.",
+        "source": "document",
+        "ref": "query:policy_sections(section=Rule R9: Undocumented patterns)",
+        "entity_ids": []
+      },
+      {
+        "claim": "Rule R6: Shared origin: Rule R6: Shared origin. When several cards show fraud from the same device profile, the same billing region, or the same recipient email in one window, name the shared element, recommend `CREATE_CASE` and `FILE_REPORT`, and `MONITOR_CONNECTED_CARDS` for every card that shares it.",
+        "source": "document",
+        "ref": "query:policy_sections(section=Rule R6: Shared origin)",
+        "entity_ids": []
+      },
+      {
+        "claim": "Matches published guidance \u2014 FFIEC: Money Laundering and Terrorist Financing Red Flags (part 1): \"FFIEC BSA/AML Appendices - Appendix F \u2013 Money Laundering and Terrorist Financing Red Flags JavaScript must be enabled in your browser in order to use some functions. BSA/AML Manual BSA/AML Manual Appendices Appendix F \u2013 Money Laundering and Terrorist Financing Red Flags Appendices APPENDIX F: MONEY LAUNDERING AND TERRORIST FINANCING \"\"RED FLAGS\"\" The following are examples of potentially suspicio",
+        "source": "external",
+        "ref": "query:policy_search(\"red flags for undocumented: shared_origin, linked_to_other_f\", regulator)",
+        "entity_ids": []
       }
     ],
     "similar_prior_cases": [
-      "CC-5037",
-      "CC-2828",
-      "CC-2375",
-      "CC-2165"
+      "CC-2649",
+      "CC-2971",
+      "CC-2985",
+      "CC-3035",
+      "CC-4022"
     ],
-    "summary": "Monitoring flagged online transaction 3459158 ($149.92) on card C01104-K2 due to a high model score of 0.998. The transaction formed the culmination of a rapid 18-minute burst of four online purchases totaling $600.10 across four distinct billing regions, representing physically impossible geographic velocity. The activity was initiated via device D007387, which was flagged as new to this card account during the burst. Additionally, card C01104-K2 has six prior confirmed fraud cases, including case CC-5037 which involved an identical transaction pattern and device profile. The episode was determined to be card-not-present new-device fraud with a 0.97 probability, resulting in an immediate card block and case creation.",
+    "summary": "Monitoring flagged transaction 3462447 ($225.36) on card C01996-K2 after it was conducted online using device D004630, which was new to this account and masked behind an anonymous proxy. Graph analysis revealed that device D004630 belongs to fraud ring 57672119, made purchases across three other cards within 48 hours, and is directly linked to four confirmed-fraud closed cases (CC-2649, CC-2985, CC-2971, and CC-3035). Although the transaction occurred in the holder's billing region and received a low intrinsic model score of 0.061, the cross-card links and departure from the holder's single prior in-person transaction are highly suspicious. The case is assessed as uncertain with a 0.492 probability of undocumented fraud, and has been escalated to an analyst while connected cards are monitored.",
     "written_to_graph": true,
     "graph_case_id": "CASE-MON-008"
   },
@@ -150,40 +118,50 @@
   "next_best_actions": {
     "initial": [
       {
-        "action": "BLOCK_CARD",
-        "route": "L1",
-        "reason": "Section 6: probability 0.97 >= 0.85 on 6 independent signals"
-      },
-      {
         "action": "CREATE_CASE",
         "route": "auto",
-        "reason": "3a: fraud probability at or above 0.30"
+        "reason": "3a: fraud probability at or above 0.30; R9: coordinated abuse across customers fitting no known pattern; R6: several cards show fraud from SM-G935F Build/NRD90M | Android 7.0 | chrome 62.0 for android | 1920x1080"
+      },
+      {
+        "action": "MONITOR_CONNECTED_CARDS",
+        "route": "auto",
+        "reason": "R6: 3 connected card(s) share the same origin"
+      },
+      {
+        "action": "ESCALATE_TO_ANALYST",
+        "route": "auto",
+        "reason": "R9 and 3a: coordinated abuse, but fraud on this card is not strongly suspected (probability 0.49); an analyst decides whether to report; R6 and 3a: SM-G935F Build/NRD90M | Android 7.0 | chrome 62.0 for android | 1920x1080 is shared with other cards' fraud, but fraud on this card is not strongly suspected (probability 0.49); an analyst decides whether to report"
       }
     ],
     "final": [
       {
-        "action": "BLOCK_CARD",
-        "route": "L1",
-        "reason": "Section 6: probability 0.97 >= 0.85 on 6 independent signals"
-      },
-      {
         "action": "CREATE_CASE",
         "route": "auto",
-        "reason": "3a: fraud probability at or above 0.30"
+        "reason": "3a: fraud probability at or above 0.30; R9: coordinated abuse across customers fitting no known pattern; R6: several cards show fraud from SM-G935F Build/NRD90M | Android 7.0 | chrome 62.0 for android | 1920x1080"
+      },
+      {
+        "action": "MONITOR_CONNECTED_CARDS",
+        "route": "auto",
+        "reason": "R6: 3 connected card(s) share the same origin"
+      },
+      {
+        "action": "ESCALATE_TO_ANALYST",
+        "route": "auto",
+        "reason": "R9 and 3a: coordinated abuse, but fraud on this card is not strongly suspected (probability 0.49); an analyst decides whether to report; R6 and 3a: SM-G935F Build/NRD90M | Android 7.0 | chrome 62.0 for android | 1920x1080 is shared with other cards' fraud, but fraud on this card is not strongly suspected (probability 0.49); an analyst decides whether to report"
       }
     ],
     "what_changed": "nothing"
   },
   "sar": {
     "file": false,
-    "reason": "3a: fraud suspected but exposure $600.10 is at most $1,000 and there is no shared device, region cluster or link to other customers' fraud; case only",
+    "reason": "3a: fraud is not confirmed or strongly suspected, so no report is required",
     "narrative": "",
     "subjects": [],
     "total_amount_usd": 0,
     "activity_dates": []
   },
-  "stop_reason": "The investigation ended under Section 6 because the fraud probability reached 0.97, well above the 0.85 threshold for decisive action, supported by six independent evidence bases including calibrated model scoring, burst velocity, impossible geographic movement, new device status, and prior confirmed fraud history.",
-  "tool_calls": 19,
-  "tokens": 283770,
-  "latency_s": 129.3
+  "stop_reason": "The investigation concluded under Policy Section 6 because the fraud probability reached 0.492, placing it in the uncertain range where further automated graph analysis would not alter the outcome. Direct cardholder contact and manual review are required to reach a conclusive determination, warranting analyst escalation and connected card monitoring.",
+  "tool_calls": 57,
+  "tokens": 375658,
+  "latency_s": 186.3
 }

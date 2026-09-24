@@ -1,51 +1,39 @@
 {
   "case_id": "MON-001",
   "case": {
-    "status": "open",
+    "status": "escalated",
     "verdict": "uncertain",
-    "fraud_probability": 0.2,
+    "fraud_probability": 0.205,
     "pattern": "card_not_present_new_device",
     "pattern_description": "",
     "affected_txn_ids": [
       "3435476"
     ],
     "first_suspicious_txn_id": "3435476",
-    "connected_card_ids": [
-      "C06224-K2"
-    ],
+    "connected_card_ids": [],
     "connected_device_profiles": [
       "KFFOWI Build/LVY48F | Android 5.1.1 | chrome generic | 1024x600"
     ],
     "exposure_usd": 149.99,
     "evidence": [
       {
-        "claim": "Flagged online transaction 3435476 used device D000255 with specific profile 'KFFOWI Build/LVY48F | Android 5.1.1 | chrome generic | 1024x600', which is marked as New for this account and is linked to 18 cards all-time and 14 confirmed-fraud closed cases.",
-        "source": "graph",
-        "ref": "query:device_neighbors(device=D000255, 2016-10-07..2016-11-09)",
-        "entity_ids": [
-          "3435476",
-          "C00854-K2"
-        ]
-      },
-      {
-        "claim": "Device D000255 links card C00854-K2 to fraud ring 37749036, which connects cards C02231-K1, C07256-K2, C08840-K1, C01579-K1, C06299-K1, C06224-K2, and C05690-K1, all with confirmed fraud history; ring member C06224-K2 is actively transacting in the current window.",
+        "claim": "Device D000255 links transaction 3435476 directly to fraud ring 37749036, comprising 7 cards (C02231-K1, C07256-K2, C08840-K1, C01579-K1, C06224-K2, C05690-K1, C06299-K1) where this specific device was new to each account in suspicious transactions with model scores up to 0.999.",
         "source": "graph",
         "ref": "query:ring_members(ring=37749036)",
         "entity_ids": [
-          "C00854-K2",
-          "C06224-K2",
-          "C07256-K2",
-          "C06299-K1",
-          "C05690-K1",
           "C02231-K1",
+          "C07256-K2",
           "C08840-K1",
-          "C01579-K1"
+          "C01579-K1",
+          "C06224-K2",
+          "C05690-K1",
+          "C06299-K1"
         ]
       },
       {
-        "claim": "Six closed cases linked directly to device D000255 (CC-5430, CC-4873, CC-4852, CC-4716, CC-4641, and CC-4613) were confirmed fraud under patterns of card-not-present fraud, new device use, and account takeover.",
+        "claim": "All 14 closed cases associated with device D000255 all-time were confirmed fraud, including cases CC-5430, CC-4873, CC-4852, CC-4716, CC-4641, and CC-4613, which confirmed card-not-present fraud from new devices matching this device profile.",
         "source": "graph",
-        "ref": "query:linked_cases(tx=3435476)",
+        "ref": "query:device_neighbors(device=D000255, 2016-10-07..2016-11-06)",
         "entity_ids": [
           "CC-5430",
           "CC-4873",
@@ -56,16 +44,7 @@
         ]
       },
       {
-        "claim": "Flagged transaction 3435476 introduced a new product code R and new device D000255 for holder C00854-K2|299|127, deviating from their prior baseline of in-person retail (product W) and iOS mobile device usage (device D005906).",
-        "source": "graph",
-        "ref": "query:holder_history(holder=C00854-K2|299|127, before=2016-11-06)",
-        "entity_ids": [
-          "3435476",
-          "C00854-K2"
-        ]
-      },
-      {
-        "claim": "The bank's second-generation fraud model scored transaction 3435476 at 0.012 with a calibrated historical fraud rate of 0.006 (0.6%), reflecting that the standalone model cannot detect cross-card device sharing.",
+        "claim": "Transaction 3435476 was initiated using device D000255 with profile 'KFFOWI Build/LVY48F | Android 5.1.1 | chrome generic | 1024x600', which has specific profile specificity and is recorded as New for card C00854-K2.",
         "source": "graph",
         "ref": "query:alert_context(tx=3435476)",
         "entity_ids": [
@@ -74,21 +53,41 @@
         ]
       },
       {
-        "claim": "The transaction occurred in region 299, consistent with the cardholder's historical billing region and in-person card transactions on the same day.",
+        "claim": "Flagged transaction 3435476 is for product R, which is a new product category for this holder whose prior transactions were products W and H, and does not match any recurring charge pattern.",
         "source": "graph",
         "ref": "query:holder_history(holder=C00854-K2|299|127, before=2016-11-06)",
         "entity_ids": [
           "3435476",
-          "C00854-K2"
+          "3434189",
+          "3434648",
+          "3435354"
         ]
       },
       {
-        "claim": "The flagged amount of $149.99 is within the holder's historical spending range (prior mean $318.31, prior max $599.92).",
+        "claim": "The bank's second-generation fraud model scored transaction 3435476 at 0.012, corresponding to a historical fraud rate of 0.006.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3435476)",
+        "entity_ids": [
+          "3435476"
+        ]
+      },
+      {
+        "claim": "Flagged transaction 3435476 occurred in region 299, consistent with the billing region of the holder and all 3 prior transactions on this holder.",
         "source": "graph",
         "ref": "query:holder_history(holder=C00854-K2|299|127, before=2016-11-06)",
         "entity_ids": [
           "3435476",
-          "C00854-K2"
+          "3434189",
+          "3434648",
+          "3435354"
+        ]
+      },
+      {
+        "claim": "The transaction amount of $149.99 is below the holder's historical transaction maximum of $599.92 and mean of $318.31.",
+        "source": "graph",
+        "ref": "query:holder_history(holder=C00854-K2|299|127, before=2016-11-06)",
+        "entity_ids": [
+          "3435476"
         ]
       },
       {
@@ -110,9 +109,11 @@
       "CC-4852",
       "CC-4716",
       "CC-4641",
-      "CC-4613"
+      "CC-4613",
+      "CC-4207",
+      "CC-5363"
     ],
-    "summary": "Transaction 3435476 for $149.99 on card C00854-K2 was flagged during monitoring because it utilized device D000255, an entity central to fraud ring 37749036. Device D000255 was new to this account and is linked to 18 cards and 14 confirmed-fraud closed cases across the institution. The online purchase of product R marked a departure from the holder's normal in-person retail activity on an iOS device, despite matching their home billing region. Active ring member card C06224-K2 was also identified transacting through the same device within the current monitoring window. The case was categorized as card-not-present fraud via a new device, warranting case escalation, connected card monitoring, and a regulatory report.",
+    "summary": "Transaction 3435476 for $149.99 on card C00854-K2 was flagged during monitoring after being processed online via device D000255, which was new to the account. Device D000255 is an anchor for fraud ring 37749036 linking 7 other cards and has 14 historical closed cases that were all confirmed fraud. However, the transaction matches the cardholder's historical billing region 299, falls within typical spending amounts, and scored very low on the fraud model (0.012). Because of the tension between the severe cross-card graph links and the benign transaction features, the verdict is uncertain at a 20.5% fraud probability, and the case has been escalated to an analyst.",
     "written_to_graph": true,
     "graph_case_id": "CASE-MON-001"
   },
@@ -122,55 +123,38 @@
       {
         "action": "CREATE_CASE",
         "route": "auto",
-        "reason": "3a: fraud probability at or above 0.30; R6: several cards show fraud from device:D000255"
+        "reason": "3a: fraud probability at or above 0.30; R6: several cards show fraud from KFFOWI Build/LVY48F | Android 5.1.1 | chrome generic | 1024x600"
       },
       {
-        "action": "FILE_REPORT",
-        "route": "L2",
-        "reason": "R6: shared origin device:D000255"
-      },
-      {
-        "action": "MONITOR_CONNECTED_CARDS",
+        "action": "ESCALATE_TO_ANALYST",
         "route": "auto",
-        "reason": "R6: 1 connected card(s) share the same origin"
+        "reason": "R6 and 3a: KFFOWI Build/LVY48F | Android 5.1.1 | chrome generic | 1024x600 is shared with other cards' fraud, but fraud on this card is not strongly suspected (probability 0.20); an analyst decides whether to report"
       }
     ],
     "final": [
       {
         "action": "CREATE_CASE",
         "route": "auto",
-        "reason": "3a: fraud probability at or above 0.30; R6: several cards show fraud from device:D000255"
+        "reason": "3a: fraud probability at or above 0.30; R6: several cards show fraud from KFFOWI Build/LVY48F | Android 5.1.1 | chrome generic | 1024x600"
       },
       {
-        "action": "FILE_REPORT",
-        "route": "L2",
-        "reason": "R6: shared origin device:D000255"
-      },
-      {
-        "action": "MONITOR_CONNECTED_CARDS",
+        "action": "ESCALATE_TO_ANALYST",
         "route": "auto",
-        "reason": "R6: 1 connected card(s) share the same origin"
+        "reason": "R6 and 3a: KFFOWI Build/LVY48F | Android 5.1.1 | chrome generic | 1024x600 is shared with other cards' fraud, but fraud on this card is not strongly suspected (probability 0.20); an analyst decides whether to report"
       }
     ],
     "what_changed": "nothing"
   },
   "sar": {
-    "file": true,
-    "reason": "R6: shared origin device:D000255",
-    "narrative": "This report details suspicious card-not-present activity involving customer C00854 and card account C00854-K2 identified on November 6, 2016. On that date at 16:35:06 UTC, an online transaction of $149.99 for product R was executed in region 299 under transaction ID 3435476. The transaction was conducted using device D000255, possessing the hardware profile 'KFFOWI Build/LVY48F | Android 5.1.1 | chrome generic | 1024x600'. Device D000255 was recorded as new to card account C00854-K2 and sharply deviated from the cardholder's historical baseline of in-person retail spending on an iOS device. Knowledge graph analysis revealed that device D000255 serves as the operational nexus of fraud ring 37749036, linking at least 18 cards across the institution. The device is tied directly to 14 prior confirmed fraudulent cases, including closed cases CC-5430, CC-4873, CC-4852, CC-4716, CC-4641, and CC-4613. Furthermore, device D000255 connects card C00854-K2 to card C06224-K2, an active ring member conducting unauthorized transactions within the same evaluation timeframe. Total suspicious exposure associated with transaction 3435476 on card C00854-K2 is $149.99. Card C00854-K2 has been escalated for case creation and connected cards have been placed on active monitoring to prevent further ring-related losses.",
-    "subjects": [
-      "C00854",
-      "C00854-K2",
-      "C06224-K2"
-    ],
-    "total_amount_usd": 149.99,
-    "activity_dates": [
-      "2016-11-06",
-      "2016-11-06"
-    ]
+    "file": false,
+    "reason": "3a: fraud is not confirmed or strongly suspected, so no report is required",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0,
+    "activity_dates": []
   },
-  "stop_reason": "The investigation stopped under policy section 6 because further steps would not change the decision; confirmed graph evidence establishing device links to fraud ring 37749036 and multiple historical fraud cases sufficiently determined the necessary actions.",
-  "tool_calls": 19,
-  "tokens": 616503,
-  "latency_s": 202.4
+  "stop_reason": "Further automated investigation steps would not change the decision under Policy Section 6, as the conflict between the confirmed fraud ring device links and the low-risk transaction profile requires manual analyst review under Policy R6.",
+  "tool_calls": 49,
+  "tokens": 301882,
+  "latency_s": 164.8
 }

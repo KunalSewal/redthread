@@ -3,18 +3,16 @@
   "case": {
     "status": "closed_fraud",
     "verdict": "fraud",
-    "fraud_probability": 0.946,
+    "fraud_probability": 0.954,
     "pattern": "card_not_present_fraud",
     "pattern_description": "",
     "affected_txn_ids": [
-      "3581141",
-      "3586980",
-      "3587043"
+      "3581141"
     ],
     "first_suspicious_txn_id": "3581141",
     "connected_card_ids": [],
     "connected_device_profiles": [],
-    "exposure_usd": 70.11,
+    "exposure_usd": 30.02,
     "evidence": [
       {
         "claim": "Customer reported: Customer C08299 message: 'I never made this $30.02 purchase. Please check my card.' Refers to 3581141.",
@@ -25,54 +23,23 @@
         ]
       },
       {
-        "claim": "Cardholder C08299 explicitly reported unauthorized use regarding transaction 3581141 ($30.02), stating they never made the purchase.",
-        "source": "graph",
-        "ref": "query:similar_closed_cases(\"customer report: Customer C08299 message: 'I never made this...\", k=6)",
-        "entity_ids": [
-          "3581141",
-          "C08299"
-        ]
-      },
-      {
-        "claim": "Flagged online transaction 3581141 received a model score of 0.984, which historically has an empirical fraud rate of 92.1%.",
+        "claim": "Flagged online transaction 3581141 scored 0.984 on the fraud model, with a calibrated historical fraud rate of 0.921.",
         "source": "graph",
         "ref": "query:alert_context(tx=3581141)",
         "entity_ids": [
-          "3581141",
-          "C08299-K1"
+          "3581141"
         ]
       },
       {
-        "claim": "The flagged transaction was the first transaction for holder in region 203 with 0 prior transactions, showing no recurring charge history.",
+        "claim": "Holder C08299-K1|203|179 has zero prior transactions and no recurring charge pattern (recurring: false), providing no positive baseline of prior authorized activity.",
         "source": "graph",
         "ref": "query:holder_history(holder=C08299-K1|203|179, before=2016-12-28)",
         "entity_ids": [
-          "3581141",
           "C08299-K1"
         ]
       },
       {
-        "claim": "Flagged transaction 3581141 occurred in region 203, which represents only 1 of 46 prior card transactions, compared to 30 prior transactions in region 330.",
-        "source": "graph",
-        "ref": "query:alert_context(tx=3581141)",
-        "entity_ids": [
-          "3581141",
-          "C08299-K1"
-        ]
-      },
-      {
-        "claim": "Card C08299-K1 exhibited subsequent high-scoring online transactions 3586980 (model 0.880) and 3587043 (model 0.729) on 2016-12-30 with near-identical rapid authorizations.",
-        "source": "graph",
-        "ref": "query:card_window(card=C08299-K1, 2016-12-18..2016-12-31)",
-        "entity_ids": [
-          "3581141",
-          "3586980",
-          "3587043",
-          "C08299-K1"
-        ]
-      },
-      {
-        "claim": "Card C08299-K1 has ring_id -1 and sits in a singleton Louvain community of 1 card with 0 confirmed fraud cases and a lift vs base rate of 0.0.",
+        "claim": "Card C08299-K1 belongs to Louvain community 103809027 of size 1 with zero confirmed fraud cases, yielding a lift vs base rate of 0.0, and has no ring membership (ring_id -1).",
         "source": "graph",
         "ref": "query:community_profile(card=C08299-K1)",
         "entity_ids": [
@@ -80,19 +47,21 @@
         ]
       },
       {
-        "claim": "Flagged transaction 3581141 had no recorded device ID, and subsequent transactions on device D009079 used a generic Windows 10 profile with no proxy and not marked as new.",
+        "claim": "Transaction region 203 shows a model fraud lift of 0.76 vs all transactions during the 7-day window, with only 2 of 127 transactions scoring above 0.5.",
         "source": "graph",
-        "ref": "query:device_neighbors(device=D009079, 2016-11-28..2016-12-31)",
+        "ref": "query:shared_origin(tx=3581141, window=+/-7d)",
         "entity_ids": [
+          "3581141",
           "C08299-K1"
         ]
       },
       {
-        "claim": "In prior case CC-3362, a $30.02 transaction scoring 0.87 was cleared after cardholder verified travel, showing high scores at this amount can occur legitimately.",
+        "claim": "Similar closed cases such as CC-2614 and CC-2440 confirm that cardholder reports of unrecognized online purchases with inconsistent profiles represent confirmed card_not_present_fraud.",
         "source": "graph",
-        "ref": "query:similar_closed_cases(\"customer report: Customer C08299 message: 'I never made this...\", k=6)",
+        "ref": "query:similar_closed_cases(\"customer report card not present fraud online purchase denie...\", k=6)",
         "entity_ids": [
-          "CC-3362"
+          "CC-2614",
+          "CC-2440"
         ]
       },
       {
@@ -103,9 +72,10 @@
       }
     ],
     "similar_prior_cases": [
-      "CC-3362"
+      "CC-2614",
+      "CC-2440"
     ],
-    "summary": "Alert HHG-009 was initiated when cardholder C08299 disputed online transaction 3581141 for $30.02, stating they did not authorize the charge. The flagged transaction yielded a high fraud model score of 0.984 (92.1% historical fraud rate) and took place in region 203, where the cardholder had zero prior transaction history. Further examination revealed two subsequent suspicious online transactions on 2016-12-30 with high model scores, bringing the total unauthorized exposure to $70.11. The alert was confirmed as card-not-present fraud under Rule R2 based on decisive customer denial and corroborating model and regional anomalies.",
+    "summary": "Customer C08299 reported an unauthorized online purchase of $30.02 (transaction 3581141) on card C08299-K1. The flagged transaction produced an elevated fraud model score of 0.984, corresponding to a 92.1% historical fraud rate. The cardholder baseline contains zero prior transactions and no recurring billing history, offering no positive evidence of legitimate customer authorization. Although graph analysis identified no device ring links or community lift, the corroborated model score and absence of legitimate holder activity confirm card-not-present fraud. Card C08299-K1 was blocked to prevent further loss.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHG-009"
   },
@@ -115,7 +85,7 @@
       {
         "action": "BLOCK_CARD",
         "route": "L1",
-        "reason": "R2: customer states they did not make the transaction; exposure $70.11"
+        "reason": "R2: customer states they did not make the transaction; exposure $30.02"
       },
       {
         "action": "CREATE_CASE",
@@ -127,7 +97,7 @@
       {
         "action": "BLOCK_CARD",
         "route": "L1",
-        "reason": "R2: customer states they did not make the transaction; exposure $70.11"
+        "reason": "R2: customer states they did not make the transaction; exposure $30.02"
       },
       {
         "action": "CREATE_CASE",
@@ -139,14 +109,14 @@
   },
   "sar": {
     "file": false,
-    "reason": "3a: fraud suspected but exposure $70.11 is at most $1,000 and there is no shared device, region cluster or link to other customers' fraud; case only",
+    "reason": "3a: fraud suspected but exposure $30.02 is at most $1,000 and there is no shared device, region cluster or link to other customers' fraud; case only",
     "narrative": "",
     "subjects": [],
     "total_amount_usd": 0,
     "activity_dates": []
   },
-  "stop_reason": "The investigation stopped pursuant to policy section 6 because the probability of fraud reached decisive certainty (0.946) supported by two strong independent bases\u2014a direct cardholder dispute and a calibrated model score of 0.984\u2014such that further steps would not alter the decision.",
-  "tool_calls": 17,
-  "tokens": 146290,
-  "latency_s": 143.1
+  "stop_reason": "The investigation concluded under policy section 6 because the assessed fraud probability reached a decisive level (0.954) supported by multiple independent bases, including the direct customer dispute and a highly calibrated model score, such that further inquiry would not alter the outcome.",
+  "tool_calls": 41,
+  "tokens": 91734,
+  "latency_s": 78.6
 }
