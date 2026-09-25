@@ -126,7 +126,8 @@ export function CaseFile({ id }: { id: string }) {
   const beliefNow = marks.assessed === null || current < marks.assessed
     ? null
     : (marks.replied !== null && current >= marks.replied && detail.reply?.posterior != null
-      ? detail.reply.posterior
+      // after the reply, the case's final probability (floored like every other) is the one to show
+      ? c?.fraud_probability ?? detail.reply.posterior
       : belief?.posterior ?? c?.fraud_probability ?? null)
   const previous = marks.replied !== null && current >= marks.replied ? belief?.posterior ?? null : null
   const showFinal = marks.decided === null || current >= marks.decided

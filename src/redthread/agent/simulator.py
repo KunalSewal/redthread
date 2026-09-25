@@ -20,6 +20,7 @@ leaving belief where the evidence left it.
 
 from dataclasses import dataclass
 
+from redthread.belief import P_FLOOR
 from redthread.policy import Response
 
 # A recurring-charge match comes from the holder's transaction history, so it is evidence:
@@ -42,7 +43,8 @@ class SimulatedReply:
 def bayes(prior: float, likelihood_ratio: float) -> float:
     prior = min(max(prior, 0.001), 0.999)
     odds = prior / (1 - prior) * likelihood_ratio
-    return round(odds / (1 + odds), 3)
+    # The same floor as every other probability: evidence this noisy never supports 0 or 1.
+    return round(min(max(odds / (1 + odds), P_FLOOR), 1 - P_FLOOR), 3)
 
 
 def simulate(request_type: str, prior: float, *, recurring: bool, customer_reported: bool) -> SimulatedReply:

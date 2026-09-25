@@ -47,3 +47,12 @@ def test_step_up_failure_reads_as_denial():
     assert reply.response == "denied"
     assert "passcode" in reply.text
     assert "Assumed" in reply.text
+
+
+def test_a_reply_never_takes_the_probability_past_the_floor():
+    """An informative reply once moved a case to 0.004 while every other probability stops at 0.03."""
+    from redthread.agent.simulator import simulate
+    from redthread.belief import P_FLOOR
+
+    reply = simulate("customer_validation", 0.03, recurring=True, customer_reported=False)
+    assert reply.informative and reply.posterior == P_FLOOR
