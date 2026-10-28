@@ -21,6 +21,7 @@ import pandas as pd
 from redthread import paths
 from redthread.agent.graph import investigate_alert
 from redthread.agent.mcp_graph import McpGraph
+from redthread.data import sources
 
 sys.path.insert(0, str(Path(__file__).parent))
 from run_cases import TRACES  # noqa: E402
@@ -35,7 +36,7 @@ def _rows(result: list[dict]) -> list[dict]:
 
 
 async def raise_alerts(graph: McpGraph, max_alerts: int) -> list[dict]:
-    pack_cards = set(pd.read_csv(paths.CASE_PACK_CSV)["card_id"])
+    pack_cards = set(pd.read_csv(sources.case_pack_csv())["card_id"])
     ring = _rows(await graph.query("monitor_ring_activity", {"from_ts": WINDOW[0], "to_ts": WINDOW[1]}))
     misses = _rows(await graph.query("monitor_model_misses", {"from_ts": WINDOW[0], "to_ts": WINDOW[1]}))
     candidates = []

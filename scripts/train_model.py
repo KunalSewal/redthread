@@ -19,6 +19,7 @@ import pandas as pd
 from sklearn.metrics import average_precision_score, brier_score_loss, roc_auc_score
 
 from redthread import paths
+from redthread.data import sources
 from redthread.model.features import build_features, closed_case_labels, load_raw
 
 log = logging.getLogger("train_model")
@@ -67,7 +68,7 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
     start = time.time()
     raw = load_raw()
-    month = pd.to_datetime(raw["ts"]).dt.month.to_numpy()
+    month = sources.month_index(raw["ts"]).to_numpy()  # Jan 2017 = 13, never "history"
     tx_ids, risk = raw["TransactionID"], raw["risk_score"]
     y = closed_case_labels(tx_ids)
     x = build_features(raw)

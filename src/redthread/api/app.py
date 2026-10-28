@@ -24,6 +24,7 @@ from redthread.agent.graph import investigate_alert
 from redthread.agent.mcp_graph import McpGraph
 from redthread.api.casegraph import case_graph
 from redthread.belief import Judged, assess
+from redthread.data import sources
 from redthread.policy import AUTO_ACTIONS, Action, Assessment, recommend
 from redthread.tg import GRAPH, connection
 
@@ -51,7 +52,7 @@ def _alerts() -> list[dict]:
     Both are investigated the same way; ``source`` is what separates "the queue gave us this" from
     "nobody asked us to look at this", which is the whole point of the monitoring deliverable.
     """
-    pack = pd.read_csv(paths.CASE_PACK_CSV, dtype={"flagged_txn_id": str})
+    pack = pd.read_csv(sources.case_pack_csv(), dtype={"flagged_txn_id": str})
     pack["risk_score"] = pack["risk_score"].astype(object).where(pack["risk_score"].notna(), None)
     alerts = [r | {"source": "bank_queue"} for r in pack.to_dict("records")]
     for raised in _read(EXTRA / "alerts.json") or []:

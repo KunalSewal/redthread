@@ -18,6 +18,7 @@ from pydantic import ValidationError
 
 from redthread import paths
 from redthread.answer import Answer
+from redthread.data import sources
 
 EXPOSURE_TOLERANCE = 0.01
 GRAPH_CASE_PREFIX = "CASE-"  # our own case vertices, written by the agent
@@ -28,7 +29,7 @@ MONITOR_PREFIX = "MON-"  # alerts raised by scripts/monitor.py (cases_extra/)
 class Dataset:
     @cached_property
     def amounts(self) -> pd.Series:
-        tx = pd.read_csv(paths.TRANSACTIONS_CSV, usecols=["TransactionID", "TransactionAmt"], engine="pyarrow")
+        tx = sources.read_transactions(usecols=["TransactionID", "TransactionAmt"], engine="pyarrow")
         return tx.set_index(tx["TransactionID"].astype(str))["TransactionAmt"]
 
     @cached_property
@@ -53,11 +54,11 @@ class Dataset:
 
     @cached_property
     def closed_cases(self) -> set[str]:
-        return set(pd.read_csv(paths.CLOSED_CASES_CSV, usecols=["case_id"])["case_id"])
+        return set(pd.read_csv(sources.closed_cases_csv(), usecols=["case_id"])["case_id"])
 
     @cached_property
     def case_pack(self) -> set[str]:
-        return set(pd.read_csv(paths.CASE_PACK_CSV, usecols=["case_id"])["case_id"])
+        return set(pd.read_csv(sources.case_pack_csv(), usecols=["case_id"])["case_id"])
 
     def known_entity(self, entity_id: str) -> bool:
         return (entity_id in self.amounts.index or entity_id in self.cards or entity_id in self.customers

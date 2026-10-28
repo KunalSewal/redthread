@@ -7,16 +7,20 @@ other data-dependent tests.
 import pytest
 from fastapi.testclient import TestClient
 
-from redthread import paths
+from redthread.data import sources
 
-pytestmark = pytest.mark.skipif(not paths.CASE_PACK_CSV.exists(), reason="dataset not present")
+pytestmark = pytest.mark.skipif(not sources.case_pack_csv().exists(), reason="dataset not present")
 
 
 @pytest.fixture(scope="module")
-def client() -> TestClient:
+def client():
+    """Round 1's pack: its cases are investigated, with traces, so the views have data to serve."""
     from redthread.api.app import app
 
-    return TestClient(app)
+    patch = pytest.MonkeyPatch()
+    patch.setenv(sources.ROUND_ENV, "r1")
+    yield TestClient(app)
+    patch.undo()
 
 
 def test_the_queue_merges_the_banks_alerts_with_the_agents_own(client):

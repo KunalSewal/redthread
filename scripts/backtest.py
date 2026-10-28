@@ -21,6 +21,7 @@ import pandas as pd
 from redthread import config, paths
 from redthread.agent.graph import investigate_alert
 from redthread.agent.mcp_graph import McpGraph
+from redthread.data import sources
 
 log = logging.getLogger("backtest")
 
@@ -35,7 +36,7 @@ def build_alerts(n: int, month: int, seed: int) -> list[dict]:
     each alert is a coin flip, and the reported accuracy is broken down by trigger so that reading
     the trigger alone would be visible as a gap between the two strata.
     """
-    cases = pd.read_csv(paths.CLOSED_CASES_CSV)
+    cases = pd.read_csv(sources.closed_cases_csv())
     cases = cases[pd.to_datetime(cases["opened_at"]).dt.month == month]
     fraud = cases[cases["outcome"] == "confirmed_fraud"]
     cleared = cases[cases["outcome"] == "cleared"]

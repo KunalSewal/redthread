@@ -21,6 +21,7 @@ import sys
 import pandas as pd
 
 from redthread import paths
+from redthread.data import sources
 
 RULE = re.compile(r"\b(R\d{1,2}|section \d[ab]?|3[ab])\b", re.I)
 BLOCKS = {"BLOCK_CARD", "BLOCK_ALL_CARDS"}
@@ -137,7 +138,7 @@ def main() -> int:
     folder = paths.ROOT / args.folder
 
     alerts = {}
-    pack = pd.read_csv(paths.CASE_PACK_CSV, dtype={"flagged_txn_id": str})
+    pack = pd.read_csv(sources.case_pack_csv(), dtype={"flagged_txn_id": str})
     alerts.update({r["case_id"]: r for r in pack.to_dict("records")})
     extra = folder / "alerts.json"
     if extra.exists():

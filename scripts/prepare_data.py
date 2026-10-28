@@ -14,6 +14,7 @@ import time
 import pandas as pd
 
 from redthread import paths
+from redthread.data import sources
 from redthread.data.entities import derive_card_ids, device_profile_strings, holder_ids, region_code
 from redthread.knowledge import PATTERNS
 
@@ -140,9 +141,9 @@ def main() -> None:
     start = time.time()
     paths.PROCESSED.mkdir(parents=True, exist_ok=True)
 
-    tx = pd.read_csv(paths.TRANSACTIONS_CSV, usecols=TXN_SOURCE_COLS, low_memory=False)
-    identity = pd.read_csv(paths.IDENTITY_CSV, usecols=IDENTITY_COLS, low_memory=False)
-    closed = pd.read_csv(paths.CLOSED_CASES_CSV)
+    tx = sources.read_transactions(usecols=TXN_SOURCE_COLS, low_memory=False)
+    identity = sources.read_identity(usecols=IDENTITY_COLS, low_memory=False)
+    closed = pd.read_csv(sources.closed_cases_csv())
     log.info("read %d transactions, %d identity rows, %d closed cases", len(tx), len(identity), len(closed))
 
     tx["card_id"] = derive_card_ids(tx["customer_id"], tx["card6"])

@@ -2,6 +2,7 @@ import pandas as pd
 import pytest
 
 from redthread import paths
+from redthread.data import sources
 from redthread.data.entities import derive_card_ids, device_profile_strings, holder_ids, region_code
 
 
@@ -47,22 +48,34 @@ def test_region_code():
 
 
 @pytest.mark.data
-@pytest.mark.skipif(not paths.TRANSACTIONS_CSV.exists(), reason="dataset not present")
+@pytest.mark.skipif(not sources.transaction_files(), reason="dataset not present")
 def test_card_ids_reproduce_every_labeled_card():
-    """Every card ID the bank wrote down must come out of our derivation."""
-    tx = pd.read_csv(paths.TRANSACTIONS_CSV, usecols=["TransactionID", "customer_id", "card6"])
+    """Every card ID the bank wrote down must come out of our derivation, with January loaded too.
+
+    Card numbers are ranks over each customer's card types across all loaded data, so a new month
+    could renumber existing cards; this would catch it on both rounds' cases and case packs."""
+    tx = sources.read_transactions(usecols=["TransactionID", "customer_id", "card6"])
     tx["card_id"] = derive_card_ids(tx["customer_id"], tx["card6"])
     derived = tx.set_index("TransactionID")["card_id"]
 
-    closed = pd.read_csv(paths.CLOSED_CASES_CSV, usecols=["card_id", "txn_ids"])
+    closed = pd.read_csv(sources.closed_cases_csv(), usecols=["card_id", "txn_ids"])
     closed = closed.assign(txn=closed["txn_ids"].astype(str).str.split("|")).explode("txn")
-    pack = pd.read_csv(paths.CASE_PACK_CSV, usecols=["card_id", "flagged_txn_id"])
+    packs = [paths.DATA / "case_pack.csv", paths.DATA_R2 / "cases" / "case_pack_final.csv"]
+    pack = pd.concat([pd.read_csv(f, usecols=["card_id", "flagged_txn_id"]) for f in packs if f.exists()])
     labels = pd.concat([
         closed[["txn", "card_id"]].rename(columns={"txn": "tid"}),
         pack.rename(columns={"flagged_txn_id": "tid"}),
     ])
+    # The appended HHG cases that were cleared list no transactions; older cleared cases always did.
+    labels = labels[labels["tid"].astype(str).str.fullmatch(r"\d+")]
     labels["tid"] = labels["tid"].astype(int)
 
     assert len(labels) > 14_000
     mismatches = labels[derived.loc[labels["tid"]].to_numpy() != labels["card_id"].to_numpy()]
-    assert mismatches.empty, mismatches.head()
+    # HHF-011's alert names C09241-K1, but the bank's 21 closed cases on the same debit card all say
+    # C09241-K2, as does our derivation. The pack contradicts the bank's own records there; the agent
+    # takes the card from the flagged transaction and notes the discrepancy. Anything else fails.
+    known_pack_errors = {(3640919, "C09241-K1")}
+    unexpected = mismatches[[(t, c) not in known_pack_errors
+                             for t, c in zip(mismatches["tid"], mismatches["card_id"], strict=True)]]
+    assert unexpected.empty, unexpected.head()

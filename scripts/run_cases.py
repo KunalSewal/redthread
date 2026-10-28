@@ -19,6 +19,7 @@ import pandas as pd
 from redthread import paths
 from redthread.agent.graph import investigate_alert
 from redthread.agent.mcp_graph import McpGraph
+from redthread.data import sources
 
 sys.path.insert(0, str(paths.ROOT / "scripts"))
 import rings  # noqa: E402
@@ -28,7 +29,7 @@ TRACES = paths.ROOT / "runs"
 
 
 def load_alerts(ids: list[str]) -> list[dict]:
-    pack = pd.read_csv(paths.CASE_PACK_CSV, dtype={"flagged_txn_id": str})
+    pack = pd.read_csv(sources.case_pack_csv(), dtype={"flagged_txn_id": str})
     pack["risk_score"] = pack["risk_score"].astype(object).where(pack["risk_score"].notna(), None)
     if ids:
         missing = set(ids) - set(pack["case_id"])

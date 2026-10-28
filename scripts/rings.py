@@ -22,6 +22,7 @@ import logging
 import pandas as pd
 
 from redthread import paths
+from redthread.data import sources
 from redthread.tg import GRAPH, connection
 
 log = logging.getLogger("rings")
@@ -36,7 +37,7 @@ def benchmark_cutoff() -> str:
     rely on rings built from the six days after it. The first day of the month the exam alerts begin
     in is before every benchmark and monitoring alert alike.
     """
-    opened = pd.to_datetime(pd.read_csv(paths.CASE_PACK_CSV, usecols=["opened_at"])["opened_at"])
+    opened = pd.to_datetime(pd.read_csv(sources.case_pack_csv(), usecols=["opened_at"])["opened_at"])
     return opened.min().replace(day=1, hour=0, minute=0, second=0).strftime("%Y-%m-%d %H:%M:%S")
 
 

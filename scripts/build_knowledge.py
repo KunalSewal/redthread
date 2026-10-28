@@ -20,6 +20,7 @@ from pathlib import Path
 import pandas as pd
 
 from redthread import paths
+from redthread.data import sources
 from redthread.rag.embed import embed_passages
 from redthread.rag.sources import SOURCES
 
@@ -143,7 +144,7 @@ def main() -> None:
     doc_vectors = embed_passages(chunks.content.tolist())
     write_vectors(paths.PROCESSED / "doc_chunk_emb.txt", chunks.chunk_id.tolist(), doc_vectors)
 
-    cases = pd.read_csv(paths.CLOSED_CASES_CSV, usecols=["case_id", "outcome", "pattern", "analyst_notes"])
+    cases = pd.read_csv(sources.closed_cases_csv(), usecols=["case_id", "outcome", "pattern", "analyst_notes"])
     case_vectors = embed_passages(closed_case_text(cases))
     write_vectors(paths.PROCESSED / "closed_case_emb.txt", cases.case_id.tolist(), case_vectors)
 

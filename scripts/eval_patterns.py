@@ -13,6 +13,7 @@ import logging
 import pandas as pd
 
 from redthread import paths
+from redthread.data import sources
 from redthread.patterns import classify
 
 log = logging.getLogger("eval_patterns")
@@ -27,7 +28,7 @@ def main() -> None:
     by_id = txns.set_index("tx_id")
     by_card = dict(tuple(txns.groupby("card_id")))
 
-    cases = pd.read_csv(paths.CLOSED_CASES_CSV)
+    cases = pd.read_csv(sources.closed_cases_csv())
     cases = cases[cases["outcome"] == "confirmed_fraud"]
     rows = []
     for case in cases.itertuples():

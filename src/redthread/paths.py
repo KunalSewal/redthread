@@ -8,7 +8,6 @@ PROCESSED = DATA / "processed"
 CASES_OUT = ROOT / "cases"
 GSQL = ROOT / "gsql"
 
-TRANSACTIONS_CSV = DATA / "transactions.csv"
-IDENTITY_CSV = DATA / "identity.csv"
-CLOSED_CASES_CSV = DATA / "closed_cases_history.csv"
-CASE_PACK_CSV = DATA / "case_pack.csv"
+DATA_R2 = DATA / "round2"  # final round: January 2017, the replacement closed cases, the HHF pack
+
+# Raw inputs span both rounds: read them through redthread.data.sources, never by path here.

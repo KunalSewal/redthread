@@ -174,16 +174,50 @@ def _state() -> dict:
     return json.loads(STATE.read_text()) if STATE.exists() else {}
 
 
+UPLOAD_CHUNK_BYTES = 4_000_000  # long single uploads were dropped mid-stream (SSL EOF) on Savanna
+UPLOAD_ATTEMPTS = 4
+
+
+def _chunks(body: str, limit: int):
+    """Whole lines, at most ``limit`` bytes per chunk (a single longer line is sent on its own)."""
+    chunk, size = [], 0
+    for line in body.splitlines(keepends=True):
+        if chunk and size + len(line) > limit:
+            yield "".join(chunk)
+            chunk, size = [], 0
+        chunk.append(line)
+        size += len(line)
+    if chunk:
+        yield "".join(chunk)
+
+
+def _post(job: str, data: str, sep: str) -> dict:
+    """One chunk, retried with backoff. Loading jobs upsert, so a retried chunk cannot duplicate."""
+    for attempt in range(1, UPLOAD_ATTEMPTS + 1):
+        try:
+            return _summarize(connection().runLoadingJobWithData(data, "f", job, sep=sep, eol="\n", timeout=0))
+        except Exception as exc:
+            if attempt == UPLOAD_ATTEMPTS:
+                raise
+            log.warning("%s: upload attempt %d failed (%s); retrying", job, attempt, type(exc).__name__)
+            time.sleep(5 * attempt)
+    raise RuntimeError("unreachable")
+
+
 def load_file(job: str, path, sep: str = ",", has_header: bool = True) -> dict:
-    """Post one file to a loading job (header stripped) and check every data line was accepted."""
+    """Post one file to a loading job (header stripped), in chunks, and check every data line was
+    accepted."""
     text = path.read_text(encoding="utf-8")
     body = text.partition("\n")[2] if has_header else text
     expected = body.count("\n") + (0 if body.endswith("\n") or not body else 1)
-    result = connection().runLoadingJobWithData(body, "f", job, sep=sep, eol="\n", timeout=0)
-    stats = _summarize(result)
+    stats = {"valid": 0, "rejected": 0}
+    for data in _chunks(body, UPLOAD_CHUNK_BYTES):
+        part = _post(job, data, sep)
+        stats["valid"] += part.get("valid", 0)
+        stats["rejected"] += part.get("rejected", 0)
     stats["expected"] = expected
-    if stats.get("valid") != expected or stats.get("rejected"):
-        raise RuntimeError(f"{job} {path.name}: {stats}\n{json.dumps(result)[:1500]}")
+    if stats["valid"] != expected or stats["rejected"]:
+        raise RuntimeError(f"{job} {path.name}: {stats}")
     return stats
 
 

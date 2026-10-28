@@ -11,6 +11,7 @@ from functools import cache
 import pandas as pd
 
 from redthread import paths
+from redthread.data import sources
 from redthread.model.features import closed_case_labels
 
 BANDS = [0.0, 0.05, 0.1, 0.2, 0.3, 0.5, 0.7, 0.85, 1.0001]
@@ -32,9 +33,9 @@ def _cache_path(max_month: int):
 
 def build(max_month: int = 10) -> dict:
     scores = pd.read_csv(paths.PROCESSED / "txn_scores.csv")
-    tx = pd.read_csv(paths.TRANSACTIONS_CSV, usecols=["TransactionID", "risk_score", "ts"], engine="pyarrow")
+    tx = sources.read_transactions(usecols=["TransactionID", "risk_score", "ts"], engine="pyarrow")
     df = tx.merge(scores, left_on="TransactionID", right_on="tx_id")
-    df = df[pd.to_datetime(df["ts"]).dt.month <= max_month]  # labelled months only
+    df = df[sources.month_index(df["ts"]) <= max_month]  # labelled months only
     df["fraud"] = closed_case_labels(df["TransactionID"])
     table = {}
     for col in ["model_score", "risk_score"]:
@@ -65,8 +66,8 @@ def hot_share(score_min: float = 0.5) -> float:
 
 @cache
 def _report_outcomes(max_month: int) -> tuple[int, int]:
-    cases = pd.read_csv(paths.CLOSED_CASES_CSV, usecols=["opened_at", "outcome", "analyst_notes"])
-    cases = cases[pd.to_datetime(cases["opened_at"]).dt.month <= max_month]
+    cases = pd.read_csv(sources.closed_cases_csv(), usecols=["opened_at", "outcome", "analyst_notes"])
+    cases = cases[sources.month_index(cases["opened_at"]) <= max_month]
     reports = cases[cases["analyst_notes"].str.contains(r"cardholder \S+ reported", regex=True, na=False)]
     return int((reports["outcome"] == "confirmed_fraud").sum()), len(reports)
 

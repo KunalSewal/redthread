@@ -9,7 +9,7 @@ the holder key: ``customer_id`` is really an issuer bucket shared by many people
 import numpy as np
 import pandas as pd
 
-from redthread import paths
+from redthread.data import sources
 from redthread.data.entities import SECONDS_PER_DAY, derive_card_ids, holder_ids
 
 CATEGORICAL = [
@@ -21,8 +21,8 @@ DROP = ["TransactionID", "TransactionDT", "customer_id", "ts", "channel", "card_
 
 def load_raw() -> pd.DataFrame:
     """Transactions joined to identity, numeric columns as float32 to fit in memory."""
-    tx = pd.read_csv(paths.TRANSACTIONS_CSV, engine="pyarrow")
-    ident = pd.read_csv(paths.IDENTITY_CSV, engine="pyarrow")
+    tx = sources.read_transactions(engine="pyarrow")
+    ident = sources.read_identity(engine="pyarrow")
     tx = tx.merge(ident, on="TransactionID", how="left")
     numeric = tx.select_dtypes("number").columns.difference(["TransactionID", "TransactionDT"])
     tx[numeric] = tx[numeric].astype("float32")
@@ -63,6 +63,6 @@ def build_features(tx: pd.DataFrame) -> pd.DataFrame:
 
 def closed_case_labels(tx_ids: pd.Series) -> pd.Series:
     """1 if the transaction is in a confirmed-fraud closed case, else 0."""
-    closed = pd.read_csv(paths.CLOSED_CASES_CSV, usecols=["outcome", "txn_ids"])
+    closed = pd.read_csv(sources.closed_cases_csv(), usecols=["outcome", "txn_ids"])
     fraud = closed[closed["outcome"] == "confirmed_fraud"]["txn_ids"].astype(str).str.split("|").explode()
     return tx_ids.isin(set(fraud.astype(int))).astype("int8")
