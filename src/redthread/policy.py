@@ -5,7 +5,7 @@ actions, approval routes, evidence requests, SAR decision and stop decision the 
 Nothing here calls an LLM: every identifier and route is deterministic and unit-tested.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from typing import Literal
 
@@ -114,14 +114,48 @@ class _Plan:
         return [Recommendation(a, route_for(a, self.exposure), "; ".join(self.reasons[a])) for a in ordered]
 
 
+REPLY_FLOOR = 0.03  # the floor every probability respects (belief.P_FLOOR)
+
+
+def after_reply(a: Assessment, posterior: float, informative: bool, response: Response | None = None) -> Assessment:
+    """The assessment once a requested reply is in: the one definition the workflow and tests share.
+
+    The verdict follows the policy's thresholds. Only a reply that carried information counts as
+    another independent signal: an assumed reply inferred from the evidence is not a second opinion,
+    and policy reads this count (R1 and the stopping rule). A legitimate verdict has no episode, so
+    no exposure, pattern or ring.
+    """
+    p = min(max(posterior, REPLY_FLOOR), 1 - REPLY_FLOOR)
+    verdict = "fraud" if p >= STOP_HIGH else "legitimate" if p <= STOP_LOW else "uncertain"
+    a = replace(a, probability=p, verdict=verdict,
+                independent_evidence=a.independent_evidence + (1 if informative else 0))
+    if verdict == "legitimate":
+        a = replace(a, exposure_usd=0.0, pattern="none", shared_origin=False, linked_to_other_fraud=False,
+                    coordinated_undocumented=False, connected_cards=())
+    elif response == "confirmed" and verdict != "fraud":
+        # The cardholder confirmed the flagged charge: no fraud episode is established on this card,
+        # so it carries no pattern. (A ring it touches is still there; R6/R9 actions need the episode.)
+        a = replace(a, pattern="none", coordinated_undocumented=False)
+    return a
+
 def sar_required(a: Assessment, response: Response | None = None) -> tuple[bool, str]:
     """Policy 3a: confirmed or strongly suspected fraud AND one of the aggravating conditions."""
     denied = response == "denied" or (a.customer_disputed and response is None and a.verdict == "fraud")
     suspected = a.verdict == "fraud" or a.probability >= STOP_HIGH or denied
-    if response == "confirmed" or not suspected:
+    if response == "confirmed":
+        return False, "3a: the cardholder confirmed the activity, so no report is required"
+    if a.pattern == "undocumented":
+        # R9 names FILE_REPORT outright for coordinated abuse fitting no documented pattern; the
+        # pattern is only named when the episode exists, so this is "strongly suspected" under 3a.
+        # Round 1 lost HHG-014 here: undocumented, uncertain at 0.81, no report; the bank filed one.
+        return True, "R9 and 3a: coordinated abuse that fits no documented pattern"
+    if not suspected:
         return False, "3a: fraud is not confirmed or strongly suspected, so no report is required"
     if a.coordinated_undocumented:
         return True, "3a and R9: coordinated activity that fits no documented pattern"
+    if a.verdict == "fraud" and a.connected_cards:
+        return True, (f"3a: the fraud connects to {len(a.connected_cards)} other card(s), which is a "
+                      "connection to another customer's fraud")
     if a.shared_origin:
         return True, f"3a and R6: fraud across several cards sharing {a.shared_element or 'a common origin'}"
     if a.linked_to_other_fraud:
@@ -296,7 +330,7 @@ def _ring_actions(plan: _Plan, a: Assessment, response: Response | None) -> None
     if response == "confirmed":
         return
     suspected = sar_required(a, response)[0]
-    if a.coordinated_undocumented:
+    if a.coordinated_undocumented or a.pattern == "undocumented":
         plan.add(Action.CREATE_CASE, "R9: coordinated abuse across customers fitting no known pattern")
         plan.add(Action.ESCALATE_TO_ANALYST, "R9" if suspected else (
             f"R9 and 3a: coordinated abuse, but fraud on this card is not strongly suspected (probability "
@@ -314,9 +348,11 @@ def _ring_actions(plan: _Plan, a: Assessment, response: Response | None) -> None
 
 
 def _escalation(plan: _Plan, a: Assessment, response: Response | None) -> None:
-    if response == "confirmed":
-        return
     uncertain_and_exposed = a.verdict == "uncertain" and a.exposure_usd > ESCALATE_EXPOSURE
+    # R8 reads the verdict, not the reply: a confirmation that leaves the case uncertain with more
+    # than $500 exposed still goes to an analyst. A confirmation does settle conflicting evidence.
+    if response == "confirmed" and not uncertain_and_exposed:
+        return
     if uncertain_and_exposed or a.evidence_conflicts:
         if a.evidence_conflicts:
             why = "evidence conflicts"
