@@ -18,7 +18,7 @@ import random
 
 import pandas as pd
 
-from redthread import config, paths
+from redthread import config, paths, redact
 from redthread.agent.graph import investigate_alert
 from redthread.agent.mcp_graph import McpGraph
 from redthread.data import sources
@@ -37,7 +37,7 @@ def build_alerts(n: int, month: int, seed: int) -> list[dict]:
     the trigger alone would be visible as a gap between the two strata.
     """
     cases = pd.read_csv(sources.closed_cases_csv())
-    cases = cases[pd.to_datetime(cases["opened_at"]).dt.month == month]
+    cases = cases[sources.month_index(cases["opened_at"]) == month]
     fraud = cases[cases["outcome"] == "confirmed_fraud"]
     cleared = cases[cases["outcome"] == "cleared"]
     picked = pd.concat([fraud.sample(n // 2, random_state=seed), cleared.sample(n - n // 2, random_state=seed)])
@@ -194,6 +194,7 @@ async def _run(n: int, month: int, seed: int, out: str) -> None:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s", datefmt="%H:%M:%S")
+    redact.install()
     for noisy in ("httpx", "google_genai", "mcp", "sentence_transformers", "pyTigerGraph", "redthread.agent.graph"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
     parser = argparse.ArgumentParser()

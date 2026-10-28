@@ -9,6 +9,7 @@ live investigations streamed as server-sent events, and the approval workflow fo
 import asyncio
 import json
 import logging
+import threading
 from datetime import datetime
 from pathlib import Path
 
@@ -16,13 +17,16 @@ import pandas as pd
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sse_starlette.sse import EventSourceResponse
 
-from redthread import paths
-from redthread.agent.graph import investigate_alert
+from redthread import paths, redact
+from redthread.agent.graph import InvestigationHalted, investigate_alert
 from redthread.agent.mcp_graph import McpGraph
+from redthread.agent.outputs import persist, persist_halt
+from redthread.api.auth import Approver, CurrentApprover
 from redthread.api.casegraph import case_graph
+from redthread.api.ledger import Ledger
 from redthread.belief import Judged, assess
 from redthread.data import sources
 from redthread.policy import AUTO_ACTIONS, Action, Assessment, recommend
@@ -30,11 +34,13 @@ from redthread.tg import GRAPH, connection
 
 log = logging.getLogger(__name__)
 RUNS = paths.ROOT / "runs"
-APPROVALS = RUNS / "approvals.json"
+APPROVALS = Ledger(RUNS / "approvals.log.jsonl")  # append-only and hash-chained
+_approval_lock = threading.Lock()
 UI_DIST = paths.ROOT / "ui" / "dist"
 ROUTE_RANK = {"auto": 0, "L1": 1, "L2": 2}
 
 app = FastAPI(title="RedThread")
+redact.install()  # uvicorn configures logging before it imports the app
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173"], allow_methods=["*"], allow_headers=["*"])
 _live: dict[str, asyncio.Queue] = {}
 
@@ -67,7 +73,7 @@ def _answer_for(case_id: str) -> dict | None:
 
 
 def _approvals() -> dict:
-    return _read(APPROVALS) or {}
+    return APPROVALS.decisions()
 
 
 @app.get("/api/cases")
@@ -114,15 +120,27 @@ def get_case(case_id: str) -> dict:
 
 
 class Approval(BaseModel):
+    """What is being decided. Who decides comes from the approver key, never from here: a body that
+    tries to name a role or an approver is refused outright rather than quietly ignored."""
+    model_config = ConfigDict(extra="forbid")
     action: Action
     decision: str  # "approved" | "rejected"
-    approver: str
-    role: str  # "L1" | "L2"
     note: str = ""
 
 
+@app.get("/api/whoami")
+def whoami(approver: CurrentApprover) -> dict:
+    return {"name": approver.name, "role": approver.role}
+
+
+@app.get("/api/approvals/verify")
+def verify_approvals() -> dict:
+    intact, broken_at = APPROVALS.verify()
+    return {"intact": intact, "first_broken_record": broken_at, "records": len(APPROVALS.records())}
+
+
 @app.post("/api/cases/{case_id}/approvals")
-def approve(case_id: str, body: Approval) -> dict:
+def approve(case_id: str, body: Approval, approver: CurrentApprover) -> dict:
     """Policy section 2: L1 and L2 actions wait for a human with at least that authority."""
     answer = _answer_for(case_id)
     if not answer:
@@ -132,29 +150,30 @@ def approve(case_id: str, body: Approval) -> dict:
         raise HTTPException(400, f"{body.action} is not a recommended action for this case")
     if item["route"] == "auto" or body.action in AUTO_ACTIONS:
         raise HTTPException(400, "auto actions are executed by the agent and need no approval")
-    if body.decision not in ("approved", "rejected") or body.role not in ("L1", "L2"):
-        raise HTTPException(400, "decision must be approved|rejected and role L1|L2")
-    if ROUTE_RANK[body.role] < ROUTE_RANK[item["route"]]:
-        raise HTTPException(403, f"{body.action} requires {item['route']} approval; {body.role} is not sufficient")
-    approvals = _approvals()
-    at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    record = {"decision": body.decision, "approver": body.approver, "role": body.role, "note": body.note,
-              "at": at}
-    record["in_graph"] = _record_decision_in_graph(case_id, body, at, len(approvals.get(case_id, {})) + 1)
-    approvals.setdefault(case_id, {})[body.action] = record
-    RUNS.mkdir(exist_ok=True)
-    APPROVALS.write_text(json.dumps(approvals, indent=2), encoding="utf-8")
-    return record
+    if body.decision not in ("approved", "rejected"):
+        raise HTTPException(400, "decision must be approved or rejected")
+    if ROUTE_RANK[approver.role] < ROUTE_RANK[item["route"]]:
+        raise HTTPException(403, f"{body.action} requires {item['route']} approval; "
+                                 f"{approver.name} holds {approver.role}, which is not sufficient")
+    with _approval_lock:  # the "already decided?" check and the append must not interleave
+        if APPROVALS.find(case_id, body.action):
+            raise HTTPException(409, f"{body.action} on {case_id} has already been decided; decisions are final")
+        at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        n = len(_approvals().get(case_id, {})) + 1
+        in_graph = _record_decision_in_graph(case_id, body, approver, at, n)
+        return APPROVALS.append({"case_id": case_id, "action": str(body.action), "decision": body.decision,
+                                 "approver": approver.name, "approver_id": approver.id, "role": approver.role,
+                                 "note": body.note, "at": at, "in_graph": in_graph})
 
 
-def _record_decision_in_graph(case_id: str, body: "Approval", at: str, n: int) -> bool:
+def _record_decision_in_graph(case_id: str, body: "Approval", approver: Approver, at: str, n: int) -> bool:
     """Write the decision onto the case in the graph, so it becomes memory later cases retrieve.
 
     The approval is recorded locally either way; if the workspace is suspended the graph simply is
     not updated, and the response says so rather than failing the approval.
     """
     cid = f"CASE-{case_id}"
-    text = f"{body.role} {body.approver} {body.decision} {body.action}" + (f" ({body.note})" if body.note else "")
+    text = f"{approver.role} {approver.name} {body.decision} {body.action}" + (f" ({body.note})" if body.note else "")
     try:
         conn = connection(GRAPH)
         conn.runInstalledQuery("record_analyst_decision", {"case_id": cid, "decision": text, "decided_at": at})
@@ -188,13 +207,12 @@ async def _run(alert: dict, queue: asyncio.Queue) -> None:
         # A self-raised alert's answer belongs with the others in cases_extra/; cases/ holds exactly the
         # twenty graded files.
         folder = paths.CASES_OUT if alert.get("source", "bank_queue") == "bank_queue" else EXTRA
-        (folder / f"{case_id}.json").write_text(json.dumps(state["answer"], indent=2), encoding="utf-8")
-        trace = {k: state.get(k) for k in ("alert", "events", "evidence", "llm_assessment", "belief", "assessment",
-                                           "initial", "request", "reply", "final_assessment", "final", "report",
-                                           "policy_evidence")}
-        RUNS.mkdir(exist_ok=True)
-        (RUNS / f"{case_id}.trace.json").write_text(json.dumps(trace, indent=1, default=str), encoding="utf-8")
+        persist(state, folder, RUNS)
         await queue.put({"kind": "done", "case_id": case_id})
+    except InvestigationHalted as exc:  # fail closed: say what failed; the previous answer stays as it was
+        persist_halt(alert, exc, RUNS)
+        await queue.put({"kind": "halted", "case_id": case_id, "stage": exc.stage,
+                         "detail": f"Investigation stopped at {exc.stage}: {exc.reason[:400]}. No answer was written."})
     except Exception as exc:  # surface failures to the dashboard instead of hanging the stream
         log.exception("live investigation failed")
         await queue.put({"kind": "failed", "case_id": case_id, "detail": str(exc)[:500]})

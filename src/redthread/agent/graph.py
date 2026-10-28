@@ -17,9 +17,11 @@ from typing import Any, TypedDict
 
 from google.genai import types
 from langgraph.graph import END, StateGraph
+from pydantic import ValidationError
 
 from redthread.agent import memory, prompts
-from redthread.agent.llm import Llm
+from redthread.agent.guard import guard
+from redthread.agent.llm import Llm, ModelError
 from redthread.agent.mcp_graph import GraphToolError, McpGraph
 from redthread.agent.schemas import LlmAssessment, LlmReport, json_schema
 from redthread.agent.simulator import simulate
@@ -27,12 +29,35 @@ from redthread.agent.tools import Tools
 from redthread.answer import Answer
 from redthread.belief import Belief, Judged, assess
 from redthread.patterns import classify
-from redthread.policy import Action, Assessment, evidence_request, recommend, request_reason, sar_required
+from redthread.policy import Action, Assessment, after_reply, evidence_request, recommend, request_reason, sar_required
 
 log = logging.getLogger(__name__)
 FOLLOW_UP_BUDGET = 5
 STOP_HIGH, STOP_LOW = 0.85, 0.15
 P_FLOOR = 0.03  # calibration is scored: never claim certainty the evidence cannot support
+
+
+class InvestigationHalted(RuntimeError):
+    """A dependency failed, so the investigation stopped rather than continue on partial evidence.
+
+    Fail closed: no answer is written and nothing claims to be saved. ``stage`` names what failed;
+    ``events`` is the trace up to the failure, so the halt itself is auditable.
+    """
+
+    def __init__(self, stage: str, reason: str, events: list[dict]):
+        super().__init__(f"investigation halted at {stage}: {reason}")
+        self.stage, self.reason, self.events = stage, reason, events
+
+
+# Everything a trace keeps about an investigation; the runner, the monitor and the API all write this.
+TRACE_KEYS = ("alert", "events", "evidence", "llm_assessment", "belief", "assessment", "initial", "request",
+              "reply", "final_assessment", "final", "report", "policy_evidence", "quarantine")
+
+def halt_record(alert: dict, exc: "InvestigationHalted") -> dict:
+    """What a halted investigation leaves behind instead of an answer: which dependency failed, why,
+    and the trace up to that point. Written next to the traces as ``<case>.halted.json``."""
+    return {"case_id": alert["case_id"], "status": "halted", "stage": exc.stage, "reason": exc.reason,
+            "halted_at": memory.now(), "answer_written": False, "events": exc.events}
 
 
 class CaseState(TypedDict, total=False):
@@ -55,6 +80,7 @@ class CaseState(TypedDict, total=False):
     case_opened: bool
     policy_evidence: list[dict]
     investigation_calls: int
+    quarantine: list[dict]
     answer: dict
 
 
@@ -80,21 +106,57 @@ class Investigation:
         try:
             result = await coro
         except GraphToolError as exc:
-            self._event(state, "tool_error", f"{key}: {str(exc)[:300]}")
-            return None
+            self._halt(state, key, str(exc))
         state.setdefault("evidence", {})[key] = result
         self._event(state, "evidence", f"{result['ref']}")
         return result
 
+    def _halt(self, state: CaseState, stage: str, reason: str) -> None:
+        self._event(state, "halted", f"{stage}: {reason[:300]}")
+        raise InvestigationHalted(stage, reason, state.get("events", []))
+
+    async def _generate(self, state: CaseState, stage: str, contents, **kwargs):
+        try:
+            return await self.llm.generate(contents, system=prompts.INVESTIGATOR, **kwargs)
+        except ModelError as exc:
+            self._halt(state, stage, str(exc))
+
+    async def _structured(self, state: CaseState, stage: str, prompt: str, schema, temperature: float):
+        """A structured answer from the model, validated. One retry on malformed output, then halt:
+        an answer that does not parse is never patched up or guessed."""
+        for attempt in (1, 2):
+            resp = await self._generate(state, stage, [_user(prompt)], response_schema=json_schema(schema),
+                                        temperature=temperature)
+            try:
+                return schema.model_validate_json(resp.text or "")
+            except ValidationError as exc:
+                if attempt == 2:
+                    self._halt(state, stage, f"model output failed validation twice: {str(exc)[:200]}")
+                log.warning("[%s] %s: malformed model output, retrying", state.get("case_id"), stage)
+
     # ------------------------------------------------------------------ nodes
     async def intake(self, state: CaseState) -> CaseState:
-        alert = state["alert"]
+        # Alert text is written by people and may be hostile. Only the guarded text goes any further;
+        # the original stays on the alert for the audit trail.
+        alert = dict(state["alert"])
+        guarded = guard(alert.get("trigger_text"))
+        alert["trigger_text_original"], alert["trigger_text"] = guarded.original, guarded.text
+        state["alert"] = alert
+        state["quarantine"] = [{"kind": f.kind, "text": f.text} for f in guarded.findings]
         state["case_id"] = f"CASE-{alert['case_id']}"
         state["started"] = time.time()
+        self._event(state, "alert", f"{alert['trigger_type']}: {alert['trigger_text']}")
+        if guarded.hostile:
+            kinds = sorted({k for f in guarded.findings for k in f.kind.split(",")})
+            self._event(state, "quarantined",
+                        f"{len(guarded.findings)} segment(s) of the alert text addressed the system rather than "
+                        f"an analyst ({', '.join(kinds)}); set aside and never used as evidence or instruction")
         # A re-investigation starts clean: memory should carry other cases' lessons, not an earlier answer
         # to this same alert.
-        await self.graph.query("delete_case", {"case_id": state["case_id"]})
-        self._event(state, "alert", f"{alert['trigger_type']}: {alert['trigger_text']}")
+        try:
+            await self.graph.query("delete_case", {"case_id": state["case_id"]})
+        except GraphToolError as exc:
+            self._halt(state, "intake", str(exc))
         return state
 
     async def gather(self, state: CaseState) -> CaseState:
@@ -103,6 +165,15 @@ class Investigation:
         tx = str(a["flagged_txn_id"])
         ctx = await self._collect(state, "alert_context", t.alert_context(tx))
         flagged = ctx["flagged_txn"]
+        actual_card = ctx["card"]["card_id"]
+        if actual_card != a["card_id"]:
+            # The transaction, not the alert's label, decides which card is investigated. HHF-011's alert
+            # names C09241-K1 while its transaction is on C09241-K2, the card all 21 of the bank's closed
+            # cases for that customer use; investigating the label would read the wrong card's history.
+            self._event(state, "data_quality",
+                        f"The alert names card {a['card_id']}, but transaction {tx} is on card {actual_card}; "
+                        f"investigating {actual_card}, the card the transaction was made on")
+            a = state["alert"] = {**a, "card_id_reported": a["card_id"], "card_id": actual_card}
         await self._collect(state, "card_activity", t.card_activity(a["card_id"], flagged["ts"], flagged_tx=tx))
         if ctx.get("holder"):
             await self._collect(state, "holder_baseline", t.holder_baseline(ctx["holder"]["holder_id"], tx))
@@ -126,7 +197,7 @@ class Investigation:
         contents = [_user(self._case_brief(state) + "\n\n" + prompts.INVESTIGATE_TASK.format(budget=FOLLOW_UP_BUDGET))]
         tools = [types.Tool(function_declarations=FOLLOW_UP_TOOLS)]
         for _ in range(FOLLOW_UP_BUDGET + 1):
-            resp = await self.llm.generate(contents, system=prompts.INVESTIGATOR, tools=tools)
+            resp = await self._generate(state, "investigate", contents, tools=tools)
             calls = resp.function_calls or []
             if not calls or any(c.name == "finish_investigation" for c in calls):
                 reason = next((c.args.get("reason", "") for c in calls if c.name == "finish_investigation"), "")
@@ -158,13 +229,11 @@ class Investigation:
         if name not in dispatch:
             return {"error": f"unknown tool {name}"}
         result = await self._collect(state, key, dispatch[name]())
-        return result or {"error": "query failed"}
+        return result
 
     async def assess(self, state: CaseState) -> CaseState:
         prompt = self._case_brief(state) + "\n\n" + prompts.ASSESS_TASK
-        resp = await self.llm.generate([_user(prompt)], system=prompts.INVESTIGATOR,
-                                       response_schema=json_schema(LlmAssessment), temperature=0.1)
-        raw = LlmAssessment.model_validate_json(resp.text)
+        raw = await self._structured(state, "assess", prompt, LlmAssessment, temperature=0.1)
         clean = self._validate(state, raw)
         belief = self._weigh_evidence(state, clean)
         state["llm_assessment"] = clean.model_dump()
@@ -274,7 +343,7 @@ class Investigation:
         contents = [_user(brief + "\n\n" + prompts.RESOLVE_TASK)]
         tools = [types.Tool(function_declarations=FOLLOW_UP_TOOLS)]
         for _ in range(3):
-            resp = await self.llm.generate(contents, system=prompts.INVESTIGATOR, tools=tools)
+            resp = await self._generate(state, "resolve_uncertainty", contents, tools=tools)
             calls = resp.function_calls or []
             if not calls or any(c.name == "finish_investigation" for c in calls):
                 break
@@ -362,9 +431,9 @@ class Investigation:
                         f"Case {state['case_id']} opened in the graph, status open: {'; '.join(why)}")
             await memory.write_case(self.graph, record, state["events"])
             state["case_opened"] = True
-        except Exception as exc:  # the investigation continues; the final write-back retries
+        except Exception as exc:  # fail closed: a case the bank cannot record is not a case
             log.exception("opening the case failed")
-            self._event(state, "memory_error", f"opening the case failed: {str(exc)[:300]}")
+            self._halt(state, "open_case", f"could not open the case in the graph: {str(exc)[:300]}")
 
     async def request_evidence(self, state: CaseState) -> CaseState:
         a = state["assessment"]
@@ -384,20 +453,10 @@ class Investigation:
         if not reply:
             state["final"], state["final_assessment"] = state["initial"], state["assessment"]
             return state
-        a = dict(state["assessment"])
-        p = min(max(reply["posterior"], P_FLOOR), 1 - P_FLOOR)
-        a["probability"] = p
-        a["verdict"] = "fraud" if p >= STOP_HIGH else "legitimate" if p <= STOP_LOW else "uncertain"
-        # Only a reply that carried information counts as another independent signal. An assumed
-        # reply, inferred from the evidence we already had, is not a second opinion — and policy
-        # reads this count (R1, and the stopping rule).
-        if reply.get("informative"):
-            a["independent_evidence"] = a["independent_evidence"] + 1
-        if a["verdict"] == "legitimate":
-            a.update(exposure_usd=0.0, pattern="none", shared_origin=False, linked_to_other_fraud=False,
-                     coordinated_undocumented=False, connected_cards=[])
-        policy_a = Assessment(**{**a, "connected_cards": tuple(a["connected_cards"])})
+        before = Assessment(**{**state["assessment"], "connected_cards": tuple(state["assessment"]["connected_cards"])})
+        policy_a = after_reply(before, reply["posterior"], bool(reply.get("informative")), reply["response"])
         recs = recommend(policy_a, reply["response"])
+        a = {**asdict(policy_a), "connected_cards": list(policy_a.connected_cards)}
         state["final_assessment"], state["final"] = a, [asdict(r) for r in recs]
         self._event(state, "decision", "Final: " + ", ".join(f"{r.action} ({r.route})" for r in recs))
         return state
@@ -405,9 +464,7 @@ class Investigation:
     async def report(self, state: CaseState) -> CaseState:
         record = self._record_for_report(state)
         prompt = prompts.REPORT_TASK + "\n\nCASE RECORD:\n" + json.dumps(record, indent=1)
-        resp = await self.llm.generate([_user(prompt)], system=prompts.INVESTIGATOR,
-                                       response_schema=json_schema(LlmReport), temperature=0.2)
-        rep = LlmReport.model_validate_json(resp.text)
+        rep = await self._structured(state, "report", prompt, LlmReport, temperature=0.2)
         if not state.get("reply"):
             rep = rep.model_copy(update={"what_changed": "nothing"})
         if not any(r["action"] == Action.FILE_REPORT for r in state["final"]):
@@ -476,6 +533,20 @@ class Investigation:
         if alert["trigger_type"] == "customer_report":
             evidence.insert(0, {"claim": f"Customer reported: {alert['trigger_text']}", "source": "customer",
                                 "ref": "trigger:customer_report", "entity_ids": [str(alert["flagged_txn_id"])]})
+        if state.get("quarantine"):
+            kinds = sorted({k for q in state["quarantine"] for k in q["kind"].split(",")})
+            evidence.append({
+                "claim": (f"The alert text also contained {len(state['quarantine'])} segment(s) addressed to the "
+                          f"system rather than an analyst ({', '.join(kinds)}). They were set aside and used "
+                          f"neither as evidence nor as instruction; the decision rests on the evidence above."),
+                "source": "external", "ref": "guard:alert_text", "entity_ids": [str(alert["flagged_txn_id"])]})
+        if alert.get("card_id_reported"):
+            evidence.append({
+                "claim": (f"The alert named card {alert['card_id_reported']}, but transaction "
+                          f"{alert['flagged_txn_id']} is on card {alert['card_id']}; the investigation used the "
+                          f"card the transaction was made on."),
+                "source": "graph", "ref": "query:alert_context", "entity_ids": [str(alert["flagged_txn_id"]),
+                                                                              alert["card_id"]]})
         if reply:
             evidence.append({"claim": reply["text"], "source": "customer", "ref": "evidence_request:1",
                              "entity_ids": [str(alert["flagged_txn_id"])]})

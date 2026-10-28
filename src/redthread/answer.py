@@ -4,6 +4,7 @@ Structural and cross-field rules live here. Checks that need the dataset (IDs ex
 the sum of amounts) live in ``redthread.validate``.
 """
 
+import re
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -57,10 +58,23 @@ class Case(_Strict):
         return self
 
 
+# Banking guidelines: nothing a customer sees, including evidence-request text, may reveal that a
+# suspicious activity report is being considered or filed. The organisers' grader checks the same
+# words; this is broader, and it is a schema rule, so an answer that would tip off cannot be built.
+TIPOFF = re.compile(r"\b(sar|sars|suspicious\s+activity|file[ds]?\s+(a\s+)?report|filing|regulator\w*|fincen|"
+                    r"reported\s+to\s+the\s+authorit\w*|law\s+enforcement|police|compliance|investigators?)\b", re.I)
+
+
 class EvidenceRequest(_Strict):
     type: Literal["customer_validation", "step_up_auth", "analyst_info"]
     asked_after_step: int = Field(ge=0)
     assumed_response: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _no_tip_off(self) -> "EvidenceRequest":
+        if TIPOFF.search(self.assumed_response):  # every request type: the grader reads them all
+            raise ValueError(f"customer-facing text would tip off: {TIPOFF.search(self.assumed_response).group(0)!r}")
+        return self
 
 
 class ActionItem(_Strict):

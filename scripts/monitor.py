@@ -18,9 +18,10 @@ from pathlib import Path
 
 import pandas as pd
 
-from redthread import paths
+from redthread import paths, redact
 from redthread.agent.graph import investigate_alert
 from redthread.agent.mcp_graph import McpGraph
+from redthread.agent.outputs import persist
 from redthread.data import sources
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -86,19 +87,14 @@ async def main(max_alerts: int, resume: bool = False) -> None:
             if resume and (OUT / f"{alert['case_id']}.json").exists():
                 continue
             state = await investigate_alert(graph, alert, as_of=alert["opened_at"])
-            (OUT / f"{alert['case_id']}.json").write_text(json.dumps(state["answer"], indent=2), encoding="utf-8")
-            trace = {k: state.get(k) for k in ("alert", "events", "evidence", "llm_assessment", "belief",
-                                               "assessment", "initial", "request", "reply", "final_assessment",
-                                               "final", "report")}
-            (TRACES / f"{alert['case_id']}.trace.json").write_text(json.dumps(trace, indent=1, default=str),
-                                                                     encoding="utf-8")
-            c = state["answer"]["case"]
+            c = persist(state, OUT, TRACES)["case"]
             log.info("%s (%s): %s p=%.2f %s $%.2f", alert["case_id"], alert["source"], c["verdict"],
                      c["fraud_probability"], c["pattern"], c["exposure_usd"])
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s", datefmt="%H:%M:%S")
+    redact.install()
     for noisy in ("httpx", "google_genai", "mcp", "sentence_transformers", "pyTigerGraph"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
     parser = argparse.ArgumentParser()

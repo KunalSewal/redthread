@@ -9,16 +9,16 @@ trace: events, evidence digests, LLM assessment) for review and the dashboard.
 
 import argparse
 import asyncio
-import json
 import logging
 import sys
 import time
 
 import pandas as pd
 
-from redthread import paths
-from redthread.agent.graph import investigate_alert
+from redthread import paths, redact
+from redthread.agent.graph import InvestigationHalted, investigate_alert
 from redthread.agent.mcp_graph import McpGraph
+from redthread.agent.outputs import persist, persist_halt
 from redthread.data import sources
 
 sys.path.insert(0, str(paths.ROOT / "scripts"))
@@ -52,17 +52,18 @@ async def main(ids: list[str]) -> int:
                 # as_of: an alert may only draw on cases opened before it, so a rerun cannot feed a later
                 # case's memory backwards into an earlier alert.
                 state = await investigate_alert(graph, alert, as_of=alert["opened_at"])
+            except InvestigationHalted as exc:
+                # Fail closed: the previous answer, if any, is left untouched and nothing new is written.
+                halted = persist_halt(alert, exc, TRACES)
+                log.error("%s HALTED at %s: %s (no answer written; see %s)",
+                          alert["case_id"], exc.stage, exc.reason, halted.name)
+                failures += 1
+                continue
             except Exception:
                 log.exception("case %s failed", alert["case_id"])
                 failures += 1
                 continue
-            answer = state["answer"]
-            (paths.CASES_OUT / f"{alert['case_id']}.json").write_text(json.dumps(answer, indent=2), encoding="utf-8")
-            trace = {k: state.get(k) for k in ("alert", "events", "evidence", "llm_assessment", "belief",
-                                               "assessment", "initial", "request", "reply", "final_assessment",
-                                               "final", "report", "policy_evidence")}
-            (TRACES / f"{alert['case_id']}.trace.json").write_text(json.dumps(trace, indent=1, default=str),
-                                                                     encoding="utf-8")
+            answer = persist(state, paths.CASES_OUT, TRACES)
             c = answer["case"]
             log.info("%s done in %.0fs: %s p=%.2f %s exposure $%.2f | final: %s | sar=%s | calls=%d tokens=%d",
                      alert["case_id"], time.time() - start, c["verdict"], c["fraud_probability"], c["pattern"],
@@ -73,6 +74,7 @@ async def main(ids: list[str]) -> int:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s", datefmt="%H:%M:%S")
+    redact.install()
     for noisy in ("httpx", "google_genai", "mcp", "sentence_transformers", "pyTigerGraph"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
     parser = argparse.ArgumentParser()

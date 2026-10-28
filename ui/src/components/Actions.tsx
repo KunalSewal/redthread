@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { api } from '../api'
 import type { ActionItem, CaseAction } from '../api'
 
@@ -32,9 +32,33 @@ function Plan({ title, items }: { title: string; items: ActionItem[] }) {
   )
 }
 
+const KEY_STORE = 'redthread.approverKey'
+
+/** The approver key, kept for this browser session only. The server resolves it to a name and role. */
+function useApproverKey() {
+  const [key, setKey] = useState(() => {
+    try { return sessionStorage.getItem(KEY_STORE) ?? '' } catch { return '' }
+  })
+  const [who, setWho] = useState<{ name: string; role: string } | null>(null)
+  useEffect(() => {
+    if (!key) { setWho(null); return }
+    api.whoami(key).then(setWho).catch(() => setWho(null))
+  }, [key])
+  useEffect(() => {  // every approval row on the page signs in and out together
+    const sync = (e: Event) => setKey((e as CustomEvent<string>).detail)
+    window.addEventListener(KEY_STORE, sync)
+    return () => window.removeEventListener(KEY_STORE, sync)
+  }, [])
+  const save = (k: string) => {
+    try { if (k) sessionStorage.setItem(KEY_STORE, k); else sessionStorage.removeItem(KEY_STORE) } catch { /* ok */ }
+    window.dispatchEvent(new CustomEvent(KEY_STORE, { detail: k }))
+  }
+  return { key, who, save }
+}
+
 function Approval({ caseId, a, onDone }: { caseId: string; a: CaseAction; onDone: () => void }) {
-  const [role, setRole] = useState<'L1' | 'L2'>(a.route === 'L2' ? 'L2' : 'L1')
-  const [name, setName] = useState('')
+  const { key, who, save } = useApproverKey()
+  const [draft, setDraft] = useState('')
   const [error, setError] = useState('')
   if (a.route === 'auto') return <span className="state state-done">Done by the agent (simulated)</span>
   if (a.approval) {
@@ -45,24 +69,28 @@ function Approval({ caseId, a, onDone }: { caseId: string; a: CaseAction; onDone
   }
   const decide = (decision: string) => {
     setError('')
-    api.approve(caseId, { action: a.action, decision, approver: name || 'Analyst', role, note: '' })
+    api.approve(caseId, key, { action: a.action, decision, note: '' })
       .then(onDone).catch((e: Error) => setError(e.message))
+  }
+  if (!who) {
+    return (
+      <div className="approve">
+        <label>
+          <span>Approver key</span>
+          <input type="password" value={draft} onChange={(e) => setDraft(e.target.value)}
+            placeholder="Paste your approver key" autoComplete="off" />
+        </label>
+        <button className="btn-approve" onClick={() => save(draft.trim())} disabled={!draft.trim()}>Sign in</button>
+        {key && <p className="error" role="alert">That approver key is not recognised.</p>}
+      </div>
+    )
   }
   return (
     <div className="approve">
-      <label>
-        <span>Your role</span>
-        <select value={role} onChange={(e) => setRole(e.target.value as 'L1' | 'L2')}>
-          <option value="L1">Team lead (L1)</option>
-          <option value="L2">Fraud manager (L2)</option>
-        </select>
-      </label>
-      <label>
-        <span>Name</span>
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
-      </label>
+      <span className="approver-id">Signed in as <strong>{who.name}</strong> ({who.role})</span>
       <button className="btn-approve" onClick={() => decide('approved')}>Approve</button>
       <button className="btn-quiet" onClick={() => decide('rejected')}>Reject</button>
+      <button className="btn-quiet" onClick={() => { save(''); setDraft('') }}>Sign out</button>
       {error && <p className="error" role="alert">{error}</p>}
     </div>
   )

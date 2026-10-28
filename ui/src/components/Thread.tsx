@@ -21,6 +21,7 @@ const KIND: Record<string, { label: string; node: 'dot' | 'ring' | 'diamond' | '
   validation: { label: 'Checked itself', node: 'ring' },
   report: { label: 'Wrote the case', node: 'ring' },
   memory: { label: 'Updated the case in the graph', node: 'ring' },
+  halted: { label: 'Stopped: a dependency failed', node: 'bar' },
 }
 
 /** The query name, without the 'query:' prefix and its arguments: 'alert_context(tx=…)' → the name. */

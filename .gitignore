@@ -43,3 +43,6 @@ runs/
 context/
 docs/
 references/
+
+# Approver keys (hashes only, but kept out of the repo all the same)
+secrets/

@@ -6,6 +6,7 @@ search only: no raw GSQL, no schema changes, no deletes. Writes happen solely th
 run (the MCP docs measure ~4x speed-up versus a session per call).
 """
 
+import asyncio
 import json
 import logging
 import os
@@ -23,6 +24,7 @@ from redthread import config  # noqa: F401  (loads .env)
 log = logging.getLogger(__name__)
 ALLOWED_TOOLS = "run_installed_query,search_top_k_similarity,is_query_installed,get_graph_schema"
 RUN_QUERY_TOOL = "tigergraph__run_installed_query"
+QUERY_TIMEOUT_S = 120  # a query that hangs is a failed dependency, not a long wait
 
 # pyTigerGraph (inside the MCP server) warns on plain vertex params but handles them correctly.
 logging.getLogger("pyTigerGraph").setLevel(logging.ERROR)
@@ -69,7 +71,13 @@ class McpGraph:
         """Run an installed query through MCP and return its PRINT results."""
         params = params or {}
         start = time.time()
-        result = await self._session.call_tool(RUN_QUERY_TOOL, {"query_name": name, "params": params})
+        try:
+            result = await asyncio.wait_for(
+                self._session.call_tool(RUN_QUERY_TOOL, {"query_name": name, "params": params}), QUERY_TIMEOUT_S)
+        except TimeoutError as exc:
+            raise GraphToolError(f"{name} timed out after {QUERY_TIMEOUT_S}s") from exc
+        except Exception as exc:  # a dropped session or transport error: the graph is unavailable
+            raise GraphToolError(f"{name} could not reach the graph: {type(exc).__name__}: {exc}") from exc
         elapsed = time.time() - start
         self.calls.append(CallRecord(name, params, round(elapsed, 3)))
         text = "".join(getattr(c, "text", "") for c in result.content)

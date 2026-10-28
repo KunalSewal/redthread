@@ -89,9 +89,9 @@ export function CaseFile({ id }: { id: string }) {
       const source = new EventSource(`/api/cases/${id}/stream`)
       source.onmessage = (m) => {
         const e = JSON.parse(m.data)
-        if (e.kind === 'done' || e.kind === 'failed') {
+        if (e.kind === 'done' || e.kind === 'failed' || e.kind === 'halted') {
           source.close()
-          if (e.kind === 'failed') setError(`The investigation stopped: ${e.detail}`)
+          if (e.kind !== 'done') setError(e.kind === 'halted' ? e.detail : `The investigation stopped: ${e.detail}`)
           setLiveEvents(null)
           load()
           return

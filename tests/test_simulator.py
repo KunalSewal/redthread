@@ -56,3 +56,21 @@ def test_a_reply_never_takes_the_probability_past_the_floor():
 
     reply = simulate("customer_validation", 0.03, recurring=True, customer_reported=False)
     assert reply.informative and reply.posterior == P_FLOOR
+
+
+def test_no_simulated_reply_could_tip_off_the_customer():
+    """Banking guidelines: nothing a customer sees may reveal a report is considered or filed."""
+    import itertools
+
+    import pytest
+
+    from redthread.agent.simulator import simulate
+    from redthread.answer import EvidenceRequest
+
+    for kind, prior, recurring, reported in itertools.product(
+            ("customer_validation", "step_up_auth", "analyst_info"), (0.1, 0.5, 0.9), (False, True), (False, True)):
+        text = simulate(kind, prior, recurring=recurring, customer_reported=reported).text
+        EvidenceRequest(type=kind, asked_after_step=1, assumed_response=text)  # raises if it would tip off
+    with pytest.raises(ValueError, match="tip off"):
+        EvidenceRequest(type="customer_validation", asked_after_step=1,
+                        assumed_response="We may need to file a report with the regulator.")

@@ -157,8 +157,13 @@ export const api = {
   evaluation: () => fetch('/api/evaluation').then(json<Evaluation>),
   policy: () => fetch('/api/policy').then(json<{ chunks: PolicyChunk[]; by_source: Record<string, number> }>),
   investigate: (id: string) => fetch(`/api/cases/${id}/investigate`, { method: 'POST' }).then(json<{ started: string }>),
-  approve: (id: string, body: { action: string; decision: string; approver: string; role: string; note: string }) =>
+  /** Who decides comes from the approver key; the body says only what is decided. */
+  approve: (id: string, key: string, body: { action: string; decision: string; note: string }) =>
     fetch(`/api/cases/${id}/approvals`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+      body: JSON.stringify(body),
     }).then(json<unknown>),
+  whoami: (key: string) =>
+    fetch('/api/whoami', { headers: { Authorization: `Bearer ${key}` } }).then(json<{ name: string; role: string }>),
 }
