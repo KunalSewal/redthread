@@ -61,8 +61,15 @@ def _kinds(segment: str) -> list[str]:
     return sorted({kind for kind, pattern in PATTERNS if pattern.search(segment)})
 
 
+# Only scripts/attacks.py turns this off, in its own process, to measure what an attack does when
+# nothing stands in its way. There is deliberately no environment variable or setting for it.
+DEFENCES = True
+
+
 def guard(text: str | None) -> Guarded:
     original = text or ""
+    if not DEFENCES:
+        return Guarded(text=original, original=original)
     kept, findings = [], []
     for segment in (s for s in _SPLIT.split(original) if s and s.strip()):
         kinds = _kinds(segment)
@@ -71,3 +78,39 @@ def guard(text: str | None) -> Guarded:
         else:
             kept.append(segment.strip())
     return Guarded(text=" ".join(kept), original=original, findings=tuple(findings))
+
+
+# Free text that tool results carry from people: analysts' notes on closed cases and the summaries
+# on earlier agent cases. Measured on all 5,585 closed-case notes: none is flagged. The policy and
+# regulatory passages are a curated corpus loaded by build_knowledge, not text people write at run
+# time, and are not screened: their own wording ("Do not block." in R7) would be cut. The digests'
+# own fields (refs, notes on how to read a number) are written by this code.
+FREE_TEXT_KEYS = frozenset({"analyst_notes", "summary"})
+
+
+def screen(obj, path: str = "") -> tuple[object, list[dict]]:
+    """Guard every free-text field in a tool result, as the alert text is guarded.
+
+    Returns the result with hostile segments removed and a record of each one (where it was found and
+    what it said), so a note planted in the case history reaches neither the model nor the answer.
+    """
+    findings: list[dict] = []
+    if isinstance(obj, dict):
+        out = {}
+        for k, v in obj.items():
+            if k in FREE_TEXT_KEYS and isinstance(v, str):
+                g = guard(v)
+                out[k] = g.text if g.hostile else v
+                findings += [{"at": f"{path}.{k}".lstrip("."), "kind": f.kind, "text": f.text} for f in g.findings]
+            else:
+                out[k], found = screen(v, f"{path}.{k}")
+                findings += found
+        return out, findings
+    if isinstance(obj, list):
+        out_list = []
+        for n, v in enumerate(obj):
+            item, found = screen(v, f"{path}[{n}]")
+            out_list.append(item)
+            findings += found
+        return out_list, findings
+    return obj, findings
