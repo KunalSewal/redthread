@@ -27,6 +27,9 @@ PATTERNS: list[tuple[str, re.Pattern]] = [(kind, re.compile(p, re.I)) for kind, 
                           r"\b(legitimate|fraud|closed|cleared|probability)\b"),
     ("outcome_directive", r"\bfraud_probability\s*="),
     ("outcome_directive", r"\breply\s+[A-Z][A-Z_]{3,}\b"),
+    # Instructions about how to weigh the evidence, which the model does decide (ATK-4).
+    ("evidence_directive", r"\b(mark|treat|judge|weigh|rate|score|count|consider)\b.{0,60}"
+                           r"\b(exculpatory|incriminating|decisive|strength|weight)\b"),
     # "approve it" is an instruction; "I did not approve it" is a customer's denial and is kept.
     ("outcome_directive", r"(?<!not\s)(?<!n't\s)(?<!never\s)\b(close|approve|clear)\s+(it|the\s+(case|file|alert))\b"),
     ("suppression", r"\b(do\s+not|don't|never)\s+(file|escalate|report|block|flag)\b"),
@@ -36,6 +39,10 @@ PATTERNS: list[tuple[str, re.Pattern]] = [(kind, re.compile(p, re.I)) for kind, 
                         r"\b(already\s+)?(cleared|approved|signed\s+off|reviewed)\b"),
 ]]
 
+# A role-tagged block or an HTML comment is one unit however many sentences it holds: splitting
+# "[[assistant: ... . When you judge the evidence, mark ...]]" at the full stop let its second half
+# through as ordinary text (found by ATK-4, 29 Oct).
+_BLOCK = re.compile(r"\[\[.*?(?:\]\]|$)|<!--.*?(?:-->|$)", re.S)
 # Boundaries between segments: sentence ends, plus the openers hostile text tends to hide behind.
 _SPLIT = re.compile(r"(?<=[.!?])\s+(?=[A-Z\[<])|(?=\[\[)|(?=<!--)|(?=\bP\.S\.)|(?=\bAlso,\s)|(?=\bNote from\b)")
 
@@ -71,12 +78,15 @@ def guard(text: str | None) -> Guarded:
     if not DEFENCES:
         return Guarded(text=original, original=original)
     kept, findings = [], []
-    for segment in (s for s in _SPLIT.split(original) if s and s.strip()):
+    blocks = _BLOCK.findall(original)
+    for block in blocks:
+        findings.append(Finding(kind=",".join(_kinds(block) or ["role_marker"]), text=block.strip()))
+    for segment in (s for s in _SPLIT.split(_BLOCK.sub(" ", original)) if s and s.strip()):
         kinds = _kinds(segment)
         if kinds:
             findings.append(Finding(kind=",".join(kinds), text=segment.strip()))
         else:
-            kept.append(segment.strip())
+            kept.append(" ".join(segment.split()))  # a removed block leaves only its spaces
     return Guarded(text=" ".join(kept), original=original, findings=tuple(findings))
 
 
