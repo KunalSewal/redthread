@@ -156,6 +156,7 @@ export const api = {
   replay: (id: string) => fetch(`/api/cases/${id}/replay`).then(json<Replay>),
   monitoring: () => fetch('/api/monitoring').then(json<Monitoring>),
   rings: () => fetch('/api/rings').then(json<Rings>),
+  containment: () => fetch('/api/containment').then(json<Containment>),
   evaluation: () => fetch('/api/evaluation').then(json<Evaluation>),
   policy: () => fetch('/api/policy').then(json<{ chunks: PolicyChunk[]; by_source: Record<string, number> }>),
   investigate: (id: string) => fetch(`/api/cases/${id}/investigate`, { method: 'POST' }).then(json<{ started: string }>),
@@ -183,3 +184,16 @@ export interface Replay {
   quarantined: { kind: string; text: string; at?: string }[]
   final: { verdict: string; probability: number; pattern: string } | null
 }
+
+export interface PlanAction { kind: string; target: string; cuts_usd: number; touches: string[] }
+export interface PlanSummary {
+  actions: PlanAction[]; exposure_total_usd: number; exposure_cut_usd: number; exposure_left_usd: number
+  customers_touched: string[]; expected_cut_usd: number; expected_legitimate_customers_touched: number
+  penalty_usd_per_customer: number; net_expected_usd: number; method: string
+}
+export interface ContainmentPlan {
+  ring: string; shared: string[]; cards: string[]; established?: string[]; found_in: string; transactions: number
+  plan: PlanSummary; block_every_card: PlanSummary; monitor: string[]
+  other_people_on_blocked_cards: Record<string, number>
+}
+export interface Containment { planned_as_of: string; penalty_usd_per_person: number; plans: ContainmentPlan[] }

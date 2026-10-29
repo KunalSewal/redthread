@@ -7,7 +7,7 @@
  */
 import { useEffect, useState } from 'react'
 import { api } from '../api'
-import type { Ring, Rings as RingsData } from '../api'
+import type { Containment, ContainmentPlan, Ring, Rings as RingsData } from '../api'
 import { Link, useRouter } from '../router'
 
 function RingDetail({ ring }: { ring: Ring }) {
@@ -51,6 +51,49 @@ function RingDetail({ ring }: { ring: Ring }) {
   )
 }
 
+const usd = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
+
+function PlanRow({ p }: { p: ContainmentPlan }) {
+  const blocks = p.plan.actions.map((a) => (a.kind === 'card' ? a.target : `${a.kind} ${a.target.split(':').slice(1).join(':')}`))
+  const sharing = Object.values(p.other_people_on_blocked_cards).reduce((a, b) => a + b, 0)
+  return (
+    <tr>
+      <td>{p.ring}{p.found_in && <> (found in <Link to={`/case/${p.found_in}`}>{p.found_in}</Link>)</>}</td>
+      <td className="col-num num">{usd(p.plan.exposure_cut_usd)} of {usd(p.plan.exposure_total_usd)}</td>
+      <td>{blocks.join(', ') || 'nothing worth its cost'}</td>
+      <td>{p.plan.customers_touched.join(', ') || 'none'}{sharing ? <span className="hint">; {sharing} other people also use these cards</span> : null}</td>
+      <td className="num">{p.monitor.length ? `${p.monitor.length} card(s)` : '—'}</td>
+      <td className="col-num num">{usd(p.block_every_card.exposure_cut_usd)}, {p.block_every_card.customers_touched.length} customer(s)</td>
+    </tr>
+  )
+}
+
+function ContainmentPanel() {
+  const [data, setData] = useState<Containment | null>(null)
+  const [error, setError] = useState('')
+  useEffect(() => { api.containment().then(setData).catch((e: Error) => setError(e.message)) }, [])
+  if (error) return <p className="hint">{error}</p>
+  if (!data) return null
+  const live = data.plans.filter((p) => p.plan.exposure_total_usd > 0)
+  return (
+    <section aria-labelledby="containment-title" className="communities">
+      <h3 id="containment-title">How to contain it</h3>
+      <p className="prose">
+        For each ring and January scheme, the blocks with the best expected value as of {data.planned_as_of.slice(0, 10)}:
+        exposure weighted by how likely each card is compromised, against {usd(data.penalty_usd_per_person)} for
+        every legitimate customer an action may touch. Cards that do not pay for that are monitored instead.
+      </p>
+      <table className="digest-table">
+        <thead>
+          <tr><th>Ring or scheme</th><th className="col-num">Exposure cut</th><th>Block</th><th>Customers touched</th>
+            <th>Monitor</th><th className="col-num">Blocking every card</th></tr>
+        </thead>
+        <tbody>{live.map((p) => <PlanRow key={p.ring} p={p} />)}</tbody>
+      </table>
+    </section>
+  )
+}
+
 export function Rings({ ringId }: { ringId?: string }) {
   const { navigate } = useRouter()
   const [data, setData] = useState<RingsData | null>(null)
@@ -69,9 +112,9 @@ export function Rings({ ringId }: { ringId?: string }) {
       <header className="page-head">
         <h2 id="rings-title">Rings and communities</h2>
         <p className="prose">
-          Connected components over suspicious, new-to-account device use in the July&ndash;October
-          history found <strong className="num">{data.rings.length}</strong> tight rings &mdash; built from
-          that history alone, so no November or December alert leans on a ring that formed after it.
+          Connected components over suspicious, new-to-account device use found{' '}
+          <strong className="num">{data.rings.length}</strong> tight rings &mdash; built only from activity
+          before the first alert being judged, so no alert leans on a ring that formed after it.
           Louvain over the whole
           card-device graph sorted <strong className="num">{data.communities_total?.toLocaleString()}</strong>{' '}
           communities, of which <strong className="num">{data.communities_ranked}</strong> hold five cards
@@ -101,6 +144,8 @@ export function Rings({ ringId }: { ringId?: string }) {
 
         <div className="ring-main">
           {selected ? <RingDetail ring={selected} /> : <p className="empty">Choose a ring.</p>}
+
+          <ContainmentPanel />
 
           <section aria-labelledby="communities-title" className="communities">
             <h3 id="communities-title">Communities with the most known-bad cards</h3>

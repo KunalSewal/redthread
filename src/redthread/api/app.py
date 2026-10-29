@@ -312,6 +312,15 @@ def ring(ring_id: int) -> dict:
     return found
 
 
+@app.get("/api/containment")
+def containment() -> dict:
+    """Containment plans for every ring and January scheme (scripts/containment.py)."""
+    data = _read(paths.PROCESSED / "containment.json")
+    if not data:
+        raise HTTPException(503, "run scripts/containment.py to build the containment plans")
+    return data
+
+
 @app.get("/api/evaluation")
 def evaluation() -> dict:
     """Everything measured about this agent, including where it fails."""
