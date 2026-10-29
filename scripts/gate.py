@@ -66,6 +66,26 @@ def official_grader(pack: Path, answers: Path, transactions: Path | None) -> dic
             "policy": team["policy"], "clean": team["clean"], "findings": [[c, *f] for c, f in findings]}
 
 
+def installed_queries() -> dict:
+    """Every query in gsql/03_queries.gsql is installed on the live graph. A query written but never
+    installed fails here, not halfway through an investigation (recipient_cards, 29 Oct)."""
+    import re
+
+    from redthread.tg import connection
+
+    wanted = set(re.findall(r"CREATE OR REPLACE QUERY (\w+)", (ROOT / "gsql" / "03_queries.gsql").read_text()))
+    try:
+        installed = {k.split("/")[-1] for k in connection().getEndpoints(dynamic=True)}
+    except Exception as exc:  # the graph is unreachable: say so, never pass
+        print(f"FAIL  {'installed queries':34}        graph unreachable: {str(exc)[:80]}")
+        return {"check": "installed queries", "ok": False, "error": str(exc)[:300]}
+    missing = sorted(wanted - installed)
+    ok = not missing
+    print(f"{'PASS' if ok else 'FAIL'}  {'installed queries':34}        {len(wanted) - len(missing)}/{len(wanted)} "
+          f"installed{'; missing ' + ', '.join(missing) if missing else ''}")
+    return {"check": "installed queries", "ok": ok, "missing": missing}
+
+
 def round1_accuracy() -> dict:
     """Our Round 1 answers against the outcomes the final round published as CC-5566..5585."""
     closed = pd.read_csv(R2 / "closed_cases_history.csv")
@@ -102,6 +122,7 @@ def main() -> int:
         run("schema and dataset validation", [PY, "-m", "redthread.validate", "cases"]),
         run("policy and point-in-time audit", [PY, "scripts/check_policy.py", "cases"]),
         official_grader(pack, ROOT / "cases", None if args.quick else R2 / "transactions_2017q1.csv"),
+        installed_queries(),
         round1_accuracy(),
     ]
     (ROOT / "runs").mkdir(exist_ok=True)

@@ -65,6 +65,7 @@ def _cleared_anchor(case, by_card: dict) -> str:
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
+    logging.getLogger("pyTigerGraph").setLevel(logging.ERROR)
     parser = argparse.ArgumentParser()
     parser.add_argument("--limit", type=int, default=0)
     args = parser.parse_args()

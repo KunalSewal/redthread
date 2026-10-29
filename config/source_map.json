@@ -1,0 +1,53 @@
+{
+ "approved": {
+  "approver": "Kunal Sewal",
+  "role": "L2",
+  "at": "2026-10-29T07:46:27Z",
+  "note": "Reviewed the three breaks",
+  "hash": "ac289804545900fef882a1d343bf6b598dc3ee1fb5068e0bf12530119fa6ba85"
+ },
+ "proposal_sha256": "8731b0edfdb2745635af067b1393d42f21c35c0c75ded664ac2a627b423a3be5",
+ "breaks_acknowledged": [
+  "the new file's calendar months are [1]: any rule of the form 'month <= 10 is labelled history' would treat January as labelled (and every January transaction as not fraud). Months must be counted continuously (redthread.data.sources.month_index: Jan 2017 = 13)",
+  "the closed-case history is replaced, not appended: 20 new cases (CC-5566..CC-5585) are earlier benchmark reviews with known outcomes; calibration, priors and similar-case retrieval must read the new file, and the graph's ClosedCase vertices must be reloaded",
+  "D1 no longer continues across the file boundary: 7% of January transactions resolve to an earlier holder against 43% for December. Holder baselines for January alerts are thin; judge 'new for this card' at card level (redthread.schemes)"
+ ],
+ "map": {
+  "transactions": [
+   "data/transactions.csv",
+   "data/round2/transactions_2017q1.csv"
+  ],
+  "identity": [
+   "data/identity.csv",
+   "data/round2/identity_2017q1.csv"
+  ],
+  "closed_cases": "data/round2/closed_cases_history.csv",
+  "case_pack": "data/round2/cases/case_pack_final.csv"
+ },
+ "fingerprints": {
+  "data/transactions.csv": {
+   "bytes": 707936515,
+   "head_sha256": "28f6479c4d6f80ce10824de839970b801f239fd683218e0adeb3ff72725e8066"
+  },
+  "data/round2/transactions_2017q1.csv": {
+   "bytes": 70087600,
+   "head_sha256": "102d34fa6b4861c788805e0266fa1aaaba10f5d819f0169ac6f68d90a235adeb"
+  },
+  "data/identity.csv": {
+   "bytes": 26716154,
+   "head_sha256": "53d772c5fb00c32e12136bf01c43c367019f00aaa4ce2565018150939eddee0e"
+  },
+  "data/round2/identity_2017q1.csv": {
+   "bytes": 2981977,
+   "head_sha256": "5ce5115e85509584e2fd2beed1b7011098bdb9a3b04ccd1b49d0fd3a816b6329"
+  },
+  "data/round2/closed_cases_history.csv": {
+   "bytes": 2714120,
+   "head_sha256": "8efdf87791663f6d3c4a0a19cc9a17e7be92ad1733a8eeeebbbb74c3c046ad60"
+  },
+  "data/round2/cases/case_pack_final.csv": {
+   "bytes": 3735,
+   "head_sha256": "d2cd238d99bd69f53f585637787ca123ff910719ca0ec1c9789dee09161f8f11"
+  }
+ }
+}
