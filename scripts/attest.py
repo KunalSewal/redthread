@@ -75,6 +75,24 @@ def attest(answer: dict, trace: dict) -> list[dict]:
     return claims
 
 
+SENTENCE = re.compile(r"(?<=[.!?])\s+(?=[A-Z0-9])")
+ID_IN_TEXT = re.compile(r"\b(\d{7}|C\d{5}-K\d|C\d{5}|CC-\d{4})\b")
+
+
+def sar_sentences(answer: dict, claims: list[dict]) -> list[dict]:
+    """Challenge 4: every sentence of a filed report linked to attested IDs. A sentence that names no
+    ID is listed as unsupported rather than passed over."""
+    narrative = answer["sar"]["narrative"] if answer["sar"]["file"] else ""
+    attested = {i for c in claims if c["attested"] for kind in c["evidence"].values() for i in kind}
+    out = []
+    for sentence in (s for s in SENTENCE.split(narrative) if s.strip()):
+        ids = sorted(set(ID_IN_TEXT.findall(sentence)))
+        out.append({"sentence": sentence.strip(), "ids": ids,
+                    "supported": bool(ids) and all(i in attested for i in ids),
+                    "unattested_ids": [i for i in ids if i not in attested]})
+    return out
+
+
 def verify(conn, claim: dict) -> dict:
     """Re-run the claim's queries; every transaction and card it names must come back somewhere."""
     wanted = set(claim["evidence"]["transactions"]) | set(claim["evidence"]["cards"])
@@ -105,8 +123,9 @@ def main() -> None:
         if args.verify:
             for cl in claims:
                 cl["reverified"] = verify(conn, cl)
+        sar = sar_sentences(answer, claims)
         doc = {"case_id": path.stem, "attested_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
-               "data": versions, "claims": claims}
+               "data": versions, "claims": claims, "sar_sentences": sar}
         (OUT / f"{path.stem}.json").write_text(json.dumps(doc, indent=1), encoding="utf-8")
         n_ok = sum(c["attested"] for c in claims)
         ver = [c.get("reverified", {}).get("verified") for c in claims]
@@ -114,7 +133,11 @@ def main() -> None:
         totals["attested"] += n_ok
         totals["verified"] += sum(v is True for v in ver)
         totals["mismatched"] += sum(v is False for v in ver)
+        if sar:
+            totals["sar_sentences"] = totals.get("sar_sentences", 0) + len(sar)
+            totals["sar_supported"] = totals.get("sar_supported", 0) + sum(x["supported"] for x in sar)
         print(f"{path.stem}: {n_ok}/{len(claims)} attested"
+              + (f", report {sum(x['supported'] for x in sar)}/{len(sar)} sentences supported" if sar else "")
               + (f", {sum(v is True for v in ver)} re-verified, {sum(v is False for v in ver)} mismatched"
                  if args.verify else ""))
     print(totals)
