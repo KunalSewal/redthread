@@ -7,9 +7,10 @@ follow, and both are answered from GSQL results here, deterministically:
 
 1. **Is the flagged charge part of a run the card has never made?** ``new_kind_run`` returns the
    card's transactions in the 30 days up to the alert whose kind (product and channel) was under 5%
-   of its activity in the 60 days before. Measured on Round 1's 20 known outcomes: every alert in such
-   a run of two or more was confirmed fraud (3 of 3), and every alert that was a single new-kind
-   charge was cleared (3 of 3). A run of one is therefore not a finding.
+   of its activity in the 60 days before. On Round 1's 20 known outcomes every alert in such a run of
+   two or more was confirmed fraud (3 of 3) and every single new-kind charge was cleared (3 of 3); on
+   the bank's own closed cases the rule does not separate fraud from cleared alerts at all (3.4% and
+   3.8%). It is moderate evidence (run_strength), and a run of one is not a finding.
 2. **Are other customers doing the same thing at the same moment?** ``scheme_peers`` counts cards that
    newly show the run's signature in the alert's window, and in the same window one and two months
    earlier. Small online probes appeared on 20 cards in January against 3 to 7 a month before; large
@@ -83,10 +84,16 @@ def signature(run: list[dict]) -> Signature | None:
 
 
 def run_strength(run: list[dict]) -> str | None:
-    """Three or more charges the card never made is strong; two is moderate; one is nothing."""
-    if len(run) >= 3:
-        return "strong"
-    return "moderate" if len(run) == 2 else None
+    """A run of two or more charges the card never made is moderate evidence; one is nothing.
+
+    Measured two ways (scripts/backtest_detectors.py, data/processed/detector_backtest.json). On the
+    review queue this pack is drawn from (Round 1's 20), runs were on 3 of 10 frauds and 0 of 10
+    cleared alerts: likelihood ratio (3+1)/(10+2) over (0+1)/(10+2) = 4, between moderate and strong.
+    On the bank's own 5,585 closed cases, a population drawn differently, the rule fired on 3.4% of
+    confirmed frauds and 3.8% of cleared alerts: no evidence at all. So a run is moderate, never strong,
+    and what makes it a scheme is the same behaviour starting on other customers' cards (peer_strength).
+    """
+    return "moderate" if len(run) >= 2 else None
 
 
 def peer_strength(now: int, earlier: list[int]) -> str | None:

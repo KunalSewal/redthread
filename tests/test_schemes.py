@@ -34,7 +34,7 @@ def test_signature_bands_amounts_and_keeps_rare_conditions():
 
 
 def test_strengths():
-    assert schemes.run_strength(PROBES) == "strong"
+    assert schemes.run_strength(PROBES) == "moderate"  # measured: never strong on its own
     assert schemes.run_strength(PROBES[:2]) == "moderate"
     assert schemes.run_strength(PROBES[:1]) is None
     assert schemes.peer_strength(20, [8, 4]) == "strong"  # HHF-004's probes: 20 cards against 8 and 4
