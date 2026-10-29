@@ -43,3 +43,13 @@ def test_greedy_is_used_for_large_rings_and_still_attributes_every_dollar():
     chosen = {a.target for a in best.actions}
     assert {f"C{i}" for i in range(0, 20, 2)} <= chosen  # untouched cards always pay
     assert sum(best.as_dict()["actions"][k]["cuts_usd"] for k in range(len(best.actions))) == best.exposure_cut
+
+
+def test_a_suspected_card_is_blocked_only_when_its_expected_loss_beats_the_expected_harm():
+    # Two peer cards seen doing the ring's thing, each a coin flip: block the big one, monitor the small.
+    items = [Item("t1", "P1", 2000.0, p_fraud=0.5), Item("t2", "P2", 100.0, p_fraud=0.5)]
+    cands = [Action("card", "P1", frozenset({"P1"}), p_legit=0.5), Action("card", "P2", frozenset({"P2"}), p_legit=0.5)]
+    best = plan(items, cands, penalty_usd=250)
+    assert [a.target for a in best.actions] == ["P1"]
+    assert best.as_dict()["expected_cut_usd"] == 1000.0
+    assert best.as_dict()["expected_legitimate_customers_touched"] == 0.5
