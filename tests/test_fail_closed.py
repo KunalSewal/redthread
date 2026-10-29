@@ -158,3 +158,26 @@ def test_after_two_timeouts_the_model_thinks_less_and_says_so(monkeypatch):
     assert resp.text == "ok"
     assert levels == ["high", "high", "low"]
     assert model.degraded and "after 2 timeout(s)" in model.degraded[0]
+
+
+def test_the_same_call_twice_gets_the_same_answer_and_a_changed_one_does_not(monkeypatch, tmp_path):
+    """Reproducibility: an investigation rerun on an unchanged graph must not drift (same-case drill)."""
+    from google.genai import types
+
+    monkeypatch.setattr(llm_module, "REPLAY_DIR", tmp_path)
+    calls = []
+
+    async def answer(model, contents, config):
+        calls.append(contents[0].parts[0].text)
+        return types.GenerateContentResponse(candidates=[types.Candidate(content=types.Content(
+            role="model", parts=[types.Part.from_text(text=f"answer {len(calls)}")]))])
+
+    model = Llm.__new__(Llm)
+    model.tokens, model.degraded, model.reused, model.replay = 0, [], [], True
+    model.client = SimpleNamespace(aio=SimpleNamespace(models=SimpleNamespace(generate_content=answer)))
+    ask = [types.Content(role="user", parts=[types.Part.from_text(text="the same evidence")])]
+    first = asyncio.run(model.generate(ask, system="s"))
+    second = asyncio.run(model.generate(ask, system="s"))
+    assert first.text == second.text == "answer 1" and len(calls) == 1 and len(model.reused) == 1
+    changed = [types.Content(role="user", parts=[types.Part.from_text(text="new evidence")])]
+    assert asyncio.run(model.generate(changed, system="s")).text == "answer 2"

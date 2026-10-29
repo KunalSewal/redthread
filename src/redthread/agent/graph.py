@@ -130,13 +130,15 @@ class Investigation:
         raise InvestigationHalted(stage, reason, state.get("events", []))
 
     async def _generate(self, state: CaseState, stage: str, contents, **kwargs):
-        before = len(getattr(self.llm, "degraded", []))
+        before, reused = len(getattr(self.llm, "degraded", [])), len(getattr(self.llm, "reused", []))
         try:
             resp = await self.llm.generate(contents, system=prompts.INVESTIGATOR, **kwargs)
         except ModelError as exc:
             self._halt(state, stage, str(exc))
         for note in getattr(self.llm, "degraded", [])[before:]:
             self._event(state, "model_degraded", f"{stage}: {note}")
+        for key in getattr(self.llm, "reused", [])[reused:]:
+            self._event(state, "model_reused", f"{stage}: same inputs as an earlier call ({key}); its answer reused")
         return resp
 
     async def _structured(self, state: CaseState, stage: str, prompt: str, schema, temperature: float):

@@ -1,13 +1,16 @@
 """Gemini client with retries and per-case token accounting."""
 
 import asyncio
+import hashlib
+import json
 import logging
+import os
 import random
 
 from google import genai
 from google.genai import errors, types
 
-from redthread import config
+from redthread import config, paths
 
 log = logging.getLogger(__name__)
 RETRYABLE = (429, 500, 502, 503, 504)
@@ -18,6 +21,13 @@ CALL_TIMEOUT_S = 240  # one model call; thinking=high can take a while, but neve
 # the case's events: a cheaper answer is acceptable, an undisclosed one is not.
 STEP_DOWN_AFTER_TIMEOUTS = 2
 STEP_DOWN_LEVEL = "low"
+# Same inputs, same answer. Every model response is stored under a hash of everything that went into
+# the call (model, system prompt, contents, tools, schema, temperature, thinking level). An identical
+# call later reuses it, so an investigation run twice on an unchanged graph gives the same judgements
+# and the same answer; any change in the evidence changes the hash and gets a fresh call. Two runs of
+# one alert without this differed by 0.09 in probability (the same-case drill, 29 Oct). Each reuse is
+# recorded in the case's events. REDTHREAD_LLM_REPLAY=off turns it off.
+REPLAY_DIR = paths.ROOT / "runs" / "llm_replay"
 
 
 class ModelError(RuntimeError):
@@ -29,6 +39,8 @@ class Llm:
         self.client = genai.Client()
         self.tokens = 0
         self.degraded: list[str] = []  # calls answered at a lower thinking level, for the audit trail
+        self.reused: list[str] = []  # calls answered from an identical earlier call, for the audit trail
+        self.replay = os.environ.get("REDTHREAD_LLM_REPLAY", "on") != "off"
 
     async def generate(self, contents: list[types.Content], *, system: str, model: str | None = None,
                        tools: list[types.Tool] | None = None, response_schema: dict | None = None,
@@ -44,6 +56,17 @@ class Llm:
                 response_json_schema=response_schema,
             )
 
+        key = hashlib.sha256(json.dumps({
+            "model": model or config.REASONING_MODEL, "system": system, "temperature": temperature,
+            "thinking": config.THINKING_LEVEL, "schema": response_schema,
+            "contents": [c.model_dump(mode="json", exclude_none=True) for c in contents],
+            "tools": [t.model_dump(mode="json", exclude_none=True) for t in tools or []],
+        }, sort_keys=True, default=str).encode()).hexdigest()
+        stored = REPLAY_DIR / f"{key}.json"
+        if getattr(self, "replay", False) and stored.exists():
+            self.reused.append(key[:12])
+            return types.GenerateContentResponse.model_validate_json(stored.read_text(encoding="utf-8"))
+
         level, timeouts = config.THINKING_LEVEL, 0
         for attempt in range(1, attempts + 1):
             try:
@@ -55,6 +78,9 @@ class Llm:
                 if level != config.THINKING_LEVEL:
                     self.degraded.append(f"answered at thinking level {level!r} after {timeouts} timeout(s) at "
                                          f"{config.THINKING_LEVEL!r}")
+                elif getattr(self, "replay", False):  # a stepped-down answer is never stored as the answer
+                    REPLAY_DIR.mkdir(parents=True, exist_ok=True)
+                    stored.write_text(resp.model_dump_json(exclude_none=True), encoding="utf-8")
                 return resp
             except TimeoutError:
                 why = f"no response within {CALL_TIMEOUT_S}s"
