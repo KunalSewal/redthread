@@ -119,4 +119,4 @@ def validate_dir(cases_dir: Path) -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(validate_dir(Path(sys.argv[1]) if len(sys.argv) > 1 else paths.CASES_OUT))
+    sys.exit(validate_dir(Path(sys.argv[1]) if len(sys.argv) > 1 else sources.answers_dir()))

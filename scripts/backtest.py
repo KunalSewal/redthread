@@ -41,8 +41,7 @@ def build_alerts(n: int, month: int, seed: int) -> list[dict]:
     fraud = cases[cases["outcome"] == "confirmed_fraud"]
     cleared = cases[cases["outcome"] == "cleared"]
     picked = pd.concat([fraud.sample(n // 2, random_state=seed), cleared.sample(n - n // 2, random_state=seed)])
-    scores = (pd.read_parquet(paths.PROCESSED / "_all.parquet", columns=["tx_id", "risk_score"])
-              .set_index("tx_id")["risk_score"])
+    scores = sources.processed_transactions(["risk_score"]).astype({"tx_id": int}).set_index("tx_id")["risk_score"]
     rng = random.Random(seed)
     alerts = []
     for c in picked.sort_values("opened_at").itertuples():

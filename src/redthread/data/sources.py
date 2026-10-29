@@ -37,10 +37,34 @@ def closed_cases_csv() -> Path:
     return replacement if replacement.exists() else paths.DATA / "closed_cases_history.csv"
 
 
+def answers_dir() -> Path:
+    """Where this round's answer files live: cases/ for the final round (the submission), and
+    cases_round1/ for Round 1's twenty, kept as they were submitted."""
+    return paths.ROOT / ("cases_round1" if os.environ.get(ROUND_ENV, "final") == "r1" else "cases")
+
+
 def case_pack_csv() -> Path:
     if os.environ.get(ROUND_ENV, "final") == "r1":
         return paths.DATA / "case_pack.csv"
     return paths.DATA_R2 / "cases" / "case_pack_final.csv"
+
+
+def reviewed_alerts() -> pd.DataFrame:
+    """Earlier benchmark reviews that are now closed cases, with the trigger that raised each one.
+
+    The final round's history closes Round 1's HHG cases as ordinary CC records ("Case HHG-003 from
+    the November-December review. ..."); Round 1's pack says what triggered each. Together they are
+    the outcomes of alerts drawn the way this pack's alerts are drawn. Columns: review_id, trigger_type,
+    opened_at, outcome.
+    """
+    cases = pd.read_csv(closed_cases_csv(), usecols=["opened_at", "outcome", "analyst_notes"])
+    cases["review_id"] = cases["analyst_notes"].str.extract(r"^Case (HHG-\d+) from the ", expand=False)
+    cases = cases.dropna(subset=["review_id"])
+    pack = paths.DATA / "case_pack.csv"
+    if cases.empty or not pack.exists():
+        return pd.DataFrame(columns=["review_id", "trigger_type", "opened_at", "outcome"])
+    triggers = pd.read_csv(pack, usecols=["case_id", "trigger_type"]).rename(columns={"case_id": "review_id"})
+    return cases.merge(triggers, on="review_id")[["review_id", "trigger_type", "opened_at", "outcome"]]
 
 
 def _concat(files: list[Path], **kwargs) -> pd.DataFrame:
@@ -55,6 +79,19 @@ def read_transactions(**kwargs) -> pd.DataFrame:
 
 def read_identity(**kwargs) -> pd.DataFrame:
     return _concat(identity_files(), **kwargs)
+
+
+def processed_transactions(columns: list[str]) -> pd.DataFrame:
+    """Prepared transactions of both rounds (data/processed/transactions_*.csv, from prepare_data),
+    with tx_id as a string. These carry the derived card_id and holder_id. The old _all.parquet
+    snapshot stops at December 2016 and must not be read: a January transaction is simply absent
+    from it, so a check that looks one up passes without checking anything."""
+    files = sorted(paths.PROCESSED.glob("transactions_*.csv"))
+    if not files:
+        raise FileNotFoundError("no data/processed/transactions_*.csv: run scripts/prepare_data.py")
+    cols = list(dict.fromkeys(["tx_id", *columns]))
+    return pd.concat([pd.read_csv(f, usecols=cols, dtype={"tx_id": str}, low_memory=False) for f in files],
+                     ignore_index=True)
 
 
 def month_index(ts: pd.Series) -> pd.Series:

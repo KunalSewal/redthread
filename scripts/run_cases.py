@@ -42,7 +42,7 @@ def load_alerts(ids: list[str]) -> list[dict]:
 async def main(ids: list[str]) -> int:
     # Rings as of the first benchmark alert, so no case sees a ring that formed after it.
     rings.ensure(rings.benchmark_cutoff())
-    paths.CASES_OUT.mkdir(exist_ok=True)
+    sources.answers_dir().mkdir(exist_ok=True)
     TRACES.mkdir(exist_ok=True)
     failures = 0
     async with McpGraph() as graph:
@@ -63,7 +63,7 @@ async def main(ids: list[str]) -> int:
                 log.exception("case %s failed", alert["case_id"])
                 failures += 1
                 continue
-            answer = persist(state, paths.CASES_OUT, TRACES)
+            answer = persist(state, sources.answers_dir(), TRACES)
             c = answer["case"]
             log.info("%s done in %.0fs: %s p=%.2f %s exposure $%.2f | final: %s | sar=%s | calls=%d tokens=%d",
                      alert["case_id"], time.time() - start, c["verdict"], c["fraud_probability"], c["pattern"],

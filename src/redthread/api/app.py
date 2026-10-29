@@ -68,7 +68,7 @@ def _alerts() -> list[dict]:
 
 def _answer_for(case_id: str) -> dict | None:
     """An answer file, wherever it lives: graded cases first, then self-raised ones."""
-    return (_read(paths.CASES_OUT / f"{case_id}.json")
+    return (_read(sources.answers_dir() / f"{case_id}.json")
             or _read(EXTRA / f"{case_id}.json"))
 
 
@@ -206,7 +206,7 @@ async def _run(alert: dict, queue: asyncio.Queue) -> None:
             state = await investigate_alert(graph, alert, on_event=queue.put_nowait, as_of=alert["opened_at"])
         # A self-raised alert's answer belongs with the others in cases_extra/; cases/ holds exactly the
         # twenty graded files.
-        folder = paths.CASES_OUT if alert.get("source", "bank_queue") == "bank_queue" else EXTRA
+        folder = sources.answers_dir() if alert.get("source", "bank_queue") == "bank_queue" else EXTRA
         persist(state, folder, RUNS)
         await queue.put({"kind": "done", "case_id": case_id})
     except InvestigationHalted as exc:  # fail closed: say what failed; the previous answer stays as it was

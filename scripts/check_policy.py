@@ -117,15 +117,18 @@ def check(answer: dict, alert: dict, trace: dict, tx: pd.DataFrame) -> list[tupl
         if not all(re.fullmatch(r"\d{4}-\d{2}-\d{2}", d) for d in sar["activity_dates"]) \
                 or len(sar["activity_dates"]) != 2:
             err(f"SAR activity_dates must be two YYYY-MM-DD dates: {sar['activity_dates']}")
+    unknown = [t for t in c["affected_txn_ids"] if t not in tx.index]
+    if unknown:  # never skip a check because a transaction could not be found
+        err(f"{len(unknown)} affected transaction(s) are not in the dataset: {unknown[:8]}")
     if c["affected_txn_ids"] and c["first_suspicious_txn_id"]:
-        ts = tx.reindex([int(t) for t in c["affected_txn_ids"]])["ts"].dropna()
+        ts = tx.reindex([t for t in c["affected_txn_ids"] if t in tx.index])["ts"]
         if len(ts) and str(ts.idxmin()) != c["first_suspicious_txn_id"]:
             err(f"first_suspicious_txn_id {c['first_suspicious_txn_id']} is not the earliest affected "
                 f"transaction ({ts.idxmin()})")
 
     # Point in time: nothing after the alert.
     opened = pd.Timestamp(alert["opened_at"])
-    late = [t for t in c["affected_txn_ids"] if int(t) in tx.index and tx.loc[int(t), "ts"] > opened]
+    late = [t for t in c["affected_txn_ids"] if t in tx.index and tx.loc[t, "ts"] > opened]
     if late:
         err(f"point in time: {len(late)} affected transaction(s) postdate the alert: {late}")
     return out
@@ -143,7 +146,7 @@ def main() -> int:
     extra = folder / "alerts.json"
     if extra.exists():
         alerts.update({a["case_id"]: a for a in json.loads(extra.read_text(encoding="utf-8"))})
-    tx = pd.read_parquet(paths.PROCESSED / "_all.parquet", columns=["tx_id", "ts"]).set_index("tx_id")
+    tx = sources.processed_transactions(["ts"]).set_index("tx_id")
     tx["ts"] = pd.to_datetime(tx["ts"])
 
     errors = warnings = 0

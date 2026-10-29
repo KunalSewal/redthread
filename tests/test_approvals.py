@@ -13,7 +13,7 @@ from redthread.api import auth
 from redthread.api.ledger import Ledger
 from redthread.data import sources
 
-pytestmark = pytest.mark.skipif(not (sources.paths.ROOT / "cases" / "HHG-019.json").exists(),
+pytestmark = pytest.mark.skipif(not (sources.paths.ROOT / "cases_round1" / "HHG-019.json").exists(),
                                 reason="Round 1 answers not present")
 CASE = "HHG-019"  # BLOCK_CARD routed L1, FILE_REPORT routed L2
 

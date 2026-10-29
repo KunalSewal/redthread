@@ -25,6 +25,7 @@ import sys
 import pandas as pd
 
 from redthread import paths
+from redthread.data import sources
 from redthread.model.calibration import MAX_MONTH_ENV
 
 FRAUD_AT, LEGIT_AT = 0.85, 0.15
@@ -73,8 +74,7 @@ def main() -> None:
 
     alerts = build_alerts(args.n, args.month, args.seed)
     scores = pd.read_csv(paths.PROCESSED / "txn_scores.csv").set_index("tx_id")["model_score"]
-    risk = pd.read_parquet(paths.PROCESSED / "_all.parquet", columns=["tx_id", "risk_score"]) \
-        .set_index("tx_id")["risk_score"]
+    risk = sources.processed_transactions(["risk_score"]).astype({"tx_id": int}).set_index("tx_id")["risk_score"]
 
     bank, model, trigger = [], [], []
     for a in alerts:
