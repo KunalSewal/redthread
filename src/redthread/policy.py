@@ -290,12 +290,13 @@ def _before_response(plan: _Plan, a: Assessment) -> None:
         _denied(plan, a, "R2: customer states they did not make the transaction")
         return
     # R1 / 3b: not enough to act on; ask first.
+    why = (f"R1: probability {a.probability:.2f} below 0.70 on the available signals; verify before any block"
+           if a.probability < R1_THRESHOLD else
+           f"Section 5: probability {a.probability:.2f} is short of the 0.85 needed to stop; verify before any block")
     if request == "step_up_auth" or (a.online and not a.customer_disputed and a.probability < CASE_THRESHOLD):
-        plan.add(Action.STEP_UP_AUTH, f"R1: probability {a.probability:.2f} below 0.70 on the available "
-                                      "signals; verify before any block")
+        plan.add(Action.STEP_UP_AUTH, why)
     else:
-        plan.add(Action.VERIFY_WITH_CUSTOMER, f"R1: probability {a.probability:.2f} below 0.70 on the "
-                                              "available signals; verify before any block")
+        plan.add(Action.VERIFY_WITH_CUSTOMER, why)
     plan.add(Action.CREATE_CASE, "3a: a case is opened whenever evidence is requested"
              + (" or a customer disputes a charge" if a.customer_disputed else ""))
 

@@ -136,3 +136,25 @@ def test_a_result_missing_what_it_must_hold_halts():
     with pytest.raises(InvestigationHalted) as exc:
         asyncio.run(inv._collect(state, "alert_context", no_such_txn()))
     assert "unexpected result" in exc.value.reason
+
+
+def test_after_two_timeouts_the_model_thinks_less_and_says_so(monkeypatch):
+    from redthread import config
+
+    monkeypatch.setattr(llm_module, "CALL_TIMEOUT_S", 0.05)
+    monkeypatch.setattr(config, "THINKING_LEVEL", "high")
+    levels = []
+
+    async def slow_unless_low(model, contents, config):
+        levels.append(str(config.thinking_config.thinking_level).lower().split(".")[-1])  # the SDK may hold an enum
+        if levels[-1] != llm_module.STEP_DOWN_LEVEL:
+            await asyncio.sleep(5)
+        return SimpleNamespace(text="ok", usage_metadata=None)
+
+    model = Llm.__new__(Llm)
+    model.tokens, model.degraded = 0, []
+    model.client = SimpleNamespace(aio=SimpleNamespace(models=SimpleNamespace(generate_content=slow_unless_low)))
+    resp = asyncio.run(model.generate([], system="s", attempts=4))
+    assert resp.text == "ok"
+    assert levels == ["high", "high", "low"]
+    assert model.degraded and "after 2 timeout(s)" in model.degraded[0]

@@ -130,10 +130,14 @@ class Investigation:
         raise InvestigationHalted(stage, reason, state.get("events", []))
 
     async def _generate(self, state: CaseState, stage: str, contents, **kwargs):
+        before = len(getattr(self.llm, "degraded", []))
         try:
-            return await self.llm.generate(contents, system=prompts.INVESTIGATOR, **kwargs)
+            resp = await self.llm.generate(contents, system=prompts.INVESTIGATOR, **kwargs)
         except ModelError as exc:
             self._halt(state, stage, str(exc))
+        for note in getattr(self.llm, "degraded", [])[before:]:
+            self._event(state, "model_degraded", f"{stage}: {note}")
+        return resp
 
     async def _structured(self, state: CaseState, stage: str, prompt: str, schema, temperature: float):
         """A structured answer from the model, validated. One retry on malformed output, then halt:
