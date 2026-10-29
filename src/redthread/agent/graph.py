@@ -13,17 +13,19 @@ import re
 import time
 from collections.abc import Callable
 from dataclasses import asdict
+from datetime import datetime
 from typing import Any, TypedDict
 
 from google.genai import types
 from langgraph.graph import END, StateGraph
 from pydantic import ValidationError
 
+from redthread import schemes
 from redthread.agent import memory, prompts
-from redthread.agent.guard import guard
+from redthread.agent.guard import guard, screen
 from redthread.agent.llm import Llm, ModelError
 from redthread.agent.mcp_graph import GraphToolError, McpGraph
-from redthread.agent.schemas import LlmAssessment, LlmReport, json_schema
+from redthread.agent.schemas import LlmAssessment, LlmEvidence, LlmReport, json_schema
 from redthread.agent.simulator import simulate
 from redthread.agent.tools import Tools
 from redthread.answer import Answer
@@ -107,6 +109,18 @@ class Investigation:
             result = await coro
         except GraphToolError as exc:
             self._halt(state, key, str(exc))
+        except (LookupError, TypeError, ValueError) as exc:
+            # A result missing what it must hold (no such transaction, a reshaped response) is a failure
+            # of the input or the tool layer, never something to reason around.
+            self._halt(state, key, f"unexpected result from the graph: {type(exc).__name__}: {exc}")
+        # Notes and summaries in the case history are written by people too: a planted instruction
+        # there is quarantined exactly as one in the alert text is.
+        result, planted = screen(result)
+        if planted:
+            state.setdefault("quarantine", []).extend({"kind": f["kind"], "text": f["text"], "at": f"{key}.{f['at']}"}
+                                                      for f in planted)
+            self._event(state, "quarantined", f"{len(planted)} segment(s) of free text in {key} addressed the system "
+                                              f"rather than an analyst; set aside")
         state.setdefault("evidence", {})[key] = result
         self._event(state, "evidence", f"{result['ref']}")
         return result
@@ -139,6 +153,10 @@ class Investigation:
         # Alert text is written by people and may be hostile. Only the guarded text goes any further;
         # the original stays on the alert for the audit trail.
         alert = dict(state["alert"])
+        problems = _invalid_alert(alert)
+        if problems:
+            state["case_id"] = f"CASE-{alert.get('case_id', 'unknown')}"
+            self._halt(state, "intake", "invalid alert: " + "; ".join(problems))
         guarded = guard(alert.get("trigger_text"))
         alert["trigger_text_original"], alert["trigger_text"] = guarded.original, guarded.text
         state["alert"] = alert
@@ -175,6 +193,11 @@ class Investigation:
                         f"investigating {actual_card}, the card the transaction was made on")
             a = state["alert"] = {**a, "card_id_reported": a["card_id"], "card_id": actual_card}
         await self._collect(state, "card_activity", t.card_activity(a["card_id"], flagged["ts"], flagged_tx=tx))
+        shift = await self._collect(state, "activity_shift", t.activity_shift(a["card_id"], tx))
+        if shift and shift["run"]:
+            await self._collect(state, "scheme_peers", t.scheme_peers(a["card_id"], shift["run"]))
+        if flagged.get("r_email"):
+            await self._collect(state, "recipient_spike", t.recipient_spike(a["card_id"], flagged["r_email"]))
         if ctx.get("holder"):
             await self._collect(state, "holder_baseline", t.holder_baseline(ctx["holder"]["holder_id"], tx))
         device = ctx.get("device")
@@ -255,7 +278,8 @@ class Investigation:
             state["alert"].get("card_id"), state["alert"].get("customer_id"),
             state["alert"].get("flagged_txn_id"), flagged.get("tx_id"), flagged.get("holder_id"),
             flagged.get("card_id")) if x)
-        return assess(state["alert"]["trigger_type"], flagged.get("model_score"), judged, subject)
+        return assess(state["alert"]["trigger_type"], flagged.get("model_score"), judged, subject,
+                      state["alert"].get("opened_at"))
 
     def _validate(self, state: CaseState, a: LlmAssessment) -> LlmAssessment:
         """Keep only IDs the tools actually returned; make the episode consistent with the verdict."""
@@ -272,11 +296,16 @@ class Investigation:
         if affected and flagged["tx_id"] not in affected:
             affected.insert(0, flagged["tx_id"])
         affected = _with_testing_sequence(affected, state.get("evidence", {}), led)
+        scheme = _scheme(state)
+        # The run is the episode: every charge of the kind the card never made, up to the alert. It is
+        # found by the query, not recalled by the model (HHF-004's model named three of its six).
+        affected += [t for t in scheme["run_ids"] if t not in affected]
         affected.sort(key=lambda t: led.txns[t]["ts"])
         cards = [c for c in keep(a.connected_card_ids, led.cards) if c != state["alert"]["card_id"]]
+        cards += [c for c in scheme["peer_cards"] if c not in cards and c != state["alert"]["card_id"]]
         devices = keep(a.connected_device_ids, led.devices)
         similar = [c for c in keep(a.similar_prior_cases, led.closed_cases) if c.startswith("CC-")]
-        evidence = []
+        evidence = list(scheme["evidence"])
         for ev in a.evidence:
             if ev.ref not in led.refs and not ev.ref.startswith(("trigger:", "evidence_request:")):
                 dropped.append(f"ref {ev.ref}")
@@ -290,16 +319,23 @@ class Investigation:
             self._event(state, "validation", f"Discarded unsupported IDs/refs from the assessment: {dropped[:12]}")
         # The pattern follows from the episode (channel mix, device newness, region, R5 sequence), so it is
         # derived here: 96% agreement with analysts across 4,665 closed cases, against 13% for the model alone.
+        coordinated = a.signals.coordinated_undocumented or scheme["coordinated"]
+        shared = scheme["shared_element"]
         pattern = classify([led.txns[t] for t in affected],
                            state["evidence"]["alert_context"].get("card_history", {}).get("regions", {}),
-                           coordinated_undocumented=a.signals.coordinated_undocumented)
+                           coordinated_undocumented=coordinated)
         if pattern != a.pattern:
             self._event(state, "validation", f"Pattern derived from the episode: {pattern} (model said {a.pattern})")
+        description = (a.pattern_description.strip() or scheme["description"]) if pattern == "undocumented" else ""
         return a.model_copy(update={
             "affected_txn_ids": affected, "first_suspicious_txn_id": affected[0] if affected else "",
             "connected_card_ids": cards, "connected_device_ids": devices or _linking_devices(state, led),
             "similar_prior_cases": similar, "evidence": evidence, "pattern": pattern,
-            "pattern_description": a.pattern_description if pattern == "undocumented" else "",
+            "pattern_description": description,
+            "signals": a.signals.model_copy(update={
+                "coordinated_undocumented": coordinated,
+                "shared_origin": a.signals.shared_origin or bool(shared),
+                "shared_element": a.signals.shared_element or shared}),
         })
 
     def _to_policy(self, state: CaseState, a: LlmAssessment, belief: Belief) -> Assessment:
@@ -533,13 +569,19 @@ class Investigation:
         if alert["trigger_type"] == "customer_report":
             evidence.insert(0, {"claim": f"Customer reported: {alert['trigger_text']}", "source": "customer",
                                 "ref": "trigger:customer_report", "entity_ids": [str(alert["flagged_txn_id"])]})
-        if state.get("quarantine"):
-            kinds = sorted({k for q in state["quarantine"] for k in q["kind"].split(",")})
+        for where, found in (("alert text", [q for q in state.get("quarantine", []) if "at" not in q]),
+                             ("case history", [q for q in state.get("quarantine", []) if "at" in q])):
+            if not found:
+                continue
+            kinds = sorted({k for q in found for k in q["kind"].split(",")})
+            places = sorted({q["at"].split(".")[0] for q in found if "at" in q})
             evidence.append({
-                "claim": (f"The alert text also contained {len(state['quarantine'])} segment(s) addressed to the "
-                          f"system rather than an analyst ({', '.join(kinds)}). They were set aside and used "
-                          f"neither as evidence nor as instruction; the decision rests on the evidence above."),
-                "source": "external", "ref": "guard:alert_text", "entity_ids": [str(alert["flagged_txn_id"])]})
+                "claim": (f"The {where}{' (' + ', '.join(places) + ')' if places else ''} also contained {len(found)} "
+                          f"segment(s) addressed to the system rather than an analyst ({', '.join(kinds)}). They were "
+                          f"set aside and used neither as evidence nor as instruction; the decision rests on the "
+                          f"evidence above."),
+                "source": "external", "ref": "guard:alert_text" if where == "alert text" else "guard:case_history",
+                "entity_ids": [str(alert["flagged_txn_id"])]})
         if alert.get("card_id_reported"):
             evidence.append({
                 "claim": (f"The alert named card {alert['card_id_reported']}, but transaction "
@@ -651,12 +693,12 @@ def _belief_dump(belief: Belief) -> dict:
     return {
         "prior": belief.prior, "prior_reason": belief.prior_reason, "posterior": belief.posterior,
         "verdict": belief.verdict, "independent_evidence": belief.independent_evidence,
-        "explanation": belief.explain(), "subject": sorted(belief.subject),
+        "explanation": belief.explain(), "subject": sorted(belief.subject), "as_of": belief.as_of,
         # entities and discounted are carried so the dashboard can recompute the posterior when a
         # line is struck out, rather than approximating it.
         "ledger": [{"basis": i.basis, "direction": i.direction, "strength": i.strength, "claim": i.claim,
                     "counted": i.counted, "lr": round(i.lr_applied, 3), "discounted": i.discounted,
-                    "as_prior": i.as_prior,
+                    "as_prior": i.as_prior, "uninformative": i.uninformative,
                     "entities": list(i.entities)} for i in belief.ledger],
     }
 
@@ -677,6 +719,99 @@ def _with_testing_sequence(affected: list[str], evidence: dict, led) -> list[str
             if any(i in out for i in ids):
                 out += [i for i in ids if i in led.txns and i not in out]
     return out
+
+
+TRIGGERS = ("risk_score", "customer_report", "analyst_request")
+
+
+def _invalid_alert(alert: dict) -> list[str]:
+    """What makes an alert impossible to investigate as given. Checked before anything runs."""
+    problems = [f"missing {k}" for k in ("case_id", "trigger_type", "flagged_txn_id", "card_id", "opened_at")
+                if not str(alert.get(k) or "").strip() or str(alert.get(k)) == "nan"]
+    if alert.get("trigger_type") and alert["trigger_type"] not in TRIGGERS:
+        problems.append(f"unknown trigger_type {alert['trigger_type']!r}")
+    if alert.get("flagged_txn_id") and not re.fullmatch(r"\d{1,10}", str(alert["flagged_txn_id"])):
+        problems.append(f"flagged_txn_id {alert['flagged_txn_id']!r} is not a transaction ID")
+    try:
+        datetime.strptime(str(alert.get("opened_at"))[:19], "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        problems.append(f"opened_at {alert.get('opened_at')!r} is not a timestamp")
+    return problems
+
+
+def _scheme(state: CaseState) -> dict:
+    """The deterministic findings from activity_shift and scheme_peers (see redthread.schemes).
+
+    They enter the ledger like the model's own findings, but their direction and strength are fixed by
+    measured rules, not judged: a run of charges the card never made (holder_behaviour), and other
+    customers' cards newly doing the same thing in the same window (cross_card_links). Repeated abuse
+    across customers that is not R5's card-testing sequence is R9's undocumented pattern.
+    """
+    ev = state.get("evidence", {})
+    shift, peers = ev.get("activity_shift") or {}, ev.get("scheme_peers") or {}
+    out = {"evidence": [], "run_ids": [], "peer_cards": [], "coordinated": False, "description": "",
+           "shared_element": ""}
+    recipient = ev.get("recipient_spike") or {}
+    if recipient.get("strength"):
+        # Many cards paying one recipient (R6's "same recipient email in one window"). The model score
+        # cannot see it in January, and the shared_origin check counts only high-scoring cards.
+        listed = [c["card_id"] for c in recipient["cards"]]
+        out["peer_cards"] += listed
+        out["shared_element"] = f"recipient email {recipient['recipient_email']}"
+        out["evidence"].append(LlmEvidence(
+            claim=(f"{recipient['other_cards_now']} other cards paid recipient email {recipient['recipient_email']} in "
+                   f"the 30 days to the alert, against {recipient['other_cards_month_before']} and "
+                   f"{recipient['other_cards_two_months_before']} in the same window one and two months earlier: "
+                   f"{', '.join(listed[:12])}."),
+            source="graph", ref=recipient["ref"], entity_ids=listed, direction="incriminating",
+            strength=recipient["strength"], basis="cross_card_links"))
+    run = shift.get("run") or []
+    if not run:
+        return out
+    card = shift["card_id"]
+    ids = [r["tx_id"] for r in run]
+    out["run_ids"] = ids
+    kind = f"{run[0]['product']}/{run[0]['channel']}"
+    share = 100 * (shift.get("baseline_kinds") or {}).get(kind, 0) / max(1, shift["baseline_txns"])
+    days = (_parse_ts(run[-1]["ts"]) - _parse_ts(run[0]["ts"])).total_seconds() / 86400
+    claim = (f"Card {card} made {len(run)} {run[0]['channel']} product-{run[0]['product']} charges totalling "
+             f"${shift['run_total_usd']:,.2f} over {days:.1f} days ({', '.join(ids)}); in its "
+             f"{shift['baseline_txns']} transactions of the 60 days before, that kind made up {share:.0f}%.")
+    probes = all(abs(r["amount"]) < schemes.SMALL_AUTH_USD for r in run)
+    if probes and not shift.get("fits_card_testing_r5"):
+        claim += (" Every one is a tiny authorisation, spread over days with no larger purchase after them, so "
+                  "they are not R5's sequence of three within an hour followed by a purchase.")
+    strength = schemes.run_strength(run)
+    if strength:
+        out["evidence"].append(LlmEvidence(claim=claim, source="graph", ref=shift["ref"], entity_ids=[card, *ids],
+                                           direction="incriminating", strength=strength, basis="holder_behaviour"))
+    pstrength = peers.get("strength")
+    if pstrength:
+        listed = [p["card_id"] for p in peers["peers"]]
+        out["peer_cards"] += [c for c in listed if c not in out["peer_cards"]]
+        out["evidence"].append(LlmEvidence(
+            claim=(f"{peers['other_cards_now']} other cards ({peers['other_customers']} other customers) newly show "
+                   f"the same signature in the 30 days to the alert - {peers['signature']} - against "
+                   f"{peers['other_cards_month_before']} and {peers['other_cards_two_months_before']} in the same "
+                   f"window one and two months earlier: {', '.join(listed[:12])}."),
+            source="graph", ref=peers["ref"], entity_ids=listed, direction="incriminating", strength=pstrength,
+            basis="cross_card_links"))
+        out["coordinated"] = pstrength == "strong" and not shift.get("fits_card_testing_r5")
+        sig = peers["signature"]
+        out["description"] = (
+            f"{sig[0].upper()}{sig[1:]}: card {card} carries {len(run)} such charges "
+            f"(${shift['run_total_usd']:,.2f}) and {peers['other_cards_now']} other customers' cards started the same "
+            f"in the same 30 days, against {peers['other_cards_month_before']} and "
+            f"{peers['other_cards_two_months_before']} in the two windows before. "
+            + ("The charges are spread over days with no purchase after them, so it is not R5 card testing; it looks "
+               "built to stay under per-hour velocity checks. " if probes else "")
+            + "Found by comparing each card's recent charges with its own prior 60 days, then counting other cards "
+              "with the same new behaviour.")
+    return out
+
+
+def _parse_ts(value: str) -> datetime:
+    return datetime.strptime(value[:19], "%Y-%m-%d %H:%M:%S")
 
 
 def _linking_devices(state: CaseState, led) -> list[str]:

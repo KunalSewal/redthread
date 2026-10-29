@@ -109,3 +109,30 @@ def test_a_model_that_never_answers_raises_a_model_error(monkeypatch):
     model.client = SimpleNamespace(aio=SimpleNamespace(models=SimpleNamespace(generate_content=never)))
     with pytest.raises(ModelError, match="no response"):
         asyncio.run(model.generate([], system="s", attempts=2))
+
+
+def test_an_invalid_alert_is_refused_before_anything_runs():
+    from redthread.agent.graph import _invalid_alert
+
+    good = {"case_id": "HHF-001", "trigger_type": "risk_score", "flagged_txn_id": "3660108", "card_id": "C05061-K1",
+            "opened_at": "2017-01-15 06:00:00"}
+    assert _invalid_alert(good) == []
+    bad = _invalid_alert({**good, "trigger_type": "rumour", "flagged_txn_id": "3660108; DROP GRAPH",
+                          "opened_at": "yesterday", "card_id": ""})
+    assert any("trigger_type" in p for p in bad) and any("not a transaction ID" in p for p in bad)
+    assert any("timestamp" in p for p in bad) and "missing card_id" in bad
+    inv, state = investigation(), {"alert": {**good, "flagged_txn_id": "nan"}, "events": []}
+    with pytest.raises(InvestigationHalted) as exc:
+        asyncio.run(inv.intake(state))
+    assert exc.value.stage == "intake" and "missing flagged_txn_id" in exc.value.reason
+
+
+def test_a_result_missing_what_it_must_hold_halts():
+    inv, state = investigation(), {"case_id": "CASE-X", "events": []}
+
+    async def no_such_txn():
+        return [][0]  # alert_context on a transaction the graph does not hold
+
+    with pytest.raises(InvestigationHalted) as exc:
+        asyncio.run(inv._collect(state, "alert_context", no_such_txn()))
+    assert "unexpected result" in exc.value.reason

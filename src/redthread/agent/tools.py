@@ -9,6 +9,7 @@ import statistics
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
+from redthread import schemes
 from redthread.agent.mcp_graph import GraphToolError, McpGraph
 from redthread.model.calibration import fraud_rate, hot_share
 from redthread.rag.embed import embed_query
@@ -19,7 +20,8 @@ SMALL_AUTH_USD = 10.0
 MAX_ROWS = 70
 AS_OF_QUERIES = {"alert_context", "card_window", "device_neighbors", "linked_cases", "similar_closed_cases",
                  "similar_fraud_cases", "community_profile", "shared_origin", "ring_members",
-                 "reviewed_agent_cases"}
+                 "reviewed_agent_cases", "new_kind_run", "scheme_peers",
+                 "recipient_cards"}
 GENERIC_DEVICE_INFO = {"iOS Device", "MacOS", "Windows", "Trident/7.0", "Linux", "SAMSUNG", "unknown"}
 
 
@@ -199,6 +201,78 @@ class Tools:
             "rows": shown if len(shown) <= 120 else shown[:120],
             "omitted_note": ("rows limited to suspicious, within 48h of the alert, or same holder"
                              if len(shown) < len(rows) else ""),
+        }
+
+    async def activity_shift(self, card_id: str, flagged_tx: str) -> dict:
+        """Charges of a kind the card never made, in the 30 days up to the alert (schemes.flagged_run)."""
+        res = await self._q("new_kind_run", card=card_id)
+        head = res[0]
+        rows = [self.ledger.txns.get(a["tx_id"]) or self._txn_row(a) for a in _attrs(res[1]["shifted"])]
+        run = schemes.flagged_run(rows, flagged_tx, head["baseline_txns"])
+        sig = schemes.signature(run)
+        return {
+            "ref": self._ref("activity_shift", f"new_kind_run(card={card_id}, {head['run_from'][:10]}..alert)"),
+            "card_id": card_id, "baseline_from": head["baseline_from"], "baseline_txns": head["baseline_txns"],
+            "baseline_kinds": head["baseline_kinds"], "recent_txns": head["recent_txns"],
+            "flagged_in_run": bool(run), "run": run, "run_total_usd": round(sum(abs(r["amount"]) for r in run), 2),
+            "signature": sig.describe() if sig else "",
+            "fits_card_testing_r5": schemes.fits_card_testing(run) if run else False,
+        }
+
+    async def scheme_peers(self, card_id: str, run: list[dict]) -> dict:
+        """Other cards that newly show the run's signature now, against the same window one and two
+        months earlier (schemes.peer_strength). The alert's own card is left out of every count."""
+        sig = schemes.signature(run)
+        end = _ts(self.as_of) if self.as_of else _ts(run[-1]["ts"])
+        params = {"product": sig.product, "channel": sig.channel, "amount_lo": sig.amount_lo,
+                  "amount_hi": sig.amount_hi, "need_new_device": sig.need_new_device, "need_proxy": sig.need_proxy,
+                  "min_txns": sig.min_txns}
+        windows = []
+        for back in (0, 30, 60):
+            hi = end - timedelta(days=back)
+            res = await self._q("scheme_peers", **params, from_ts=_fmt(hi - timedelta(days=30)), to_ts=_fmt(hi))
+            listed = _attrs(res[1]["peers"])
+            own = any(p["card_id"] == card_id for p in listed)
+            windows.append({"from": res[0]["window_from"], "to": res[0]["window_to"],
+                            "n_other_cards": res[0]["n_cards"] - (1 if own else 0),
+                            "peers": [{"card_id": p["card_id"], "customer_id": p["customer_id"], "n_txns": p["n"],
+                                       "amount": round(p["amount"], 2), "first_ts": p["first_ts"],
+                                       "last_ts": p["last_ts"], "tx_ids": sorted(p["tx_ids"])[:12]}
+                                      for p in listed if p["card_id"] != card_id]})
+        now, earlier = windows[0], [w["n_other_cards"] for w in windows[1:]]
+        self.ledger.cards.update(p["card_id"] for p in now["peers"])
+        return {
+            "ref": self._ref("scheme_peers", f"scheme_peers({sig.describe()}, {now['from'][:10]}..{now['to'][:10]})"),
+            "signature": sig.describe(), "other_cards_now": now["n_other_cards"],
+            "other_cards_month_before": earlier[0], "other_cards_two_months_before": earlier[1],
+            "strength": schemes.peer_strength(now["n_other_cards"], earlier),
+            "other_customers": len({p["customer_id"] for p in now["peers"]} - {card_id.split("-")[0]}),
+            "peers": now["peers"],
+        }
+
+    async def recipient_spike(self, card_id: str, domain: str) -> dict:
+        """Cards paying the flagged charge's recipient email domain in the 30 days to the alert, against
+        the same window one and two months earlier. Common domains carry thousands of cards at their
+        usual level; a domain that suddenly collects new cards is a shared origin."""
+        end = _ts(self.as_of) if self.as_of else datetime.now()
+        windows = []
+        for back in (0, 30, 60):
+            hi = end - timedelta(days=back)
+            res = await self._q("recipient_cards", domain=domain, from_ts=_fmt(hi - timedelta(days=30)), to_ts=_fmt(hi))
+            listed = _attrs(res[1]["cards"])
+            own = any(c["card_id"] == card_id for c in listed)
+            windows.append({"n_other_cards": res[0]["n_cards"] - (1 if own else 0),
+                            "cards": [{"card_id": c["card_id"], "customer_id": c["customer_id"], "n_txns": c["n"],
+                                       "amount": round(c["amount"], 2), "tx_ids": sorted(c["tx_ids"])[:12]}
+                                      for c in listed if c["card_id"] != card_id]})
+        now, earlier = windows[0], [w["n_other_cards"] for w in windows[1:]]
+        self.ledger.cards.update(c["card_id"] for c in now["cards"])
+        return {
+            "ref": self._ref("recipient_spike", f"recipient_cards(domain={domain}, 30d to alert vs 1-2 months before)"),
+            "recipient_email": domain, "other_cards_now": now["n_other_cards"],
+            "other_cards_month_before": earlier[0], "other_cards_two_months_before": earlier[1],
+            "strength": schemes.peer_strength(now["n_other_cards"], earlier),
+            "cards": now["cards"],
         }
 
     async def holder_baseline(self, holder_id: str, flagged_tx: str) -> dict:

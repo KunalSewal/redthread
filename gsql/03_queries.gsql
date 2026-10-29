@@ -510,3 +510,92 @@ CREATE OR REPLACE QUERY reviewed_agent_cases(DATETIME as_of = to_datetime("2099-
           ACCUM @@ids += f.case_id;
   PRINT @@ids AS case_ids;
 }
+
+// ---------------------------------------------------------------------------------------------
+// A shift in what the card does: the transactions in the last run_days whose kind (product and
+// channel) made up less than max_share of the card's activity in the baseline_days before that.
+// A run of charges the card has never made is how the January schemes show up on a card whose
+// ordinary activity carries on beside them. Nothing after as_of.
+CREATE OR REPLACE QUERY new_kind_run(VERTEX<Card> card, INT run_days = 30, INT baseline_days = 60,
+    DOUBLE max_share = 0.05, DATETIME as_of = to_datetime("2099-01-01 00:00:00")) FOR GRAPH RedThread {
+  MapAccum<STRING, SumAccum<INT>> @@baseline;
+  SumAccum<INT> @@n_baseline;
+  SumAccum<STRING> @device_id;
+  DATETIME run_from;
+  DATETIME base_from;
+  run_from = datetime_sub(as_of, INTERVAL run_days DAY);
+  base_from = datetime_sub(run_from, INTERVAL baseline_days DAY);
+  start = {card};
+  base = SELECT t FROM start:c -(MADE:e)-> Txn:t WHERE t.ts >= base_from AND t.ts < run_from
+         ACCUM @@baseline += (t.product_cd + "/" + t.channel -> 1), @@n_baseline += 1;
+  recent = SELECT t FROM start:c -(MADE:e)-> Txn:t WHERE t.ts >= run_from AND t.ts <= as_of;
+  shifted = SELECT t FROM recent:t
+        WHERE @@baseline.get(t.product_cd + "/" + t.channel) < max_share * @@n_baseline OR @@n_baseline == 0;
+  tmp = SELECT d FROM shifted:t -(FROM_DEVICE:e)-> DeviceProfile:d ACCUM t.@device_id += d.device_id;
+  PRINT run_from AS run_from, base_from AS baseline_from, @@n_baseline AS baseline_txns,
+        @@baseline AS baseline_kinds, recent.size() AS recent_txns;
+  PRINT shifted[shifted.tx_id, shifted.ts, shifted.amount, shifted.product_cd, shifted.channel, shifted.region,
+        shifted.p_email, shifted.r_email, shifted.device_status, shifted.proxy_type, shifted.model_score,
+        shifted.@device_id] AS shifted;
+}
+
+// ---------------------------------------------------------------------------------------------
+// The same scheme on other cards: cards with at least min_txns transactions of one kind in an
+// amount band (optionally from a device New to the account, optionally behind a proxy) between
+// from_ts and to_ts, where that kind was new to the card (under max_share of its baseline_days
+// before from_ts). Run over the alert's window and the same window earlier, it says whether many
+// customers started doing the same unusual thing at once: R9's "repeated abuse across customers".
+CREATE OR REPLACE QUERY scheme_peers(STRING product, STRING channel, DOUBLE amount_lo, DOUBLE amount_hi,
+    BOOL need_new_device, BOOL need_proxy, DATETIME from_ts, DATETIME to_ts, INT min_txns = 3,
+    INT baseline_days = 60, DOUBLE max_share = 0.05, INT max_cards = 40,
+    DATETIME as_of = to_datetime("2099-01-01 00:00:00")) FOR GRAPH RedThread {
+  SumAccum<INT> @n;
+  SumAccum<DOUBLE> @amount;
+  MinAccum<DATETIME> @first_ts;
+  MaxAccum<DATETIME> @last_ts;
+  SetAccum<STRING> @tx_ids;
+  SumAccum<INT> @base_total;
+  SumAccum<INT> @base_kind;
+  DATETIME hi;
+  DATETIME base_from;
+  hi = to_ts;
+  IF hi > as_of THEN hi = as_of; END;
+  base_from = datetime_sub(from_ts, INTERVAL baseline_days DAY);
+  everything = {Txn.*};
+  hits = SELECT t FROM everything:t
+         WHERE t.ts >= from_ts AND t.ts <= hi AND t.product_cd == product AND t.channel == channel
+               AND t.amount >= amount_lo AND t.amount < amount_hi
+               AND (NOT need_new_device OR t.device_status == "New") AND (NOT need_proxy OR t.proxy_type != "");
+  cards = SELECT c FROM hits:t -(MADE_BY:e)-> Card:c
+          ACCUM c.@n += 1, c.@amount += t.amount, c.@first_ts += t.ts, c.@last_ts += t.ts, c.@tx_ids += t.tx_id;
+  cards = SELECT c FROM cards:c WHERE c.@n >= min_txns;
+  tmp = SELECT t FROM cards:c -(MADE:e)-> Txn:t WHERE t.ts >= base_from AND t.ts < from_ts
+        ACCUM c.@base_total += 1, IF t.product_cd == product AND t.channel == channel THEN c.@base_kind += 1 END;
+  peers = SELECT c FROM cards:c WHERE c.@base_kind <= max_share * c.@base_total
+          ORDER BY c.@n DESC LIMIT max_cards;
+  fresh = SELECT c FROM cards:c WHERE c.@base_kind <= max_share * c.@base_total;
+  PRINT from_ts AS window_from, hi AS window_to, fresh.size() AS n_cards;
+  PRINT peers[peers.card_id, peers.customer_id, peers.@n, peers.@amount, peers.@first_ts, peers.@last_ts,
+        peers.@tx_ids] AS peers;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Many cards paying one recipient: the cards whose transactions name this recipient email domain in
+// a window. Run over the alert's window and the same window earlier, a domain that suddenly
+// collects many new cards is a shared origin (R6) that the model score cannot see. Nothing after as_of.
+CREATE OR REPLACE QUERY recipient_cards(VERTEX<EmailDomain> domain, DATETIME from_ts, DATETIME to_ts,
+    INT max_cards = 40, DATETIME as_of = to_datetime("2099-01-01 00:00:00")) FOR GRAPH RedThread {
+  SumAccum<INT> @n;
+  SumAccum<DOUBLE> @amount;
+  SetAccum<STRING> @tx_ids;
+  DATETIME hi;
+  hi = to_ts;
+  IF hi > as_of THEN hi = as_of; END;
+  start = {domain};
+  txns = SELECT t FROM start:m -(RECIPIENT_EMAIL_OF:e)-> Txn:t WHERE t.ts >= from_ts AND t.ts <= hi;
+  cards = SELECT c FROM txns:t -(MADE_BY:e)-> Card:c
+          ACCUM c.@n += 1, c.@amount += t.amount, c.@tx_ids += t.tx_id;
+  top = SELECT c FROM cards:c ORDER BY c.@n DESC LIMIT max_cards;
+  PRINT cards.size() AS n_cards, txns.size() AS n_txns;
+  PRINT top[top.card_id, top.customer_id, top.@n, top.@amount, top.@tx_ids] AS cards;
+}
