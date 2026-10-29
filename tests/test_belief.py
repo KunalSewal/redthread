@@ -240,3 +240,47 @@ def test_the_model_score_counts_once_whatever_the_trigger():
     assert alert.ledger[0].as_prior and not alert.ledger[0].counted
     assert asked.ledger[0].counted and not asked.ledger[0].as_prior
     assert asked.posterior < prior_for("analyst_request", 0.006)[0]
+
+
+JANUARY = "2017-01-20 10:00:00"
+NOVEMBER = "2016-11-02 10:00:00"
+
+
+def test_the_prior_comes_from_earlier_reviews_of_the_same_kind_of_alert():
+    """The bank's closed cases cleared all 900 of its model alerts and confirmed all 4,640 reports;
+    Round 1's review, drawn the way this pack is, confirmed 2 of 11 score alerts and 7 of 8 reports."""
+    score, how = prior_for("risk_score", 0.004, JANUARY)
+    report, _ = prior_for("customer_report", None, JANUARY)
+    assert score == pytest.approx(3 / 13) and "2 of 11" in how
+    assert report == pytest.approx(8 / 10)
+    # Only reviews opened before the alert count: early in Round 1 there were too few.
+    assert prior_for("risk_score", 0.004, NOVEMBER) == prior_for("risk_score", 0.004)
+    # An analyst request has a single earlier review, too few to measure, so it keeps its fixed prior.
+    assert prior_for("analyst_request", None, JANUARY)[0] == 0.5
+
+
+def test_a_score_from_a_month_the_model_never_saw_is_not_counted_either_way():
+    for direction in ("exculpatory", "incriminating"):
+        score = Judged("flagged_transaction_model", direction, "strong")
+        january = assess("analyst_request", 0.006, [score], as_of=JANUARY)
+        assert not january.ledger[0].counted and january.ledger[0].uninformative
+        assert january.posterior == pytest.approx(0.5)
+        november = assess("analyst_request", 0.006, [score], as_of=NOVEMBER)
+        assert november.ledger[0].counted and november.posterior != pytest.approx(0.5)
+
+
+def test_a_counterfactual_keeps_the_alert_date():
+    items = [item("device"), item("flagged_transaction_model", "exculpatory")]
+    belief = assess("risk_score", 0.004, items, as_of=JANUARY)
+    same = without(belief, set(), "risk_score", 0.004)
+    assert same.posterior == belief.posterior and same.prior == belief.prior
+
+
+def test_an_earlier_case_on_the_card_is_weak_evidence_whatever_the_model_says():
+    """HHG-004 was cleared: an earlier fraud case on a shared bucket card says little about a new charge."""
+    from redthread.belief import PRIOR_CASES_LR_CAP
+
+    belief = assess("analyst_request", None, [item("prior_cases", strength="decisive")])
+    assert belief.ledger[0].lr_applied == PRIOR_CASES_LR_CAP
+    cleared_before = assess("analyst_request", None, [item("prior_cases", "exculpatory", "strong")])
+    assert cleared_before.ledger[0].lr_applied == 1 / 8  # pointing the other way, it is not capped

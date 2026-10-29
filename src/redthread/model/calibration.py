@@ -82,6 +82,32 @@ def customer_report_rate() -> tuple[float, int, int]:
     return (fraud + 1) / (n + 2), fraud, n
 
 
+MIN_REVIEWED = 5  # fewer reviewed alerts of a trigger type than this, and the rate is not used
+
+
+@cache
+def _reviewed() -> pd.DataFrame:
+    return sources.reviewed_alerts()
+
+
+def review_queue_rate(trigger_type: str, as_of: str | None) -> tuple[float, int, int] | None:
+    """How often an alert of this trigger type, from the same review queue, turned out to be fraud.
+
+    The bank's own closed cases are not drawn the way the review queue is: every one of its 900
+    model-scored alerts was cleared and every one of its 4,640 cardholder reports was fraud, while
+    Round 1's review (now closed cases) confirmed 2 of 11 score alerts and 7 of 8 reports. Only reviews
+    opened before ``as_of`` count. Add-one smoothing; None when fewer than MIN_REVIEWED exist.
+    """
+    if not as_of:
+        return None
+    r = _reviewed()
+    r = r[(r["trigger_type"] == trigger_type) & (pd.to_datetime(r["opened_at"]) < pd.Timestamp(as_of))]
+    if len(r) < MIN_REVIEWED:
+        return None
+    fraud = int((r["outcome"] == "confirmed_fraud").sum())
+    return (fraud + 1) / (len(r) + 2), fraud, len(r)
+
+
 def fraud_rate(score: float, kind: str = "model_score") -> float | None:
     if score is None or score < 0:
         return None
