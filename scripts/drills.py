@@ -98,13 +98,20 @@ async def _run(g, alert: dict) -> dict:
                 "answer_written": (WORK / f"{alert['case_id']}.json").exists(), "secs": round(time.time() - start)}
 
 
+def _halted_for(r: dict, cause: str) -> bool:
+    """Halted, wrote nothing, and for the fault the drill injected. A halt for some other reason (a
+    real outage during the drill, 29 Oct) proves nothing about this control and does not pass."""
+    return r["outcome"] == "halted" and not r["answer_written"] and cause in r.get("reason", "")
+
+
 async def drill_dependency_fails(g, conn) -> dict:
     r = await _run(DroppingGraph(g, after=4), _alert("DRL-DEP"))
     return r | {"saved_in_graph": _saved(conn, "DRL-DEP"),
-                "passed": r["outcome"] == "halted" and not r["answer_written"] and not _saved(conn, "DRL-DEP")}
+                "passed": _halted_for(r, "drill: connection to the graph dropped") and not _saved(conn, "DRL-DEP")}
 
 
 async def _with_llm(mode: str, g, conn, case_id: str) -> dict:
+    cause = "drill: model call timed out" if mode == "timeout" else "failed validation"
     original = graph_module.Llm
     graph_module.Llm = lambda: BrokenLlm(mode)
     try:
@@ -112,7 +119,7 @@ async def _with_llm(mode: str, g, conn, case_id: str) -> dict:
     finally:
         graph_module.Llm = original
     return r | {"saved_in_graph": _saved(conn, case_id),
-                "passed": r["outcome"] == "halted" and not r["answer_written"] and not _saved(conn, case_id)}
+                "passed": _halted_for(r, cause) and not _saved(conn, case_id)}
 
 
 async def drill_model_timeout(g, conn) -> dict:
@@ -143,8 +150,7 @@ async def drill_invalid_input(g, conn) -> dict:
     ghost = await _run(g, _alert("DRL-INV", flagged_txn_id="9999999"))
     shaped = await _run(g, _alert("DRL-IN2", trigger_type="rumour", opened_at="yesterday"))
     return {"no_such_transaction": ghost, "malformed_alert": shaped,
-            "passed": ghost["outcome"] == shaped["outcome"] == "halted"
-            and not ghost["answer_written"] and not shaped["answer_written"]}
+            "passed": _halted_for(ghost, "alert_context") and _halted_for(shaped, "invalid alert")}
 
 
 async def drill_wrong_role(g, conn) -> dict:

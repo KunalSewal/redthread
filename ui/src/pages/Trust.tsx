@@ -6,7 +6,7 @@
  */
 import { useEffect, useState } from 'react'
 import { api } from '../api'
-import type { Evaluation } from '../api'
+import type { Evaluation, FinalRound } from '../api'
 
 const pct = (n: unknown) => (typeof n === 'number' ? `${(n * 100).toFixed(0)}%` : '—')
 
@@ -53,6 +53,107 @@ function Backtest({ b }: { b: Record<string, unknown> }) {
   )
 }
 
+const DRILL: Record<string, string> = {
+  dependency_fails: 'The graph drops mid-run', model_timeout: 'The model times out', model_garbage: 'The model returns garbage',
+  hostile_input: 'Instructions hidden in the alert', invalid_input: 'An alert naming no real transaction',
+  wrong_role: 'An approval by the wrong role', same_case: 'One case investigated twice',
+}
+
+function outcome(r?: Record<string, unknown>): string {
+  if (!r) return 'not run'
+  if (r.halted) return 'halted'
+  const harmful = (r.harmful as string[] | undefined) ?? []
+  return `${String(r.verdict)} ${typeof r.probability === 'number' ? r.probability.toFixed(2) : ''}${harmful.length ? `, ${harmful.join(', ')}` : ''}`
+}
+
+function FinalRoundSection({ f }: { f: FinalRound }) {
+  const variants = ['full', 'no_detectors', 'old_priors', 'neither'] as const
+  const label = { full: 'As submitted', no_detectors: 'Without the new detectors', old_priors: 'With the old priors', neither: 'Without either' }
+  return (
+    <section aria-labelledby="final-title">
+      <h3 id="final-title">The final round</h3>
+      {f.drills && (
+        <>
+          <h4>Drills, run against the live graph and model</h4>
+          <table className="digest-table">
+            <thead><tr><th>Drill</th><th>Result</th><th>What happened</th></tr></thead>
+            <tbody>
+              {Object.entries(f.drills).map(([name, r]) => (
+                <tr key={name}>
+                  <td>{DRILL[name] ?? name}</td>
+                  <td>{r.passed ? 'passed' : 'failed'}</td>
+                  <td>{r.outcome === 'halted' ? `halted at ${String(r.stage)}; no answer written`
+                    : r.status_codes ? `refused: ${Object.entries(r.status_codes as Record<string, number>).map(([k, v]) => `${k.replaceAll('_', ' ')} ${v}`).join(', ')}`
+                    : r.first ? `${outcome(r.first as Record<string, unknown>)} then ${outcome(r.second as Record<string, unknown>)}`
+                    : r.no_such_transaction ? 'both refused before investigating'
+                    : outcome(r)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+      {f.attacks && (
+        <>
+          <h4>Attacks, with the defences on and off</h4>
+          <table className="digest-table">
+            <thead><tr><th>Attack</th><th>Aims for</th><th>Clean run</th><th>Defended</th><th>Undefended</th></tr></thead>
+            <tbody>
+              {Object.values(f.attacks).map((a) => (
+                <tr key={a.id}>
+                  <td>{a.id} on {a.case}: {a.surface}</td>
+                  <td>{a.goal}</td>
+                  <td>{a.clean.verdict}</td>
+                  <td>{outcome(a.defended)}{a.defended?.attack_succeeded ? ' (succeeded)' : ''}</td>
+                  <td>{outcome(a.undefended)}{a.undefended?.attack_succeeded ? ' (succeeded)' : ''}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+      {f.ablation && (
+        <>
+          <h4>What the new pieces changed</h4>
+          <p className="prose">Every answer recomputed from its own evidence ledger with a piece taken out. No model call: the arithmetic is code.</p>
+          <dl className="stats-grid">
+            {variants.map((v) => {
+              const n = (k: string) => f.ablation!.filter((r) => r.verdict[v] === k).length
+              return <Stat key={v} label={label[v]} value={`${n('fraud')} / ${n('uncertain')} / ${n('legitimate')}`}
+                note="fraud / uncertain / legitimate" />
+            })}
+          </dl>
+        </>
+      )}
+      {f.detectors?.summary && (
+        <>
+          <h4>The new-kind run, backtested on {f.detectors.cases.toLocaleString()} closed cases</h4>
+          <p className="prose">
+            It fired on {f.detectors.summary.new_kind_run.confirmed_fraud_caught} of {f.detectors.summary.new_kind_run.of_confirmed.toLocaleString()} confirmed
+            frauds and {f.detectors.summary.new_kind_run.cleared_customers_acted_against} of {f.detectors.summary.new_kind_run.of_cleared} cleared alerts:
+            on the bank&rsquo;s own history it does not separate the two, so it counts only as moderate evidence. What makes a run a
+            scheme is the same behaviour starting on other customers&rsquo; cards at once.
+          </p>
+        </>
+      )}
+      {f.data_quality && (
+        <>
+          <h4>Data problems, and the investigations they taint</h4>
+          <table className="digest-table">
+            <thead><tr><th>Problem</th><th className="col-num">Records</th><th>Taints</th></tr></thead>
+            <tbody>
+              {f.data_quality.map((p) => (
+                <tr key={p.problem}><td>{p.problem}</td><td className="col-num num">{p.affected_count.toLocaleString()}</td>
+                  <td>{p.taints.length > 6 ? `${p.taints.length} cases` : p.taints.join(', ') || 'none'}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+    </section>
+  )
+}
+
 export function Trust() {
   const [data, setData] = useState<Evaluation | null>(null)
   const [error, setError] = useState('')
@@ -75,6 +176,8 @@ export function Trust() {
           answer or anything that happened later.
         </p>
       </header>
+
+      {data.final_round && <FinalRoundSection f={data.final_round} />}
 
       <section aria-labelledby="bt-title">
         <h3 id="bt-title">Replayed closed cases</h3>

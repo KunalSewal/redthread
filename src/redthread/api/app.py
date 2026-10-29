@@ -337,6 +337,21 @@ def evaluation() -> dict:
         "baselines": _read(paths.PROCESSED / "baselines.json"),
         "backtest": (backtest or {}).get("summary"),
         "backtest_cases": (backtest or {}).get("cases"),
+        "final_round": _final_round(),
+    }
+
+
+def _final_round() -> dict:
+    """The final round's measurements, read from the same files the README quotes."""
+    detectors = _read(paths.PROCESSED / "detector_backtest.json") or {}
+    quality = _read(paths.PROCESSED / "data_quality.json") or {}
+    return {
+        "drills": _read(RUNS / "drills.json"),
+        "attacks": _read(RUNS / "attacks.json"),
+        "ablation": _read(RUNS / "ablation.json"),
+        "detectors": {"cases": detectors.get("cases"), "summary": detectors.get("summary")} if detectors else None,
+        "data_quality": [{k: p.get(k) for k in ("problem", "what", "affected_count", "taints")}
+                         for p in quality.get("problems", [])] or None,
     }
 
 

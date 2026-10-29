@@ -127,12 +127,24 @@ export interface Rings {
   communities_ranked: number
 }
 
+export interface FinalRound {
+  drills: Record<string, Record<string, unknown> & { passed: boolean }> | null
+  attacks: Record<string, { id: string; case: string; surface: string; goal: string
+    clean: { verdict: string; harmful: string[] }
+    defended?: Record<string, unknown>; undefended?: Record<string, unknown> }> | null
+  ablation: { case: string; verdict: Record<string, string>; probability: Record<string, number> }[] | null
+  detectors: { cases: number; summary: Record<string, { fired: number; confirmed_fraud_caught: number;
+    of_confirmed: number; cleared_customers_acted_against: number; of_cleared: number }> } | null
+  data_quality: { problem: string; what: string; affected_count: number; taints: string[] }[] | null
+}
+
 export interface Evaluation {
   model: Record<string, unknown> | null
   patterns: Record<string, unknown> | null
   calibration: Record<string, unknown> | null
   community_lift: { n_fraud: number; n_cleared: number; bands: Record<string, { p_fraud: number; p_cleared: number; lr: number | null }> } | null
   baselines: Baseline[] | null
+  final_round?: FinalRound
   backtest: Record<string, unknown> | null
   backtest_cases: Record<string, unknown>[] | null
 }
