@@ -7,7 +7,7 @@ in ``Ledger`` so the agent's conclusions can be checked against what it actually
 
 import statistics
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from redthread import schemes
 from redthread.agent.mcp_graph import GraphToolError, McpGraph
@@ -35,6 +35,9 @@ class Ledger:
     closed_cases: dict[str, dict] = field(default_factory=dict)
     agent_cases: set[str] = field(default_factory=set)
     refs: dict[str, str] = field(default_factory=dict)  # ref -> tool name
+    # ref -> the installed queries behind it, with their exact parameters and when they ran (UTC):
+    # what an organiser re-runs to check a claim.
+    queries: dict[str, list[dict]] = field(default_factory=dict)
 
     def entity_known(self, entity_id: str) -> bool:
         return (entity_id in self.txns or entity_id in self.cards or entity_id in self.devices
@@ -78,6 +81,7 @@ class Tools:
         # verdict is the agent's opinion, not an outcome; reading it back would let one investigation
         # lean on another's guess. Loaded before the first query, so every tool filters the same way.
         self._reviewed: set[str] | None = None
+        self._since_ref: list[dict] = []  # queries run since the last digest was labelled
 
     def _until(self, hi: datetime) -> datetime:
         """End a window at the alert, never after it.
@@ -95,7 +99,11 @@ class Tools:
             self._reviewed = set(res[0]["case_ids"])
         if self.as_of and name in AS_OF_QUERIES:
             params["as_of"] = self.as_of
-        return await self.g.query(name, params)
+        at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+        result = await self.g.query(name, params)
+        if name != "reviewed_agent_cases":
+            self.__dict__.setdefault("_since_ref", []).append({"query": name, "params": dict(params), "ran_at": at})
+        return result
 
     def _reviewed_only(self, cases: list) -> list:
         """Agent cases (rows or bare IDs) a person has ruled on; the rest stay out of the evidence."""
@@ -105,6 +113,8 @@ class Tools:
     def _ref(self, tool: str, text: str) -> str:
         ref = f"query:{text}"
         self.ledger.refs[ref] = tool
+        self.ledger.queries.setdefault(ref, []).extend(getattr(self, "_since_ref", []))
+        self._since_ref = []
         return ref
 
     def _txn_row(self, a: dict) -> dict:

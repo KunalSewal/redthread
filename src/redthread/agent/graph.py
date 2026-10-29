@@ -53,7 +53,7 @@ class InvestigationHalted(RuntimeError):
 
 # Everything a trace keeps about an investigation; the runner, the monitor and the API all write this.
 TRACE_KEYS = ("alert", "events", "evidence", "llm_assessment", "belief", "assessment", "initial", "request",
-              "reply", "final_assessment", "final", "report", "policy_evidence", "quarantine")
+              "reply", "final_assessment", "final", "report", "policy_evidence", "quarantine", "query_log")
 
 def halt_record(alert: dict, exc: "InvestigationHalted") -> dict:
     """What a halted investigation leaves behind instead of an answer: which dependency failed, why,
@@ -550,6 +550,7 @@ class Investigation:
 
     async def answer(self, state: CaseState) -> CaseState:
         state["answer"] = self._build_answer(state, written=state.get("written", False))
+        state["query_log"] = self.tools.ledger.queries
         Answer.model_validate(state["answer"])
         return state
 
