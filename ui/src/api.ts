@@ -47,6 +47,7 @@ export interface LedgerItem {
   discounted?: boolean
   /** Not counted because the same fact already set the prior (the model score, or the denial). */
   as_prior?: boolean
+  uninformative?: boolean
   entities?: string[]
 }
 
@@ -152,6 +153,7 @@ async function json<T>(res: Response): Promise<T> {
 export const api = {
   cases: () => fetch('/api/cases').then(json<CaseRow[]>),
   case: (id: string) => fetch(`/api/cases/${id}`).then(json<CaseDetail>),
+  replay: (id: string) => fetch(`/api/cases/${id}/replay`).then(json<Replay>),
   monitoring: () => fetch('/api/monitoring').then(json<Monitoring>),
   rings: () => fetch('/api/rings').then(json<Rings>),
   evaluation: () => fetch('/api/evaluation').then(json<Evaluation>),
@@ -166,4 +168,18 @@ export const api = {
     }).then(json<unknown>),
   whoami: (key: string) =>
     fetch('/api/whoami', { headers: { Authorization: `Bearer ${key}` } }).then(json<{ name: string; role: string }>),
+}
+
+export interface ReplayStep {
+  step: number; at?: string; kind: string; detail: string
+  tool?: string; query?: string; parameters?: string; returned?: Record<string, unknown>
+  evidence_held: string[]; probability: number | null
+  moved?: { from: number | null; to: number; because: string }
+  belief?: { prior: number; prior_reason: string; posterior: number; verdict: string; how: string
+    counted: { basis: string; direction: string; strength: string; lr: number; claim: string }[] }
+}
+export interface Replay {
+  case_id: string; steps: ReplayStep[]
+  quarantined: { kind: string; text: string; at?: string }[]
+  final: { verdict: string; probability: number; pattern: string } | null
 }

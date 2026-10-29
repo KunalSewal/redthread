@@ -6,8 +6,9 @@ import { Missed } from './pages/Missed'
 import { Rings } from './pages/Rings'
 import { Trust } from './pages/Trust'
 import './app.css'
+import { Audit } from './pages/Audit'
 
-const ROUTES = ['/', '/case/:id', '/missed', '/rings/:id?', '/trust']
+const ROUTES = ['/', '/case/:id', '/audit/:id', '/missed', '/rings/:id?', '/trust']
 
 /** The thread, drawn. It is the product's mark and the only decorative use of the accent. */
 function Mark() {
@@ -58,6 +59,7 @@ export default function App() {
         <Masthead />
         <Route path="/" render={() => <Docket />} />
         <Route path="/case/:id" render={(p) => <CaseFile key={p.id} id={p.id} />} />
+        <Route path="/audit/:id" render={(p) => <Audit key={p.id} id={p.id} />} />
         <Route path="/missed" render={() => <Missed />} />
         <Route path="/rings/:id?" render={(p) => <Rings ringId={p.id} />} />
         <Route path="/trust" render={() => <Trust />} />

@@ -764,3 +764,20 @@ code, .ref {
 
 /* The agent's own row in a comparison: marked by weight, not by the fraud accent. */
 .digest-table tr.is-ours td { font-weight: 600; color: var(--ink); }
+
+/* Audit view (regulator's replay) */
+.audit-controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 0 0 var(--gap); }
+.audit-slider { display: flex; flex-direction: column; gap: 4px; min-width: 220px; flex: 1; font-size: var(--t-s); color: var(--graphite); }
+.audit-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: var(--gap); }
+.audit-step, .audit-held { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; padding: 16px; min-width: 0; }
+.audit-kind { color: var(--thread); font-size: var(--t-s); margin: 0 0 6px; }
+.audit-dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 12px; font-size: var(--t-s); margin: 8px 0; }
+.audit-row { display: contents; }
+.audit-dl dt { color: var(--graphite); }
+.audit-dl dd { margin: 0; overflow-wrap: anywhere; }
+.audit-moved { border-left: 3px solid var(--thread); background: var(--thread-wash); padding: 10px 12px; margin: 12px 0; }
+.audit-ledger { width: 100%; font-size: var(--t-s); border-collapse: collapse; }
+.audit-ledger td, .audit-ledger th { border-top: 1px solid var(--rule); padding: 6px; vertical-align: top; text-align: left; }
+.audit-refs { font-size: var(--t-xs); padding-left: 18px; overflow-wrap: anywhere; }
+.audit-prob { font-size: var(--t-m); }
+@media (max-width: 860px) { .audit-grid { grid-template-columns: 1fr; } }

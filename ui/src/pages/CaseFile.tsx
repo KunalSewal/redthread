@@ -148,6 +148,9 @@ export function CaseFile({ id }: { id: string }) {
             {!live && answer && (
               <button className="btn-quiet" onClick={() => navigate(`/case/${id}?replay=1`)}>Replay</button>
             )}
+            {!live && answer && (
+              <button className="btn-quiet" onClick={() => navigate(`/audit/${id}`)}>Audit view</button>
+            )}
             <button className="btn-primary" onClick={investigate} disabled={live}>
               {live ? 'Investigating…' : answer ? 'Investigate again' : 'Investigate'}
             </button>

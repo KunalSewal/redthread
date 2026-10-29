@@ -27,6 +27,7 @@ from redthread.agent.outputs import persist, persist_halt
 from redthread.api.auth import Approver, CurrentApprover
 from redthread.api.casegraph import case_graph
 from redthread.api.ledger import Ledger
+from redthread.api.replay import replay
 from redthread.belief import Judged, assess
 from redthread.data import sources
 from redthread.policy import AUTO_ACTIONS, Action, Assessment, recommend
@@ -117,6 +118,16 @@ def get_case(case_id: str) -> dict:
         "reply": trace.get("reply"), "report": trace.get("report"),
         "actions": actions,
         "graph": case_graph(trace, answer) if trace else {"nodes": [], "edges": [], "steps": 0}}
+
+
+@app.get("/api/cases/{case_id}/replay")
+def get_replay(case_id: str) -> dict:
+    """The regulator's view: each step with the query it ran, what came back, and the evidence and
+    probability the agent held at that moment (redthread.api.replay)."""
+    trace = _read(RUNS / f"{case_id}.trace.json")
+    if not trace:
+        raise HTTPException(404, "this case has no trace")
+    return replay(trace, _answer_for(case_id))
 
 
 class Approval(BaseModel):
@@ -356,7 +367,7 @@ def counterfactual(case_id: str, body: Counterfactual) -> dict:
                    entities=tuple(i.get("entities") or ()))
             for n, i in enumerate(belief["ledger"]) if n not in set(body.dropped)]
     new = assess(alert.get("trigger_type", "analyst_request"), flagged.get("model_score"), kept,
-                 frozenset(belief.get("subject") or ()))
+                 frozenset(belief.get("subject") or ()), belief.get("as_of") or alert.get("opened_at"))
 
     # The recommendation is what an analyst acts on, so recompute that too: a probability that moves
     # without changing what the bank does is a curiosity, not a finding.
