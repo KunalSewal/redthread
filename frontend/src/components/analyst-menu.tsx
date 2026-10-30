@@ -24,7 +24,16 @@ import { Label } from '@/components/ui/label'
 import { SNAPSHOT } from '@/lib/api'
 import { useAnalyst } from '@/lib/analyst'
 
-export function SignInDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+export function SignInDialog({
+  open,
+  onOpenChange,
+  reason,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  /** Why signing in is needed right now, when an action asked for it. */
+  reason?: string
+}) {
   const { signIn } = useAnalyst()
   const [key, setKey] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -53,7 +62,7 @@ export function SignInDialog({ open, onOpenChange }: { open: boolean; onOpenChan
           <DialogHeader>
             <DialogTitle>Sign in as an analyst</DialogTitle>
             <DialogDescription>
-              Paste the analyst key you were given. Every decision you make is recorded against it.
+              {reason ? `${reason} ` : ''}Paste the analyst key you were given. Every decision you make is recorded against it.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-2">

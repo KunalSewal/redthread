@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, Columns3, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Columns3, X } from 'lucide-react'
 import { useDefaultLayout, useGroupRef, type LayoutStorage } from 'react-resizable-panels'
 import { ErrorState, Id, Loading } from '@/components/states'
 import { VerdictBadge } from '@/components/verdict'
@@ -10,7 +10,7 @@ import { Peers, Run } from '@/features/case/scheme'
 import { buildRecapGraph, GraphLegend, RecapGraph, type RecapNode } from '@/features/recap/recap-graph'
 import { describe, facts, parseActions } from '@/features/recap/steps'
 import { schemeEvidence, type CaseDetail, type Replay, type ReplayStep } from '@/lib/api'
-import { approvalLevel, prob, trigger } from '@/lib/format'
+import { action, approvalLevel, basis, prob, trigger } from '@/lib/format'
 import { useReplay } from '@/lib/queries'
 import { cn } from '@/lib/utils'
 
@@ -220,10 +220,14 @@ function RecapBody({
             <ChevronLeft />
             Previous
           </Button>
-          <Button onClick={() => go(index + 2)} disabled={index >= steps.length - 1}>
-            Next
-            <ChevronRight />
-          </Button>
+          {index >= steps.length - 1 ? (
+            <Button onClick={onClose}>Finish</Button>
+          ) : (
+            <Button onClick={() => go(index + 2)}>
+              Next
+              <ChevronRight />
+            </Button>
+          )}
           <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close the recap">
             <X />
           </Button>
@@ -290,7 +294,7 @@ function Explanation({
         {why && <p className="leading-relaxed text-muted-foreground">{why}</p>}
       </div>
 
-      <Belief replay={replay} step={step} verdictStep={verdictStep} verdict={detail.answer?.case.verdict} />
+      <Belief step={step} verdictStep={verdictStep} verdict={detail.answer?.case.verdict} />
 
       {step.kind === 'alert' && <Quote text={detail.alert.trigger_text} />}
 
@@ -351,10 +355,34 @@ function Explanation({
         </Section>
       )}
 
-      {!step.query && !['alert', 'quarantined', 'recommendation'].includes(step.kind) && step.detail && (
-        <Section title="What it recorded">
-          <p className="text-sm leading-relaxed">{step.detail}</p>
+      {step.kind === 'assessment' && detail.belief ? (
+        <Section title="How each finding counted">
+          <p className="text-sm text-muted-foreground">
+            It started at {prob(detail.belief.prior)}, because {detail.belief.prior_reason}.
+          </p>
+          <ul className="divide-y rounded-lg border text-sm">
+            {detail.belief.ledger
+              .filter((l) => l.counted)
+              .map((l, i) => (
+                <li key={i} className="flex items-center justify-between gap-3 px-3 py-2">
+                  <span className={cn('flex items-center gap-1.5', l.direction === 'incriminating' ? 'text-fraud' : 'text-cleared')}>
+                    {l.direction === 'incriminating' ? <ArrowUp className="size-3.5" /> : <ArrowDown className="size-3.5" />}
+                    <span className="text-foreground">{basis(l.basis)}</span>
+                    <span className="text-muted-foreground">{l.strength}</span>
+                  </span>
+                  <span className="tnum text-muted-foreground">×{l.lr.toFixed(2)}</span>
+                </li>
+              ))}
+          </ul>
         </Section>
+      ) : (
+        !step.query &&
+        !['alert', 'quarantined', 'recommendation'].includes(step.kind) &&
+        step.detail && (
+          <Section title="What it recorded">
+            <p className="text-sm leading-relaxed">{plain(step.detail)}</p>
+          </Section>
+        )
       )}
 
       {fresh.length > 0 && (
@@ -372,10 +400,7 @@ function Explanation({
 }
 
 /** Where the probability stood: a line of every step so far, and what this step did to it. */
-function Belief({ replay, step, verdictStep, verdict }: { replay: Replay; step: ReplayStep; verdictStep: number | null; verdict?: string }) {
-  const upto = replay.steps.filter((s) => s.step <= step.step)
-  const points = upto.filter((s) => s.probability != null)
-  const n = replay.steps.length
+function Belief({ step, verdictStep, verdict }: { step: ReplayStep; verdictStep: number | null; verdict?: string }) {
   const reached = verdictStep != null && step.step >= verdictStep
 
   return (
@@ -391,19 +416,26 @@ function Belief({ replay, step, verdictStep, verdict }: { replay: Replay; step: 
           <span className="text-sm">Not weighed yet</span>
         )}
       </div>
-      <svg viewBox={`0 0 ${n} 40`} preserveAspectRatio="none" className="h-12 w-full" aria-hidden="true">
-        <line x1="0" y1="8" x2={n} y2="8" className="stroke-border" strokeDasharray="1 1" vectorEffect="non-scaling-stroke" />
-        <line x1="0" y1="32" x2={n} y2="32" className="stroke-border" strokeDasharray="1 1" vectorEffect="non-scaling-stroke" />
-        {points.length > 0 && (
-          <polyline
-            points={points.map((s) => `${s.step - 0.5},${40 - (s.probability ?? 0) * 40}`).join(' ')}
-            className={cn('fill-none', verdict === 'fraud' ? 'stroke-fraud' : verdict === 'legitimate' ? 'stroke-cleared' : 'stroke-foreground')}
-            strokeWidth="2"
-            vectorEffect="non-scaling-stroke"
-          />
-        )}
-        <line x1={step.step - 0.5} y1="0" x2={step.step - 0.5} y2="40" className="stroke-foreground/40" vectorEffect="non-scaling-stroke" />
-      </svg>
+      <div className="space-y-1.5" aria-hidden="true">
+        <div className="relative h-2 rounded-full bg-muted">
+          {reached && step.probability != null && (
+            <div
+              className={cn(
+                'absolute inset-y-0 left-0 rounded-full transition-[width] duration-500',
+                verdict === 'fraud' ? 'bg-fraud' : verdict === 'legitimate' ? 'bg-cleared' : 'bg-muted-foreground/60',
+              )}
+              style={{ width: `${step.probability * 100}%` }}
+            />
+          )}
+          {reached && step.moved?.from != null && (
+            <div className="absolute -inset-y-1 w-0.5 rounded bg-foreground/70" style={{ left: `${step.moved.from * 100}%` }} title="Where it started" />
+          )}
+        </div>
+        <div className="flex justify-between text-xs text-muted-foreground">
+          <span>0, clearly legitimate</span>
+          <span>1, clearly fraud</span>
+        </div>
+      </div>
       <p className="text-sm leading-relaxed text-muted-foreground">
         {step.moved
           ? `Moved from ${prob(step.moved.from)} to ${prob(step.moved.to)}: ${step.moved.because}.`
@@ -413,6 +445,13 @@ function Belief({ replay, step, verdictStep, verdict }: { replay: Replay; step: 
       </p>
     </div>
   )
+}
+
+/** Backend notes name policy actions by identifier and use "->"; say them in words. */
+function plain(text: string) {
+  return text
+    .replace(/\b[A-Z]{2,}(?:_[A-Z]+)+\b/g, (id) => action(id).toLowerCase())
+    .replace(/\s*->\s*/g, ' to ')
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {

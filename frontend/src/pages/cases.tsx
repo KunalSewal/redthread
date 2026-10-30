@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { Search } from 'lucide-react'
 import { Pager, usePaged } from '@/components/pager'
@@ -44,7 +44,30 @@ export function CasesPage() {
   const { setPage } = paged
 
   // A new filter starts from the first page.
-  useEffect(() => setPage(0), [source, verdict, query, setPage])
+  const filterKey = `${source}|${verdict}|${query}`
+  const lastFilter = useRef(filterKey)
+  useEffect(() => {
+    if (lastFilter.current === filterKey) return
+    lastFilter.current = filterKey
+    setPage(0)
+  }, [filterKey, setPage])
+
+  // Arriving on a case by its link, start the list on the page that holds it.
+  const placed = useRef(false)
+  useEffect(() => {
+    if (placed.current || !cases.data) return
+    placed.current = true
+    const i = filtered.findIndex((c) => c.case_id === caseId)
+    if (i >= PAGE) setPage(Math.floor(i / PAGE))
+  }, [cases.data, filtered, caseId, setPage])
+
+  // Opening a case from lower down the list shows it from its top.
+  useEffect(() => {
+    if (window.scrollY > 120) {
+      const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      window.scrollTo({ top: 0, behavior: smooth ? 'smooth' : 'auto' })
+    }
+  }, [caseId])
 
   // Open the first case when none is chosen, so the workspace is never empty on a wide screen.
   useEffect(() => {
@@ -66,7 +89,7 @@ export function CasesPage() {
 
   return (
     <div className="grid gap-6 lg:grid-cols-[340px_minmax(0,1fr)] xl:gap-8">
-      <aside className={cn('space-y-3 lg:self-start', caseId && 'hidden lg:block')} aria-label="Case list">
+      <aside className={cn('min-w-0 space-y-3 lg:self-start', caseId && 'hidden lg:block')} aria-label="Case list">
         <div className="flex items-baseline justify-between">
           <h1 className="text-xl font-semibold tracking-tight">Cases</h1>
           {cases.data && <span className="tnum text-sm text-muted-foreground">{filtered.length} shown</span>}

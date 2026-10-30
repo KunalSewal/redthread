@@ -22,12 +22,12 @@ export function LandingPage() {
       <main>
         <section className="mx-auto max-w-6xl px-4 pt-14 pb-10 sm:px-6 sm:pt-20">
           <h1 className="max-w-[18ch] text-4xl leading-[1.08] font-semibold tracking-tight text-balance sm:text-6xl">
-            A fraud investigator that shows its work.
+            Every fraud leaves a thread.
           </h1>
           <p className="mt-6 max-w-[58ch] text-lg leading-relaxed text-muted-foreground">
-            RedThread takes an alert, investigates it across a graph of 650,938 card transactions, decides what happened under
-            the bank's fraud policy, and hands the analyst every ID behind every claim. A person approves anything that touches a
-            customer.
+            RedThread is the investigator that pulls it, and shows its work. It takes an alert, follows it across a graph of
+            650,938 card transactions, decides what happened under the bank's fraud policy, and hands the analyst every ID behind
+            every claim. A person approves anything that touches a customer.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button size="lg" className="h-11 px-5 text-base" render={<Link to="/app" />}>

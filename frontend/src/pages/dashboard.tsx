@@ -99,7 +99,7 @@ function Overview() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-3">
-        <div className="relative xl:col-span-2">
+        <div className="relative min-w-0 xl:col-span-2">
           <NeedsDecision rows={waitingCases} className="xl:absolute xl:inset-0" />
         </div>
         <div className="space-y-6">
@@ -173,7 +173,7 @@ function NeedsDecision({ rows, className }: { rows: CaseRow[]; className?: strin
                   <TableRow>
                     <TableHead>Case</TableHead>
                     <TableHead>Verdict</TableHead>
-                    <TableHead>Probability</TableHead>
+                    <TableHead className="hidden sm:table-cell">Probability</TableHead>
                     <TableHead className="hidden md:table-cell">Pattern</TableHead>
                     <TableHead className="text-right">Waiting</TableHead>
                     <TableHead className="text-right">Exposure</TableHead>
@@ -194,7 +194,7 @@ function NeedsDecision({ rows, className }: { rows: CaseRow[]; className?: strin
                       <TableCell>
                         <VerdictBadge verdict={c.verdict} />
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden sm:table-cell">
                         <ProbabilityBar value={c.fraud_probability} />
                       </TableCell>
                       <TableCell className="hidden text-muted-foreground md:table-cell">{pattern(c.pattern)}</TableCell>

@@ -31,6 +31,6 @@ export function Empty({ children }: { children: ReactNode }) {
 /** An identifier the analyst can check against the data: transactions, cards, cases. */
 export function Id({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <code className={cn('rounded bg-muted px-1.5 py-0.5 font-mono text-[0.8em] text-foreground/90', className)}>{children}</code>
+    <code className={cn('rounded bg-muted px-1.5 py-0.5 font-mono text-[0.8em] whitespace-nowrap text-foreground/90', className)}>{children}</code>
   )
 }

@@ -170,7 +170,8 @@ function DecideDialog({
     },
   })
 
-  if (decision && !analyst) return <SignInDialog open onOpenChange={(o) => !o && onClose()} />
+  if (decision && !analyst)
+    return <SignInDialog open onOpenChange={(o) => !o && onClose()} reason="Approving and rejecting are signed decisions." />
 
   const verb = decision === 'approved' ? 'Approve' : 'Reject'
   const ready = !needsReason || words(note) >= 5
@@ -307,7 +308,8 @@ function SettleDialog({ caseId, n, decision, onClose }: { caseId: string; n: num
       await Promise.all([refresh(), qc.invalidateQueries({ queryKey: keys.challenges(caseId) })])
     },
   })
-  if (decision && !analyst) return <SignInDialog open onOpenChange={(o) => !o && onClose()} />
+  if (decision && !analyst)
+    return <SignInDialog open onOpenChange={(o) => !o && onClose()} reason="Settling a challenge is a signed decision." />
   return (
     <Dialog open={!!decision} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-lg">
@@ -361,7 +363,8 @@ function RaiseDialog({ caseId, verdict, open, onClose }: { caseId: string; verdi
     },
   })
 
-  if (open && !analyst) return <SignInDialog open onOpenChange={(o) => !o && onClose()} />
+  if (open && !analyst)
+    return <SignInDialog open onOpenChange={(o) => !o && onClose()} reason="A challenge is recorded against the analyst who raises it." />
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>

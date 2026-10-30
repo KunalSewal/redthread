@@ -27,10 +27,13 @@ export function ReportTab({ detail }: { detail: CaseDetail }) {
                   {sar.activity_dates.length ? `${date(sar.activity_dates[0])} to ${date(sar.activity_dates.at(-1))}` : 'None'}
                 </Item>
                 <Item label="Subjects">
-                  <span className="flex flex-wrap gap-1">
-                    {sar.subjects.map((s) => (
+                  <span className="flex flex-wrap items-center gap-1">
+                    {sar.subjects.slice(0, 6).map((s) => (
                       <Id key={s}>{s}</Id>
                     ))}
+                    {sar.subjects.length > 6 && (
+                      <span className="text-sm font-normal text-muted-foreground">and {sar.subjects.length - 6} more</span>
+                    )}
                   </span>
                 </Item>
               </div>
