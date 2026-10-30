@@ -781,3 +781,13 @@ code, .ref {
 .audit-refs { font-size: var(--t-xs); padding-left: 18px; overflow-wrap: anywhere; }
 .audit-prob { font-size: var(--t-m); }
 @media (max-width: 860px) { .audit-grid { grid-template-columns: 1fr; } }
+
+/* Challenges: evidenced disagreement with the agent */
+.challenges { margin-top: var(--gap); border-top: 1px solid var(--rule); padding-top: 12px; }
+.challenge { border-left: 3px solid var(--rule-strong); padding: 6px 12px; margin: 10px 0; }
+.challenge.c-contested { border-left-color: var(--warn); }
+.challenge.c-accepted { border-left-color: var(--cleared); }
+.challenge-form { display: grid; gap: 8px; max-width: 640px; margin-top: 8px; }
+.challenge-form label { display: grid; gap: 4px; font-size: var(--t-s); color: var(--graphite); }
+.challenge-form textarea, .challenge-form input, .challenge-form select {
+  background: var(--sheet-raised); color: var(--ink); border: 1px solid var(--rule-strong); border-radius: 4px; padding: 6px 8px; font: inherit; }

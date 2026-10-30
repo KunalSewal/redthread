@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '../api'
 import type { CaseDetail, Event } from '../api'
-import { Actions } from '../components/Actions'
+import { Actions, Challenges } from '../components/Actions'
 import { Boundary } from '../components/Boundary'
 import { BeliefLedger } from '../components/BeliefLedger'
 import { BeliefScale } from '../components/BeliefScale'
@@ -243,6 +243,7 @@ export function CaseFile({ id }: { id: string }) {
               final={showFinal ? answer.next_best_actions.final : answer.next_best_actions.initial}
               whatChanged={showFinal ? answer.next_best_actions.what_changed : 'nothing'}
               actions={detail.actions} onChange={load} />
+            <Challenges caseId={id} verdict={answer.case.verdict} />
           </section>
         )}
 

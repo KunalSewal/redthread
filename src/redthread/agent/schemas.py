@@ -7,6 +7,10 @@ from pydantic import BaseModel, Field
 from redthread.answer import Pattern
 from redthread.belief import BASES
 
+# The model judges findings from the tools. A person's disagreement enters only through
+# redthread.challenge, never as something the model can file on their behalf.
+MODEL_BASES = tuple(b for b in BASES if b != "analyst_statement")
+
 
 class LlmEvidence(BaseModel):
     claim: str = Field(description="One factual finding, with numbers and dates where relevant")
@@ -17,7 +21,7 @@ class LlmEvidence(BaseModel):
         description="Does this finding point towards fraud, or towards the holder's own activity?")
     strength: Literal["weak", "moderate", "strong", "decisive"] = Field(
         description="How much this one finding should move a fraud investigator's belief, on its own")
-    basis: Literal[BASES] = Field(  # type: ignore[valid-type]
+    basis: Literal[MODEL_BASES] = Field(  # type: ignore[valid-type]
         description="The underlying fact this rests on. Findings sharing a basis are one piece of "
                     "evidence, not several: only the strongest in each basis is counted.")
 

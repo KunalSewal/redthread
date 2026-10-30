@@ -12,6 +12,7 @@ import logging
 import threading
 from datetime import datetime
 from pathlib import Path
+from typing import Literal
 
 import pandas as pd
 from fastapi import FastAPI, HTTPException
@@ -20,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict
 from sse_starlette.sse import EventSourceResponse
 
-from redthread import paths, redact
+from redthread import challenge, paths, redact
 from redthread.agent.graph import InvestigationHalted, investigate_alert
 from redthread.agent.mcp_graph import McpGraph
 from redthread.agent.outputs import persist, persist_halt
@@ -36,6 +37,7 @@ from redthread.tg import GRAPH, connection
 log = logging.getLogger(__name__)
 RUNS = paths.ROOT / "runs"
 APPROVALS = Ledger(RUNS / "approvals.log.jsonl")  # append-only and hash-chained
+CHALLENGES = Ledger(RUNS / "challenges.log.jsonl")  # evidenced disagreements and their second approvals
 _approval_lock = threading.Lock()
 UI_DIST = paths.ROOT / "ui" / "dist"
 ROUTE_RANK = {"auto": 0, "L1": 1, "L2": 2}
@@ -150,6 +152,92 @@ def verify_approvals() -> dict:
     return {"intact": intact, "first_broken_record": broken_at, "records": len(APPROVALS.records())}
 
 
+class Challenge(BaseModel):
+    """A person's disagreement with the agent's verdict. Who raises it comes from the key."""
+    model_config = ConfigDict(extra="forbid")
+    position: Literal["fraud", "legitimate"]
+    reason: str
+    evidence_ids: list[str] = []
+
+
+class Review(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    decision: Literal["upheld", "overruled"]
+    reason: str
+
+
+HARMFUL_ACTIONS = {Action.BLOCK_CARD, Action.BLOCK_ALL_CARDS, Action.FILE_REPORT}
+
+
+def _challenges(case_id: str) -> list[dict]:
+    return [r for r in CHALLENGES.records() if r["case_id"] == case_id]
+
+
+def _stands(case_id: str, position: str) -> bool:
+    """Is there an accepted, or contested-then-upheld, challenge for this position on the case?"""
+    recs = _challenges(case_id)
+    upheld = {r["action"].removesuffix("-review") for r in recs
+              if r["action"].endswith("-review") and r["decision"] == "upheld"}
+    return any(r["position"] == position and (r["evaluation"]["status"] == "accepted" or r["action"] in upheld)
+               for r in recs if not r["action"].endswith("-review"))
+
+
+@app.get("/api/cases/{case_id}/challenges")
+def list_challenges(case_id: str) -> list[dict]:
+    return _challenges(case_id)
+
+
+@app.post("/api/cases/{case_id}/challenges")
+def raise_challenge(case_id: str, body: Challenge, approver: CurrentApprover) -> dict:
+    """Disagree with the agent, with evidence (redthread.challenge). Accepted: it becomes memory.
+    Contested: it waits for a second, different L2 approver and is not memory until upheld."""
+    answer, trace = _answer_for(case_id), _read(RUNS / f"{case_id}.trace.json")
+    if not answer or not trace:
+        raise HTTPException(404, "case not investigated yet")
+    if body.position == answer["case"]["verdict"]:
+        raise HTTPException(400, f"the agent already concluded '{body.position}'; there is nothing to challenge")
+    result = challenge.evaluate(body.position, body.reason, body.evidence_ids, answer, trace)
+    if result.status == "refused":
+        raise HTTPException(422, result.why)
+    with _approval_lock:
+        n = sum(1 for r in _challenges(case_id) if not r["action"].endswith("-review")) + 1
+        at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        in_graph = result.status == "accepted" and _write_memory(
+            case_id, f"challenge {n} accepted from {approver.role} {approver.name}: {body.position}, because "
+                     f"{body.reason[:300]} (cites {', '.join(result.ids_in_case) or 'nothing'})", at, 100 + n)
+        return CHALLENGES.append({"case_id": case_id, "action": f"challenge-{n}", "position": body.position,
+                                  "reason": body.reason, "evidence_ids": body.evidence_ids,
+                                  "by": approver.name, "approver_id": approver.id, "role": approver.role,
+                                  "evaluation": result.as_dict(), "at": at, "in_graph": bool(in_graph)})
+
+
+@app.post("/api/cases/{case_id}/challenges/{n}/review")
+def review_challenge(case_id: str, n: int, body: Review, approver: CurrentApprover) -> dict:
+    """Four eyes: a contested challenge is settled by an L2 approver other than the one who raised it."""
+    raised = next((r for r in _challenges(case_id) if r["action"] == f"challenge-{n}"), None)
+    if not raised:
+        raise HTTPException(404, "no such challenge")
+    if raised["evaluation"]["status"] != "contested":
+        raise HTTPException(400, "only a contested challenge needs a second approver")
+    if approver.role != "L2":
+        raise HTTPException(403, f"a contested challenge needs an L2 approver; {approver.name} holds {approver.role}")
+    if approver.id == raised["approver_id"]:
+        raise HTTPException(403, "the person who raised a challenge cannot settle it")
+    if len(body.reason.split()) < 5:
+        raise HTTPException(422, "settling a challenge needs a reason an auditor could check")
+    with _approval_lock:
+        if CHALLENGES.find(case_id, f"challenge-{n}-review"):
+            raise HTTPException(409, f"challenge {n} on {case_id} has already been settled; decisions are final")
+        at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        in_graph = body.decision == "upheld" and _write_memory(
+            case_id, f"challenge {n} ({raised['position']}) upheld by {approver.name} over the evidence: "
+                     f"{body.reason[:300]}", at, 150 + n)
+        return CHALLENGES.append({"case_id": case_id, "action": f"challenge-{n}-review", "decision": body.decision,
+                                  "reason": body.reason, "by": approver.name, "approver_id": approver.id,
+                                  "role": approver.role, "position": raised["position"],
+                                  "evaluation": raised["evaluation"], "at": at, "in_graph": bool(in_graph)})
+
+
 @app.post("/api/cases/{case_id}/approvals")
 def approve(case_id: str, body: Approval, approver: CurrentApprover) -> dict:
     """Policy section 2: L1 and L2 actions wait for a human with at least that authority."""
@@ -166,6 +254,12 @@ def approve(case_id: str, body: Approval, approver: CurrentApprover) -> dict:
     if ROUTE_RANK[approver.role] < ROUTE_RANK[item["route"]]:
         raise HTTPException(403, f"{body.action} requires {item['route']} approval; "
                                  f"{approver.name} holds {approver.role}, which is not sufficient")
+    # Overruling the agent on a fraud case takes evidence, not a click: rejecting a block or a report it
+    # recommended needs a challenge that the evidence accepted or a second approver upheld.
+    if (body.decision == "rejected" and body.action in HARMFUL_ACTIONS and answer["case"]["verdict"] == "fraud"
+            and not _stands(case_id, "legitimate")):
+        raise HTTPException(409, f"rejecting {body.action} on a fraud verdict needs an evidenced challenge first: "
+                                 f"POST /api/cases/{case_id}/challenges with the reason and the IDs it rests on")
     with _approval_lock:  # the "already decided?" check and the append must not interleave
         if APPROVALS.find(case_id, body.action):
             raise HTTPException(409, f"{body.action} on {case_id} has already been decided; decisions are final")
@@ -175,6 +269,21 @@ def approve(case_id: str, body: Approval, approver: CurrentApprover) -> dict:
         return APPROVALS.append({"case_id": case_id, "action": str(body.action), "decision": body.decision,
                                  "approver": approver.name, "approver_id": approver.id, "role": approver.role,
                                  "note": body.note, "at": at, "in_graph": in_graph})
+
+
+def _write_memory(case_id: str, text: str, at: str, n: int) -> bool:
+    """Record a person's decision on the case in the graph, where later investigations read it."""
+    cid = f"CASE-{case_id}"
+    try:
+        conn = connection(GRAPH)
+        conn.runInstalledQuery("record_analyst_decision", {"case_id": cid, "decision": text, "decided_at": at})
+        conn.runInstalledQuery("add_case_event", {
+            "case_id": cid, "event_id": f"{cid}-D{n:03d}", "step": 900 + n, "kind": "analyst_decision",
+            "detail": text, "occurred_at": at})
+        return True
+    except Exception:
+        log.exception("could not record the decision on %s in the graph", cid)
+        return False
 
 
 def _record_decision_in_graph(case_id: str, body: "Approval", approver: Approver, at: str, n: int) -> bool:

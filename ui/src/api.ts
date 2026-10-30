@@ -179,6 +179,19 @@ export const api = {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
       body: JSON.stringify(body),
     }).then(json<unknown>),
+  challenges: (id: string) => fetch(`/api/cases/${id}/challenges`).then(json<ChallengeRecord[]>),
+  challenge: (id: string, key: string, body: { position: string; reason: string; evidence_ids: string[] }) =>
+    fetch(`/api/cases/${id}/challenges`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+      body: JSON.stringify(body),
+    }).then(json<ChallengeRecord>),
+  settle: (id: string, n: number, key: string, body: { decision: string; reason: string }) =>
+    fetch(`/api/cases/${id}/challenges/${n}/review`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+      body: JSON.stringify(body),
+    }).then(json<ChallengeRecord>),
   whoami: (key: string) =>
     fetch('/api/whoami', { headers: { Authorization: `Bearer ${key}` } }).then(json<{ name: string; role: string }>),
 }
@@ -209,3 +222,10 @@ export interface ContainmentPlan {
   other_people_on_blocked_cards: Record<string, number>
 }
 export interface Containment { planned_as_of: string; penalty_usd_per_person: number; plans: ContainmentPlan[] }
+
+export interface ChallengeRecord {
+  case_id: string; action: string; position: string; reason: string; evidence_ids?: string[]
+  by: string; role: string; at: string; decision?: string; in_graph: boolean
+  evaluation: { status: string; why: string; probability_before: number | null; probability_after: number | null
+    strength: string; ids_in_case: string[]; ids_not_in_case: string[] }
+}

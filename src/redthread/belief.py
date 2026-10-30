@@ -50,12 +50,14 @@ BASES: tuple[str, ...] = (
     "customer_statement",         # what the cardholder said
     "amount_or_timing",           # amounts, velocity, recurring cadence, testing sequences
     "region",                     # billing region against the card's home region
+    "analyst_statement",          # a person's evidenced disagreement with the agent (redthread.challenge)
 )
 
 # Replays that assign the trigger by coin flip set this, because there the trigger carries no information.
 REPORT_PRIOR_ENV = "REDTHREAD_PRIOR_CUSTOMER_REPORT"
 PRIOR_ANALYST_REQUEST = 0.5
 PRIOR_BOUNDS = (0.05, 0.90)  # never start an investigation certain of its own conclusion
+STOP_HIGH_POSTERIOR, STOP_LOW_POSTERIOR = 0.85, 0.15  # verdict lines: fraud at or above, legitimate at or below
 P_FLOOR = 0.03  # calibration is scored; claiming 0 or 1 is never supported by evidence this noisy
 MODEL_BASIS_LR_CAP = 8.0  # when the model score is evidence rather than the prior
 # The last month whose activity the fraud model's scores were checked against outcomes (Dec 2016,
@@ -133,9 +135,9 @@ class Belief:
 
     @property
     def verdict(self) -> str:
-        if self.posterior >= 0.85:
+        if self.posterior >= STOP_HIGH_POSTERIOR:
             return "fraud"
-        return "legitimate" if self.posterior <= 0.15 else "uncertain"
+        return "legitimate" if self.posterior <= STOP_LOW_POSTERIOR else "uncertain"
 
     def explain(self) -> str:
         parts = [f"prior {self.prior:.2f} ({self.prior_reason})"]

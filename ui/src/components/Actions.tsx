@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
-import type { ActionItem, CaseAction } from '../api'
+import type { ActionItem, CaseAction, ChallengeRecord } from '../api'
 
 /** Next best actions before and after the evidence request, and the approvals the agent cannot give. */
 
@@ -35,7 +35,7 @@ function Plan({ title, items }: { title: string; items: ActionItem[] }) {
 const KEY_STORE = 'redthread.approverKey'
 
 /** The approver key, kept for this browser session only. The server resolves it to a name and role. */
-function useApproverKey() {
+export function useApproverKey() {
   const [key, setKey] = useState(() => {
     try { return sessionStorage.getItem(KEY_STORE) ?? '' } catch { return '' }
   })
@@ -117,6 +117,86 @@ export function Actions({ caseId, initial, final, whatChanged, actions, onChange
           </li>
         ))}
       </ul>
+    </div>
+  )
+}
+
+/* Disagreeing with the agent takes evidence. The server weighs the reason and the IDs it cites in the
+ * case's own ledger; a claim the evidence does not support waits for a second, different L2 approver
+ * and does not become memory until then. */
+export function Challenges({ caseId, verdict }: { caseId: string; verdict: string }) {
+  const { key, who } = useApproverKey()
+  const [records, setRecords] = useState<ChallengeRecord[]>([])
+  const [position, setPosition] = useState(verdict === 'fraud' ? 'legitimate' : 'fraud')
+  const [reason, setReason] = useState('')
+  const [ids, setIds] = useState('')
+  const [error, setError] = useState('')
+  const load = () => { api.challenges(caseId).then(setRecords).catch(() => setRecords([])) }
+  useEffect(load, [caseId])
+  const raised = records.filter((r) => !r.action.endsWith('-review'))
+  const settled = new Map(records.filter((r) => r.action.endsWith('-review')).map((r) => [r.action.replace('-review', ''), r]))
+  const submit = () => {
+    setError('')
+    api.challenge(caseId, key, { position, reason, evidence_ids: ids.split(/[\s,]+/).filter(Boolean) })
+      .then(() => { setReason(''); setIds(''); load() }).catch((e: Error) => setError(e.message))
+  }
+  return (
+    <div className="challenges">
+      <h3>Disagree with this verdict</h3>
+      <p className="hint">State why, and cite the transactions, cards or cases it rests on. One person&rsquo;s claim
+        can settle a close call; against clear evidence it needs a second L2 approver.</p>
+      {raised.map((r) => {
+        const n = Number(r.action.split('-')[1])
+        const review = settled.get(r.action)
+        return (
+          <div key={r.action} className={`challenge c-${r.evaluation.status}`}>
+            <p><strong>{r.by}</strong> ({r.role}) says <strong>{r.position}</strong>: {r.reason}</p>
+            <p className="hint">{r.evaluation.status}: {r.evaluation.why}
+              {r.evaluation.ids_not_in_case.length ? `. Not in this case: ${r.evaluation.ids_not_in_case.join(', ')}` : ''}</p>
+            {review && <p className="hint">{review.decision} by {review.by}: {review.reason}</p>}
+            {r.evaluation.status === 'contested' && !review && who?.role === 'L2' && who.name !== r.by && (
+              <Settle caseId={caseId} n={n} apiKey={key} onDone={load} />
+            )}
+          </div>
+        )
+      })}
+      {who ? (
+        <div className="challenge-form">
+          <label><span>The case is</span>
+            <select value={position} onChange={(e) => setPosition(e.target.value)}>
+              {['fraud', 'legitimate'].filter((p) => p !== verdict).map((p) => <option key={p}>{p}</option>)}
+            </select>
+          </label>
+          <label><span>Because</span>
+            <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3}
+              placeholder="What you know, in facts an auditor could check" />
+          </label>
+          <label><span>It rests on</span>
+            <input value={ids} onChange={(e) => setIds(e.target.value)} placeholder="e.g. 3660258, C12975-K2" />
+          </label>
+          <button className="btn-quiet" onClick={submit} disabled={reason.trim().split(/\s+/).length < 5}>Submit for weighing</button>
+          {error && <p className="error" role="alert">{error}</p>}
+        </div>
+      ) : <p className="hint">Sign in with an approver key above to raise a challenge.</p>}
+    </div>
+  )
+}
+
+function Settle({ caseId, n, apiKey, onDone }: { caseId: string; n: number; apiKey: string; onDone: () => void }) {
+  const [reason, setReason] = useState('')
+  const [error, setError] = useState('')
+  const decide = (decision: string) => {
+    setError('')
+    api.settle(caseId, n, apiKey, { decision, reason }).then(onDone).catch((e: Error) => setError(e.message))
+  }
+  return (
+    <div className="challenge-form">
+      <label><span>Your reason, as the second approver</span>
+        <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} />
+      </label>
+      <button className="btn-quiet" onClick={() => decide('upheld')} disabled={!reason.trim()}>Uphold</button>
+      <button className="btn-quiet" onClick={() => decide('overruled')} disabled={!reason.trim()}>Overrule</button>
+      {error && <p className="error" role="alert">{error}</p>}
     </div>
   )
 }
