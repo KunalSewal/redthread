@@ -158,7 +158,22 @@ def speed() -> str:
             f"case on average{cost}")
 
 
-FILL = {"speed": speed, "headline": headline, "ablation": ablation, "detectors": detectors, "drills": drills,
+def schema_map() -> str:
+    proc = ROOT / "data" / "processed"
+    blind, after = _read(proc / "schema_map_eval_blind.json"), _read(proc / "schema_map_eval.json")
+    if not blind:
+        return "_not yet evaluated (`python scripts/schema_map.py eval test_schema/*.gsql`)_"
+
+    def line(d: dict) -> str:
+        t = d["total"]
+        return f"{t['right']} of {t['items']} right, {t['partial']} partial, {t['wrong']} wrong"
+    out = f"on the first, blind run {line(blind)}"
+    return out + (f"; after two general fixes the blind run exposed (so no longer a blind test), {line(after)}"
+                  if after and after["total"] != blind["total"] else "")
+
+
+FILL = {"schema_map": schema_map, "speed": speed,
+        "headline": headline, "ablation": ablation, "detectors": detectors, "drills": drills,
         "attacks": attacks, "containment": containment, "data_quality": data_quality,
         "attestation": attestation}
 

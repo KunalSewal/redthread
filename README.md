@@ -166,6 +166,14 @@ IDs, and the probability before and after.
   The new layout was used only after a named L2 approver accepted it. The decision is in a
   hash-chained ledger, and `config/source_map.json` records the approved files' fingerprints. The
   reader refuses data that differs.
+- **Someone else's schema (challenge 13).** `scripts/schema_map.py` maps a bank's graph schema onto
+  the concepts an investigation needs (person, account, transaction, device, case and so on, their
+  relations and key attributes). Code parses the GSQL with every comment stripped, so nothing the
+  author wrote about the answer reaches the mapper. The model proposes a mapping with a reason for each
+  choice, and code rejects any vertex, edge or attribute that does not exist and any edge path that
+  does not connect in the direction given. On the organisers' three test schemas (ISO 20022, BIAN and a
+  T24 core-banking dump), scored against the key in their comments: <!-- numbers:schema_map -->on the first, blind run 61 of 82 right, 15 partial, 6 wrong; after two general fixes the blind run exposed (so no longer a blind test), 70 of 82 right, 9 partial, 3 wrong<!-- /numbers -->.
+  Every mapping held against its schema.
 - **Data quality (challenge 11).** `scripts/data_quality.py` lists each problem with the records
   affected and the investigations it taints:
 <!-- numbers:data_quality -->
