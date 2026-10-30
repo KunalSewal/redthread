@@ -48,10 +48,15 @@ def attest(answer: dict, trace: dict) -> list[dict]:
     log = trace.get("query_log") or {}
     alert, c = trace["alert"], answer["case"]
     claims = []
+    # Every claim also rests on the alert's own context (the flagged transaction, its card and customer),
+    # which the first query of every investigation returns.
+    context = [q for r, qs in log.items() if r.startswith("query:alert_context(") for q in qs]
     for e in c["evidence"]:
         how = log.get(e["ref"])
         if how is None and e["ref"].startswith(("trigger:", "guard:")):
             how = [{"source": "case pack row", "case_id": alert["case_id"], "field": "trigger_text"}]
+        elif how is not None and not e["ref"].startswith("query:alert_context("):
+            how = [*how, *context]
         claims.append({"what": e["claim"], "evidence": _ids([*e["entity_ids"], alert["customer_id"]]),
                        "how": how or [], "ref": e["ref"],
                        "when": sorted({q["ran_at"] for q in how or [] if "ran_at" in q}),
@@ -100,11 +105,16 @@ def verify(conn, claim: dict) -> dict:
         return {"verified": None, "reason": "nothing to re-run"}
     seen = ""
     for q in claim["how"]:
+        # The IDs a query was run on count too: new_kind_run on card C05061-K1 does not echo the card in
+        # its output, yet it is exactly what attests a claim about that card.
+        seen += json.dumps(q["params"])
         try:
             seen += json.dumps(conn.runInstalledQuery(q["query"], q["params"]))
         except Exception as exc:
             return {"verified": False, "reason": f"{q['query']} failed on re-run: {exc}"[:200]}
-    missing = sorted(i for i in wanted if f'"{i}"' not in seen)
+    # A whole-token match: holder IDs ("C06220-K1|126|201") and case summaries ("CC-2158|C10055-K1|...")
+    # carry card IDs inside them.
+    missing = sorted(i for i in wanted if not re.search(rf"(?<![\w-]){re.escape(i)}(?![\w-])", seen))
     return {"verified": not missing, "missing": missing[:20]}
 
 
