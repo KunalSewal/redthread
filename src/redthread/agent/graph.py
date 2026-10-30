@@ -84,6 +84,9 @@ class CaseState(TypedDict, total=False):
     investigation_calls: int
     quarantine: list[dict]
     answer: dict
+    # LangGraph keeps only declared keys: an undeclared one is dropped between nodes without a word
+    # (query_log never reached a trace until this was declared; tests/test_fail_closed.py checks).
+    query_log: dict[str, list[dict]]
 
 
 class Investigation:

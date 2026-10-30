@@ -65,7 +65,12 @@ class Llm:
         stored = REPLAY_DIR / f"{key}.json"
         if getattr(self, "replay", False) and stored.exists():
             self.reused.append(key[:12])
-            return types.GenerateContentResponse.model_validate_json(stored.read_text(encoding="utf-8"))
+            resp = types.GenerateContentResponse.model_validate_json(stored.read_text(encoding="utf-8"))
+            # Counted at its recorded cost: the answer's token count is what its model calls consumed,
+            # whether made now or answered from the store (each reuse is listed in the case's events).
+            if resp.usage_metadata and resp.usage_metadata.total_token_count:
+                self.tokens += resp.usage_metadata.total_token_count
+            return resp
 
         level, timeouts = config.THINKING_LEVEL, 0
         for attempt in range(1, attempts + 1):

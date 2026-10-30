@@ -181,3 +181,11 @@ def test_the_same_call_twice_gets_the_same_answer_and_a_changed_one_does_not(mon
     assert first.text == second.text == "answer 1" and len(calls) == 1 and len(model.reused) == 1
     changed = [types.Content(role="user", parts=[types.Part.from_text(text="new evidence")])]
     assert asyncio.run(model.generate(changed, system="s")).text == "answer 2"
+
+
+
+def test_every_key_the_trace_saves_survives_the_workflow():
+    """LangGraph drops undeclared state keys silently; a trace key missing here never reaches a trace."""
+    from redthread.agent.graph import TRACE_KEYS, CaseState
+
+    assert set(TRACE_KEYS) <= set(CaseState.__annotations__)
