@@ -90,6 +90,8 @@ def _unplant(conn, planted: list[str], attempts: int = 30) -> None:
                 if not conn.getVerticesById("ClosedCase", [cid]):
                     break
             except Exception as exc:  # the workspace may be waking; never give up silently
+                if "is not a valid vertex id" in str(exc):
+                    break  # TigerGraph's way of saying the vertex does not exist: it is gone
                 log.warning("could not remove planted %s yet (%s); retrying", cid, str(exc)[:80])
             time.sleep(20)
         else:
