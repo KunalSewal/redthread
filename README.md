@@ -195,6 +195,117 @@ IDs, and the probability before and after.
 Logs, traces and answers pass through redaction (secrets, keys, e-mails, phone and card numbers) before
 they are written. Credentials live in `.env` and `secrets/`, both git-ignored.
 
+## Architecture
+
+```mermaid
+flowchart TB
+    A["Alerts<br/>case pack: risk score, customer report, analyst request<br/>monitors: alerts the agent raises itself"]
+
+    subgraph AG["Agent: LangGraph workflow"]
+        G["Guard<br/>alert text, case-history notes"] --> T["Tools<br/>evidence digests, query log, as_of"]
+        T --> S["Detectors<br/>new-kind run, scheme peers,<br/>recipient spike"]
+        S --> B["Evidence ledger<br/>measured priors, tempered Bayes"]
+        B --> P["Policy engine<br/>R1-R10, routes, SAR 3a"]
+        K["Pattern classifier"] --> V
+        P --> V["Answer schema<br/>tip-off rule, ID checks"]
+        V --> O["Outputs<br/>redacted answer and trace"]
+    end
+
+    M["Gemini<br/>chooses queries, judges findings,<br/>writes the narrative<br/>(replay store: same inputs, same answer)"]
+    MCP["tigergraph-mcp<br/>allowlist: installed queries, vector search"]
+
+    subgraph TG["TigerGraph Savanna"]
+        Q["27 installed GSQL queries<br/>one write path for case memory"]
+        GR[("Graph<br/>transactions, cards, holders, devices,<br/>closed cases, agent cases, events")]
+        VE[("TigerVector<br/>policy, regulation, closed cases")]
+        AL["ring_wcc, tg_louvain"]
+        Q --- GR & VE & AL
+    end
+
+    subgraph WB["Workbench"]
+        API["FastAPI<br/>cases, audit replay, handover,<br/>counterfactual, containment, evaluation"]
+        UI["React workbench<br/>docket, case file, audit view, rings, trust"]
+        AP["Approvals and challenges<br/>approver keys, roles, four eyes,<br/>hash-chained ledgers"]
+        API --> UI --> AP
+    end
+
+    D["Approved data layout<br/>drift detection, fingerprints"]
+    GT["Quality gate<br/>tests, audit, organisers' grader,<br/>attestation, README numbers"]
+
+    A --> G
+    M <-->|"judgements, never arithmetic"| T
+    T <--> MCP <--> Q
+    O --> API
+    AP -->|"evidenced decisions become memory"| Q
+    D -.->|"what may be read"| T
+    GT -.-> O
+
+    classDef model fill:#FFF3E8,stroke:#FF6D00,stroke-width:1.5px,color:#222
+    classDef code fill:#EEF1F5,stroke:#424242,stroke-width:1.5px,color:#222
+    classDef store fill:#E8F1EF,stroke:#2C7D6C,stroke-width:1.5px,color:#222
+    class M model
+    class A,G,T,S,B,P,K,V,O,API,UI,AP,D,GT,MCP code
+    class Q,GR,VE,AL store
+```
+
+*The model is reached only for judgement: which query to run next, which way a finding points and how
+strongly, and the words of the summary. Everything that decides an outcome (probability, pattern,
+actions, routes, report) is deterministic code, and every graph access goes through installed queries
+behind the MCP allowlist.*
+
+### One investigation, step by step
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant AL as Alert
+    participant WF as Workflow
+    participant GD as Guard
+    participant TL as Tools
+    participant TG as TigerGraph (via MCP)
+    participant LM as Gemini
+    participant CD as Ledger, policy, approvals (code)
+    participant CU as Customer (simulated)
+    participant AN as Analyst (workbench)
+
+    AL->>WF: intake: validate the alert, clear any earlier run of it
+    WF->>GD: screen the alert text
+    GD-->>WF: facts kept, instructions quarantined
+    WF->>TL: gather the same checklist for every alert
+    TL->>TG: alert_context, card_window, new_kind_run, scheme_peers,<br/>recipient_cards, holder_history, device_neighbors, shared_origin,<br/>linked_cases, similar_closed_cases (vector), community
+    TG-->>TL: results up to as_of, never after the alert
+    TL-->>WF: digests, notes screened, every query logged with parameters
+    loop investigate, within a budget
+        WF->>LM: case brief: which follow-up next?
+        LM-->>WF: tool calls
+        WF->>TL: follow-up queries
+    end
+    WF->>LM: assess: judge each finding (direction, strength, basis)
+    LM-->>WF: judged findings, schema-checked
+    WF->>CD: validate IDs, add detector findings, weigh, name the pattern
+    CD-->>WF: probability and verdict
+    opt verdict between 0.15 and 0.85
+        WF->>LM: resolve once with more queries, then reassess
+    end
+    WF->>CD: initial plan: actions and approval routes
+    WF->>TG: open the case (write_case) when policy warrants it
+    opt policy asks for more evidence
+        WF->>CU: customer validation, step-up or analyst question
+        CU-->>WF: assumed reply, stated in the answer
+        WF->>CD: reweigh, final plan, what changed
+    end
+    WF->>TG: ground each cited rule in the policy text (GraphRAG)
+    WF->>LM: write the summary and, if 3a requires, the SAR narrative
+    WF->>TG: update the case and its events (memory)
+    WF-->>AN: validated answer, redacted answer and trace, audit replay
+    AN->>CD: approve or reject L1/L2 actions: role from the key, never the request
+    AN->>CD: challenge the verdict with reason and IDs
+    CD-->>AN: accepted, or contested and waiting for a second L2
+```
+
+Both diagrams as images, for slides: [`assets/architecture.png`](assets/architecture.png),
+[`assets/sequence.png`](assets/sequence.png).
+
 ## What it does
 
 | The brief asks the agent to… | RedThread |
