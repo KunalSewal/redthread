@@ -3,9 +3,9 @@
   "case": {
     "status": "escalated",
     "verdict": "fraud",
-    "fraud_probability": 0.934,
+    "fraud_probability": 0.95,
     "pattern": "undocumented",
-    "pattern_description": "A coordinated low-dollar online billing scheme affecting at least 20 distinct customer cards across the issuer, characterized by sequential online authorisations under $10 in product category C without follow-on large purchases. Individual charges range from $2.10 to $5.08 and are spaced across several days or weeks, allowing them to evade standard card-testing velocity rules (Rule R5) and single-transaction fraud models. The activity represents automated micro-billing exploitation or merchant probing across compromised card numbers.",
+    "pattern_description": "A coordinated multi-card micro-billing scheme involving recurring online authorizations under $10 for product C, spaced over multiple weeks without an escalating larger purchase. The scheme has expanded across 19 cards and 19 unrelated customers with contiguous transaction IDs, representing automated low-dollar card enumeration or systematic merchant draining rather than standard card testing. Because this coordinated cross-customer abuse does not fit established typologies, it is classified as undocumented under Rule R9.",
     "affected_txn_ids": [
       "3660245",
       "3660246",
@@ -16,24 +16,24 @@
     ],
     "first_suspicious_txn_id": "3660245",
     "connected_card_ids": [
-      "C12975-K2",
       "C05083-K1",
+      "C12975-K2",
+      "C00129-K1",
       "C01326-K2",
       "C04528-K1",
       "C09471-K2",
       "C13290-K1",
-      "C00129-K1",
-      "C12223-K1",
+      "C03611-K2",
       "C04105-K2",
-      "C12030-K1",
-      "C11332-K1",
-      "C09582-K1",
+      "C05263-K2",
       "C06198-K1",
+      "C08972-K1",
+      "C09582-K1",
       "C10035-K2",
       "C10654-K1",
-      "C08972-K1",
-      "C05263-K2",
-      "C03611-K2",
+      "C11332-K1",
+      "C12030-K1",
+      "C12223-K1",
       "C03427-K2"
     ],
     "connected_device_profiles": [],
@@ -62,82 +62,91 @@
         ]
       },
       {
-        "claim": "19 other cards (19 other customers) newly show the same signature in the 30 days to the alert - 3+ online authorisations under $10, on a card that had not made such charges before - against 7 and 4 in the same window one and two months earlier: C12975-K2, C05083-K1, C01326-K2, C04528-K1, C09471-K2, C13290-K1, C00129-K1, C12223-K1, C04105-K2, C12030-K1, C11332-K1, C09582-K1.",
+        "claim": "19 other cards (19 other customers) newly show the same signature in the 30 days to the alert - 3+ online authorisations under $10, on a card that had not made such charges before - against 7 and 4 in the same window one and two months earlier: C05083-K1, C12975-K2, C00129-K1, C01326-K2, C04528-K1, C09471-K2, C13290-K1, C03611-K2, C04105-K2, C05263-K2, C06198-K1, C08972-K1.",
         "source": "graph",
         "ref": "query:scheme_peers(3+ online authorisations under $10, on a card that had not made such charges before, 2016-12-29..2017-01-28)",
         "entity_ids": [
-          "C12975-K2",
           "C05083-K1",
+          "C12975-K2",
+          "C00129-K1",
           "C01326-K2",
           "C04528-K1",
           "C09471-K2",
           "C13290-K1",
-          "C00129-K1",
-          "C12223-K1",
+          "C03611-K2",
           "C04105-K2",
-          "C12030-K1",
-          "C11332-K1",
-          "C09582-K1",
+          "C05263-K2",
           "C06198-K1",
+          "C08972-K1",
+          "C09582-K1",
           "C10035-K2",
           "C10654-K1",
-          "C08972-K1",
-          "C05263-K2",
-          "C03611-K2",
+          "C11332-K1",
+          "C12030-K1",
+          "C12223-K1",
           "C03427-K2"
         ]
       },
       {
-        "claim": "Card C00348-K1 experienced an anomalous run of 6 online micro-authorizations under $10 in product C between 2017-01-07 and 2017-01-28 totaling $23.17, departing completely from the cardholder's baseline of in-person retail purchases.",
+        "claim": "Flagged transaction 3660250 is the culmination of an anomalous run of 6 consecutive low-value online authorizations under $10 (ranging from $2.10 to $5.08, totaling $23.17) between 2017-01-07 and 2017-01-28 for product C, spanning sequential IDs 3660245 through 3660250.",
         "source": "graph",
         "ref": "query:new_kind_run(card=C00348-K1, 2016-12-29..alert)",
         "entity_ids": [
-          "C00348-K1",
           "3660245",
           "3660246",
           "3660247",
           "3660248",
           "3660249",
-          "3660250"
+          "3660250",
+          "C00348-K1"
         ]
       },
       {
-        "claim": "A scheme peers query identified 19 peer cards across 19 customers exhibiting the identical anomalous pattern of 3+ online micro-authorizations under $10 in product C during January 2017, with tightly clustered sequential transaction IDs (3660174 to 3660349), establishing a coordinated cross-customer scheme.",
+        "claim": "Scheme peer analysis identifies 19 other cards across 19 customers exhibiting the identical anomalous signature of 3+ online authorizations under $10 on cards without prior such charges, with scheme volume growing from 4 cards two months ago to 19 currently, sharing sequential transaction IDs in the 3660xxx block.",
         "source": "graph",
         "ref": "query:scheme_peers(3+ online authorisations under $10, on a card that had not made such charges before, 2016-12-29..2017-01-28)",
         "entity_ids": [
-          "C12975-K2",
           "C05083-K1",
+          "C12975-K2",
+          "C00129-K1",
           "C01326-K2",
           "C04528-K1",
           "C09471-K2",
           "C13290-K1",
-          "C00129-K1",
-          "C12223-K1",
+          "C03611-K2",
           "C04105-K2",
-          "C12030-K1",
-          "C11332-K1",
-          "C09582-K1",
+          "C05263-K2",
           "C06198-K1",
+          "C08972-K1",
+          "C09582-K1",
           "C10035-K2",
           "C10654-K1",
-          "C08972-K1",
-          "C05263-K2",
-          "C03611-K2",
+          "C11332-K1",
+          "C12030-K1",
+          "C12223-K1",
           "C03427-K2"
         ]
       },
       {
-        "claim": "Prior closed cases CC-3841 and CC-4086 confirm that structured online authorization activity designed to circumvent automated threshold detection across multiple customer accounts is classified as confirmed fraud under the undocumented pattern (Rule R9).",
+        "claim": "The flagged transaction 3660250 represents product C online, which is completely new for the holder whose prior baseline consists of in-person product W transactions (such as transaction 3601214 for $139.34), with no matching recurring pattern.",
         "source": "graph",
-        "ref": "query:similar_closed_cases(\"3+ online authorisations under $10, on a card that had not m...\", k=6)",
+        "ref": "query:holder_history(holder=C00348-K1|264|143, before=2017-01-28)",
         "entity_ids": [
-          "CC-3841",
-          "CC-4086"
+          "3660250",
+          "3601214",
+          "C00348-K1"
         ]
       },
       {
-        "claim": "Flagged transaction 3660250 produced a very low model score of 0.001 (historical fraud rate 0.0063) and legacy risk score of 0.04, reflecting typical model baselines for isolated micro-dollar authorizations lacking device anomalies.",
+        "claim": "Closed case CC-3841 on card C01099-K1 confirmed fraudulent activity under an undocumented pattern involving structured online authorizations designed to stay under threshold amounts without matching standard typologies.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(\"3+ online authorisations under $10 scheme peers small charge...\", k=6)",
+        "entity_ids": [
+          "CC-3841"
+        ]
+      },
+      {
+        "claim": "Billing region 264 of the flagged transaction 3660250 represents 36.2% of the card's historical activity (54 of 149 prior transactions), showing that the card has regular legitimate usage in this region.",
         "source": "graph",
         "ref": "query:alert_context(tx=3660250)",
         "entity_ids": [
@@ -146,13 +155,12 @@
         ]
       },
       {
-        "claim": "Billing region 264 shows a low hot-share of 0.0022 and lift of 0.12 relative to baseline across 905 transactions in the 7-day window, indicating no localized geographic fraud concentration.",
+        "claim": "The flagged transaction 3660250 and associated run transactions were conducted without a device ID, exhibiting no proxy flag, and card C00348-K1 has no suspicious device ring membership (ring_id -1).",
         "source": "graph",
-        "ref": "query:shared_origin(tx=3660250, window=+/-7d)",
+        "ref": "query:alert_context(tx=3660250)",
         "entity_ids": [
           "3660250",
-          "C05061-K1",
-          "C07847-K2"
+          "C00348-K1"
         ]
       },
       {
@@ -195,10 +203,9 @@
       }
     ],
     "similar_prior_cases": [
-      "CC-3841",
-      "CC-4086"
+      "CC-3841"
     ],
-    "summary": "Customer C00348 reported unauthorized activity on card C00348-K1 regarding online transaction 3660250 ($4.05, product C). An investigation identified a sequence of six online micro-authorizations in product category C between January 7 and January 28, 2017, totaling $23.17, which completely departed from the cardholder's baseline of in-person retail spending. Graph analysis linked the activity to an automated micro-billing scheme spanning 19 additional customer cards with sequential transaction IDs between 3660174 and 3660349. Based on decisive evidence of coordinated cross-customer abuse fitting undocumented pattern R9, card C00348-K1 was blocked, connected cards were placed on monitoring, and a regulatory report was authorized.",
+    "summary": "Customer C00348 alerted the bank to unauthorized activity on card C00348-K1 regarding transaction 3660250 ($4.05). Graph investigation revealed a 6-transaction run of low-value online product C authorizations between January 7 and January 28, 2017, totaling $23.17, which is completely unprecedented against the cardholder's historical baseline of in-person product W purchases. Crucially, scheme peer analysis identified 19 other cards across 19 customers exhibiting identical micro-billing patterns with contiguous transaction IDs in the 3660xxx block, reflecting coordinated batch processing. Based on the customer dispute and decisive cross-card evidence, the activity was confirmed fraudulent and classified as an undocumented scheme under Rule R9. The card was blocked, peer cards were flagged for monitoring, and a suspicious activity report was initiated.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHF-005"
   },
@@ -263,28 +270,28 @@
   "sar": {
     "file": true,
     "reason": "R9 and 3a: coordinated abuse that fits no documented pattern",
-    "narrative": "This report details an organized online micro-billing fraud scheme affecting cardholder C00348 on card account C00348-K1, as well as 19 additional customer accounts across the institution. Between January 7, 2017, and January 28, 2017, card C00348-K1 was subjected to six unauthorized online micro-authorizations in product category C totaling $23.17, with individual transaction amounts ranging from $2.10 to $5.08. The unauthorized transactions (IDs 3660245 through 3660250) were conducted via the online channel and associated with billing regions 325 and 264 without captured device identifiers. On January 28, 2017, customer C00348 notified the institution that they did not authorize transaction 3660250 or the associated activity. Prior account history confirmed that cardholder C00348 maintained an established baseline of in-person retail transactions, with zero historical activity in product category C. Graph intelligence revealed that 19 peer cards across 19 distinct customers\u2014including C12975-K2, C05083-K1, and C01326-K2\u2014experienced the identical micro-authorization pattern during January 2017. Furthermore, the unauthorized charges across peer cards exhibited sequential transaction numbering clustered between 3660174 and 3660349, demonstrating a coordinated automated micro-billing scheme. The transactions were spaced across days and weeks at low dollar values, systematically evading single-transaction fraud score thresholds and standard velocity rules. Card C00348-K1 has been blocked with total identified exposure of $23.17, connected cards have been flagged for monitoring, and this report is submitted to document the coordinated abuse.",
+    "narrative": "This suspicious activity report details a coordinated micro-billing fraud scheme affecting card C00348-K1 belonging to customer C00348, alongside 19 peer cards across 19 unrelated customer accounts including C05083-K1, C12975-K2, and C06198-K1. Between January 7, 2017, and January 28, 2017, six consecutive online authorizations totaling $23.17 were posted to card C00348-K1 for product C, with individual amounts ranging from $2.10 to $5.08. The transactions were initiated via the online channel across billing regions 325 and 264, without captured device IDs or proxy records. On January 28, 2017, customer C00348 formally disputed transaction 3660250, stating that they did not authorize the charges. Internal investigation confirmed that online product C purchases were entirely inconsistent with the cardholder's baseline, which historically consisted of in-person product W transactions. The disputed charge formed part of an unbroken sequence of transactions (IDs 3660245 through 3660250) indicating automated batch processing. Graph analysis demonstrated that 19 peer cards exhibited the identical signature of three or more new online authorizations under $10, sharing clustered transaction IDs within the 3660xxx block. The overall scheme exhibited coordinated multi-card growth, escalating from 4 cards two months prior to 19 cards in the current window. Because the transactions occurred over several weeks without an escalating larger purchase, the pattern reflects systematic low-dollar merchant exploitation rather than conventional card testing. Total fraudulent exposure on card C00348-K1 is $23.17, prompting the institution to block the card and initiate ongoing monitoring on all connected accounts.",
     "subjects": [
       "C00348",
       "C00348-K1",
-      "C12975-K2",
       "C05083-K1",
+      "C12975-K2",
+      "C00129-K1",
       "C01326-K2",
       "C04528-K1",
       "C09471-K2",
       "C13290-K1",
-      "C00129-K1",
-      "C12223-K1",
+      "C03611-K2",
       "C04105-K2",
-      "C12030-K1",
-      "C11332-K1",
-      "C09582-K1",
+      "C05263-K2",
       "C06198-K1",
+      "C08972-K1",
+      "C09582-K1",
       "C10035-K2",
       "C10654-K1",
-      "C08972-K1",
-      "C05263-K2",
-      "C03611-K2",
+      "C11332-K1",
+      "C12030-K1",
+      "C12223-K1",
       "C03427-K2"
     ],
     "total_amount_usd": 23.17,
@@ -293,8 +300,8 @@
       "2017-01-28"
     ]
   },
-  "stop_reason": "The investigation ended pursuant to policy section 6 because decisive fraud probability (0.934) was reached based on two independent categories of evidence: a direct customer dispute corroborated by an abrupt cardholder behavioral shift, and strong cross-card graph links showing an identical micro-authorization scheme across 19 peer cards. Under policy section 6, further inquiry was unnecessary as additional steps would not change the decision to block the card and file a regulatory report.",
-  "tool_calls": 72,
-  "tokens": 162449,
-  "latency_s": 282.6
+  "stop_reason": "The investigation stopped pursuant to policy section 6 because the fraud probability reached a decisive 0.95 based on multiple independent lines of incriminating evidence, including the customer dispute, unprecedented product C purchasing patterns, and cross-card links to an escalating 19-card batch-processing scheme. Further investigative steps would not change the outcome or action plan.",
+  "tool_calls": 71,
+  "tokens": 153654,
+  "latency_s": 247.9
 }

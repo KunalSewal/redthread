@@ -3,7 +3,7 @@
   "case": {
     "status": "closed_legitimate",
     "verdict": "legitimate",
-    "fraud_probability": 0.145,
+    "fraud_probability": 0.077,
     "pattern": "none",
     "pattern_description": "",
     "affected_txn_ids": [],
@@ -15,7 +15,7 @@
     "exposure_usd": 0,
     "evidence": [
       {
-        "claim": "Flagged transaction 3602445 has a second-generation model score of 0.001 with a historical fraud rate of 0.0063 (0.63%), while the legacy real-time risk score was 0.06 (triggered at 0.57), indicating an extremely low likelihood of fraud.",
+        "claim": "The legacy real-time risk model scored in-person transaction 3602445 at 0.57, triggering the review, but legacy risk scores are noisy and historically fewer than 37% of scores above 0.85 were confirmed fraud.",
         "source": "graph",
         "ref": "query:alert_context(tx=3602445)",
         "entity_ids": [
@@ -24,16 +24,25 @@
         ]
       },
       {
-        "claim": "Region 315 shows a fraud lift of 0.24 versus baseline in the 7-day window with only 3 of 653 transactions scoring >= 0.5, and card C00750-K2 has 199 prior transactions in region 315.",
+        "claim": "Card C00750-K2 is linked to ring 57671727 with card C10799-K1 via device D000605 and sits in community 163578026 with a fraud lift of 3.3.",
         "source": "graph",
-        "ref": "query:shared_origin(tx=3602445, window=+/-7d)",
+        "ref": "query:ring_members(ring=57671727)",
+        "entity_ids": [
+          "C00750-K2",
+          "C10799-K1"
+        ]
+      },
+      {
+        "claim": "Flagged transaction 3602445 occurred in billing region 315, which is an established region for card C00750-K2 with 199 prior transactions (4.5% of card history).",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3602445)",
         "entity_ids": [
           "3602445",
           "C00750-K2"
         ]
       },
       {
-        "claim": "Holder C00750-K2|315|151 has zero prior transactions associated with confirmed fraud cases, indicating the holder identity is not compromised.",
+        "claim": "The specific holder identity C00750-K2|315|151 has zero prior transactions in confirmed fraud cases, indicating the account holder identity is not compromised.",
         "source": "graph",
         "ref": "query:holder_history(holder=C00750-K2|315|151, before=2017-01-01)",
         "entity_ids": [
@@ -41,42 +50,31 @@
         ]
       },
       {
-        "claim": "No card testing sequence was observed on card C00750-K2 preceding the alert transaction, and the flagged transaction is not part of a new kind run.",
+        "claim": "Card C00750-K2 shows no card testing run or abnormal activity shift (fits_card_testing_r5 is false with 0 run total), and there are no suspicious transactions in the 48 hours surrounding the alert.",
         "source": "graph",
         "ref": "query:new_kind_run(card=C00750-K2, 2016-12-02..alert)",
         "entity_ids": [
-          "C00750-K2",
-          "3602445"
-        ]
-      },
-      {
-        "claim": "Flagged transaction 3602445 was an in-person transaction with no device, and device D000605 associated with ring 57671727 had zero active cards and zero transactions in the window.",
-        "source": "graph",
-        "ref": "query:device_neighbors(device=D000605, 2016-12-02..2017-01-01)",
-        "entity_ids": [
-          "3602445",
           "C00750-K2"
         ]
       },
       {
-        "claim": "Card C00750-K2 belongs to Louvain community 163578026 with a fraud rate of 0.333 and a lift of 3.3 versus base rate, and links via ring 57671727 to card C10799-K1 via device D000605.",
+        "claim": "Similar closed cases triggered by model scores on large transactions (CC-5371, CC-2956, CC-3639, CC-0594) were all reviewed and cleared after cardholders confirmed legitimate intent or travel.",
         "source": "graph",
-        "ref": "query:community_profile(card=C00750-K2)",
+        "ref": "query:similar_closed_cases(\"risk score: Real-time model scored transaction 3602445 ($1,0...\", k=6)",
         "entity_ids": [
-          "C00750-K2",
-          "C10799-K1"
+          "CC-5371",
+          "CC-2956",
+          "CC-3639",
+          "CC-0594"
         ]
       },
       {
-        "claim": "Card C00750-K2 has 16 prior confirmed fraud closed cases (such as CC-5431, CC-4964, CC-4066, primarily account takeovers on other holders) but also a cleared case CC-0591 where a high model score alert was cleared as travel.",
+        "claim": "Device D000605 from historical ring 57671727 had zero active cards or transactions in the alert window from 2016-12-02 to 2017-01-01, and transaction 3602445 was executed in person without a device.",
         "source": "graph",
-        "ref": "query:linked_cases(tx=3602445)",
+        "ref": "query:device_neighbors(device=D000605, 2016-12-02..2017-01-01)",
         "entity_ids": [
           "C00750-K2",
-          "CC-5431",
-          "CC-4964",
-          "CC-4066",
-          "CC-0591"
+          "CC-0480"
         ]
       },
       {
@@ -97,9 +95,10 @@
     "similar_prior_cases": [
       "CC-0591",
       "CC-5371",
+      "CC-2956",
       "CC-3639"
     ],
-    "summary": "Transaction 3602445 ($1,053.79) on card C00750-K2 was alerted due to a legacy real-time risk score of 0.57. The bank's calibrated second-generation fraud model scored the transaction at an exculpatory 0.001 with a historical fraud rate of only 0.63%. The purchase occurred in-person in region 315, an established region for the cardholder with 199 prior transactions and a benign regional fraud lift of 0.24. Additionally, the specific holder identity has zero prior confirmed fraud history, no card testing was observed, and linked ring device D000605 showed zero activity during the investigation window. The transaction is determined to be legitimate cardholder activity, and the alert is cleared.",
+    "summary": "Transaction 3602445 for $1,053.79 on card C00750-K2 was flagged solely by a legacy real-time risk score of 0.57. Investigation confirmed that this was an in-person purchase conducted in billing region 315, an established location accounting for 199 prior transactions on the card. The specific cardholder identity has zero prior transactions in confirmed fraud cases, and no testing patterns or suspicious velocity were observed. While the card had a historical association with ring 57671727 via device D000605, that device had zero activity in the 30-day alert window and was not involved in this in-person purchase. The transaction is ruled legitimate, and the case is closed with no fraud.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHF-014"
   },
@@ -109,14 +108,14 @@
       {
         "action": "CLOSE_NO_FRAUD",
         "route": "auto",
-        "reason": "Section 6: probability 0.14 <= 0.15 on 6 independent signals"
+        "reason": "Section 6: probability 0.08 <= 0.15 on 6 independent signals"
       }
     ],
     "final": [
       {
         "action": "CLOSE_NO_FRAUD",
         "route": "auto",
-        "reason": "Section 6: probability 0.14 <= 0.15 on 6 independent signals"
+        "reason": "Section 6: probability 0.08 <= 0.15 on 6 independent signals"
       }
     ],
     "what_changed": "nothing"
@@ -129,8 +128,8 @@
     "total_amount_usd": 0,
     "activity_dates": []
   },
-  "stop_reason": "The investigation ended pursuant to policy section 6 because the calculated fraud probability of 0.145 is below the 0.15 threshold across six independent evidence bases, confirming legitimate activity without requiring further steps.",
-  "tool_calls": 18,
-  "tokens": 146580,
-  "latency_s": 175.5
+  "stop_reason": "The investigation was concluded under Policy Section 6 because the evaluated fraud probability of 0.08 fell below the clearance threshold of 0.15 across six independent evidence bases, demonstrating that further investigative steps would not alter the determination.",
+  "tool_calls": 19,
+  "tokens": 173712,
+  "latency_s": 255.3
 }

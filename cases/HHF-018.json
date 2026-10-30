@@ -3,7 +3,7 @@
   "case": {
     "status": "closed_legitimate",
     "verdict": "legitimate",
-    "fraud_probability": 0.132,
+    "fraud_probability": 0.051,
     "pattern": "none",
     "pattern_description": "",
     "affected_txn_ids": [],
@@ -13,7 +13,7 @@
     "exposure_usd": 0,
     "evidence": [
       {
-        "claim": "Calibrated fraud model scored transaction 3612011 at 0.0 with a historical fraud rate of 0.0063 (0.63%), showing that transactions with this score are overwhelmingly legitimate.",
+        "claim": "Real-time legacy risk score was 0.8 for transaction 3612011, triggering the alert, although legacy risk scores are noisy with only 37% above 0.85 historically confirming as fraud.",
         "source": "graph",
         "ref": "query:alert_context(tx=3612011)",
         "entity_ids": [
@@ -23,57 +23,70 @@
         ]
       },
       {
-        "claim": "Transaction 3612011 was initiated behind an anonymous proxy (IP_PROXY:ANONYMOUS) from device D000103.",
+        "claim": "Transaction 3612011 was routed through an anonymous proxy (IP_PROXY:ANONYMOUS) from device D000103.",
         "source": "graph",
-        "ref": "query:card_window(card=C02753-K1, 2016-12-22..2017-01-01)",
+        "ref": "query:alert_context(tx=3612011)",
         "entity_ids": [
           "3612011",
           "C02753-K1"
         ]
       },
       {
-        "claim": "Holder baseline for holder C02753-K1|299|183 has 0 prior transactions in confirmed fraud cases and no compromised identity history.",
+        "claim": "Device D000103 is a generic browser profile (IE 11 / Trident 7.0 desktop) shared across 244 cards with no ring association (ring_id -1), showing a lift of 0.0 with 0 of 33 transactions scoring >= 0.5 in the window.",
         "source": "graph",
-        "ref": "query:holder_history(holder=C02753-K1|299|183, before=2017-01-01)",
-        "entity_ids": []
+        "ref": "query:shared_origin(tx=3612011, window=+/-7d)",
+        "entity_ids": [
+          "3612011",
+          "C02753-K1"
+        ]
       },
       {
-        "claim": "Transaction 3612011 for $34.22 shows no card testing run or activity shift, with fits_card_testing_r5 returning false.",
+        "claim": "Card C02753-K1 has an established history with product 'H' (6 prior transactions) and online purchases (21 prior transactions out of 110 total), matching the product and channel of transaction 3612011.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3612011)",
+        "entity_ids": [
+          "3612011",
+          "C02753-K1"
+        ]
+      },
+      {
+        "claim": "Transaction 3612011 occurred in billing region 299, where card C02753-K1 has an established pattern of 6 prior transactions representing 5.5% of the card's historical activity.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3612011)",
+        "entity_ids": [
+          "3612011",
+          "C02753-K1"
+        ]
+      },
+      {
+        "claim": "The transaction amount of $34.22 is modest, with no preceding card testing sequence (fits_card_testing_r5 is false) and no subsequent burst of suspicious online transactions.",
         "source": "graph",
         "ref": "query:new_kind_run(card=C02753-K1, 2016-12-02..alert)",
         "entity_ids": [
+          "3612011",
           "C02753-K1"
         ]
       },
       {
-        "claim": "Shared origin analysis for transaction 3612011 shows device D000103 has 0 transactions scoring over 0.5 (lift 0.0) and region 299 has a low lift of 0.28 vs baseline, indicating no active shared fraud origin.",
+        "claim": "There is no customer dispute or report of unauthorized activity regarding transaction 3612011; the alert was triggered purely by an automated model score.",
         "source": "graph",
-        "ref": "query:shared_origin(tx=3612011, window=+/-7d)",
-        "entity_ids": []
+        "ref": "query:alert_context(tx=3612011)",
+        "entity_ids": [
+          "3612011",
+          "C02753-K1"
+        ]
       },
       {
-        "claim": "Historical closed cases on card C02753-K1 include two card-present out-of-region fraud cases from August and September 2016 (CC-1739, CC-4010), but the card was blocked and reissued, and the subsequent alert CC-4570 in October 2016 was cleared.",
+        "claim": "Prior closed case CC-4570 on card C02753-K1 was an automated model alert (score 0.96) that was fully cleared as legitimate travel, rather than fraud.",
         "source": "graph",
         "ref": "query:linked_cases(tx=3612011)",
         "entity_ids": [
-          "CC-4570",
-          "CC-4010",
-          "CC-1739",
-          "C02753-K1"
+          "C02753-K1",
+          "CC-4570"
         ]
       },
       {
-        "claim": "Similar alerts triggered by legacy model and risk scores without customer disputes (such as CC-3616, CC-3612, and CC-2037) were investigated and cleared as legitimate cardholder activity.",
-        "source": "graph",
-        "ref": "query:similar_closed_cases(\"risk score: Real-time model scored transaction 3612011 ($34....\", k=6)",
-        "entity_ids": [
-          "CC-3616",
-          "CC-3612",
-          "CC-2037"
-        ]
-      },
-      {
-        "claim": "Matches published guidance \u2014 FFIEC: Money Laundering and Terrorist Financing Red Flags (part 2): of the SAR. The advisories and guidance can be found on FinCEN's website. 302 Refer to SAR Advisory Key Terms . Management\u2019s primary focus should be on reporting suspicious activities, rather than on determining whether the transactions are in fact linked to money laundering, terrorist financing, or a particular crime. The following examples are red flags that, when encountered, may warrant additi",
+        "claim": "Matches published guidance \u2014 FFIEC: Money Laundering and Terrorist Financing Red Flags (part 1): \"FFIEC BSA/AML Appendices - Appendix F \u2013 Money Laundering and Terrorist Financing Red Flags JavaScript must be enabled in your browser in order to use some functions. BSA/AML Manual BSA/AML Manual Appendices Appendix F \u2013 Money Laundering and Terrorist Financing Red Flags Appendices APPENDIX F: MONEY LAUNDERING AND TERRORIST FINANCING \"\"RED FLAGS\"\" The following are examples of potentially suspicio",
         "source": "external",
         "ref": "query:policy_search(\"red flags for none: single_signal\", regulator)",
         "entity_ids": []
@@ -81,11 +94,11 @@
     ],
     "similar_prior_cases": [
       "CC-4570",
-      "CC-3616",
-      "CC-3612",
-      "CC-2037"
+      "CC-4010",
+      "CC-1739",
+      "CC-3616"
     ],
-    "summary": "Alert HHF-018 was initiated after transaction 3612011 ($34.22) on card C02753-K1 generated a legacy real-time risk score of 0.8. In contrast, the bank's calibrated second-generation fraud model scored the transaction at 0.0 with a historical fraud rate of only 0.63%, providing strong evidence of legitimate activity. While the transaction was conducted through an anonymous proxy, the associated device profile is generic and unlinked to any fraud rings or suspicious clusters. Furthermore, the holder's baseline shows no card-testing sequence or compromised identity history, and prior similar risk-score alerts have consistently resolved as cleared. The transaction is determined to be legitimate cardholder activity and the case is closed with no fraud.",
+    "summary": "Alert HHF-018 was triggered by an automated legacy risk score of 0.8 on transaction 3612011 ($34.22) on card C02753-K1. While the transaction utilized an anonymous proxy, the device profile is a generic desktop browser shared across hundreds of cards with no fraud ring associations. Card C02753-K1 exhibits an established baseline for product H, online transactions, and billing region 299, with no card-testing patterns or subsequent velocity bursts. Additionally, there is no dispute from the customer, and a prior high-scoring model alert was cleared as legitimate travel. The alert is deemed a false alarm, and the case is closed as legitimate activity.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHF-018"
   },
@@ -95,14 +108,14 @@
       {
         "action": "CLOSE_NO_FRAUD",
         "route": "auto",
-        "reason": "Section 6: probability 0.13 <= 0.15 on 5 independent signals"
+        "reason": "Section 6: probability 0.05 <= 0.15 on 7 independent signals"
       }
     ],
     "final": [
       {
         "action": "CLOSE_NO_FRAUD",
         "route": "auto",
-        "reason": "Section 6: probability 0.13 <= 0.15 on 5 independent signals"
+        "reason": "Section 6: probability 0.05 <= 0.15 on 7 independent signals"
       }
     ],
     "what_changed": "nothing"
@@ -115,8 +128,8 @@
     "total_amount_usd": 0,
     "activity_dates": []
   },
-  "stop_reason": "The investigation was concluded under policy section 6 as the calibrated fraud probability of 0.132 fell below the 0.15 clearance threshold across five independent lines of evidence, indicating that further steps would not alter the outcome.",
+  "stop_reason": "The investigation was concluded in accordance with Policy Section 6 because the evaluated fraud probability of 0.051 falls well below the 0.15 threshold, corroborated by multiple independent exculpatory factors across cardholder behavior, regional patterns, amount consistency, and lack of cross-card links, confirming that further investigative steps would not alter the outcome.",
   "tool_calls": 22,
-  "tokens": 223303,
-  "latency_s": 189.5
+  "tokens": 248412,
+  "latency_s": 296.7
 }

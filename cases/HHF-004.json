@@ -3,9 +3,9 @@
   "case": {
     "status": "escalated",
     "verdict": "fraud",
-    "fraud_probability": 0.966,
+    "fraud_probability": 0.941,
     "pattern": "undocumented",
-    "pattern_description": "A coordinated low-and-slow micro-authorization attack involving repeated online charges under $10 (product C) spaced across days and weeks, rather than a rapid card-testing burst. The pattern affects at least 20 customer cards concurrently without subsequent large purchases. This indicates automated micro-billing exploitation or distributed card validation across accounts rather than standard card-not-present fraud.",
+    "pattern_description": "Coordinated online micro-billing scheme targeting multiple unrelated cardholders across 20+ accounts in the same period. Transactions consist of repeated low-value authorizations under $10 for product C spaced over multiple weeks without an escalating high-value purchase. The identical authorization signature and sequential transaction numbering across customers indicate an automated card enumeration or illicit subscription skimming campaign.",
     "affected_txn_ids": [
       "3660255",
       "3660256",
@@ -17,25 +17,25 @@
     "first_suspicious_txn_id": "3660255",
     "connected_card_ids": [
       "C05083-K1",
-      "C09471-K2",
       "C00348-K1",
-      "C08972-K1",
-      "C12223-K1",
-      "C03611-K2",
-      "C12030-K1",
-      "C09582-K1",
+      "C09471-K2",
       "C01326-K2",
-      "C10035-K2",
-      "C05704-K2",
-      "C04528-K1",
-      "C11332-K1",
-      "C13290-K1",
+      "C03611-K2",
       "C04105-K2",
-      "C10654-K1",
+      "C04528-K1",
+      "C05704-K2",
+      "C08972-K1",
+      "C09582-K1",
+      "C10035-K2",
+      "C11332-K1",
+      "C12030-K1",
+      "C12223-K1",
+      "C13290-K1",
       "C00129-K1",
-      "C05263-K2",
       "C03427-K2",
-      "C06198-K1"
+      "C05263-K2",
+      "C06198-K1",
+      "C10654-K1"
     ],
     "connected_device_profiles": [],
     "exposure_usd": 23.99,
@@ -63,113 +63,96 @@
         ]
       },
       {
-        "claim": "20 other cards (20 other customers) newly show the same signature in the 30 days to the alert - 3+ online authorisations under $10, on a card that had not made such charges before - against 8 and 4 in the same window one and two months earlier: C05083-K1, C09471-K2, C00348-K1, C08972-K1, C12223-K1, C03611-K2, C12030-K1, C09582-K1, C01326-K2, C10035-K2, C05704-K2, C04528-K1.",
+        "claim": "20 other cards (20 other customers) newly show the same signature in the 30 days to the alert - 3+ online authorisations under $10, on a card that had not made such charges before - against 8 and 4 in the same window one and two months earlier: C05083-K1, C00348-K1, C09471-K2, C01326-K2, C03611-K2, C04105-K2, C04528-K1, C05704-K2, C08972-K1, C09582-K1, C10035-K2, C11332-K1.",
         "source": "graph",
         "ref": "query:scheme_peers(3+ online authorisations under $10, on a card that had not made such charges before, 2016-12-27..2017-01-26)",
         "entity_ids": [
           "C05083-K1",
-          "C09471-K2",
           "C00348-K1",
-          "C08972-K1",
-          "C12223-K1",
-          "C03611-K2",
-          "C12030-K1",
-          "C09582-K1",
+          "C09471-K2",
           "C01326-K2",
-          "C10035-K2",
-          "C05704-K2",
-          "C04528-K1",
-          "C11332-K1",
-          "C13290-K1",
+          "C03611-K2",
           "C04105-K2",
-          "C10654-K1",
+          "C04528-K1",
+          "C05704-K2",
+          "C08972-K1",
+          "C09582-K1",
+          "C10035-K2",
+          "C11332-K1",
+          "C12030-K1",
+          "C12223-K1",
+          "C13290-K1",
           "C00129-K1",
-          "C05263-K2",
           "C03427-K2",
-          "C06198-K1"
+          "C05263-K2",
+          "C06198-K1",
+          "C10654-K1"
         ]
       },
       {
-        "claim": "Scheme peer analysis identifies 20 other cards across 20 distinct customers exhibiting the identical signature of 3+ online authorizations under $10 on cards with no prior such charges, surging from 8 cards last month and 4 two months prior, indicating a coordinated multi-customer abuse scheme.",
+        "claim": "A coordinated scheme of 3+ online micro-authorizations under $10 on cards with no prior history was detected across 20 cards and 20 customers in the 30-day window, including peer cards C05083-K1 and C00348-K1.",
         "source": "graph",
         "ref": "query:scheme_peers(3+ online authorisations under $10, on a card that had not made such charges before, 2016-12-27..2017-01-26)",
         "entity_ids": [
+          "C12975-K2",
           "C05083-K1",
-          "C09471-K2",
           "C00348-K1",
-          "C08972-K1",
-          "C12223-K1",
-          "C03611-K2",
-          "C12030-K1",
-          "C09582-K1",
-          "C01326-K2",
-          "C10035-K2",
-          "C05704-K2",
-          "C04528-K1",
-          "C11332-K1",
-          "C13290-K1",
-          "C04105-K2",
-          "C10654-K1",
-          "C00129-K1",
-          "C05263-K2",
-          "C03427-K2",
-          "C06198-K1"
+          "C09471-K2"
         ]
       },
       {
-        "claim": "Card C12975-K2 experienced an activity shift with a run of six online micro-authorizations under $10 for product C totaling $23.99 between 2017-01-05 and 2017-01-26 (txns 3660255, 3660256, 3660257, 3660258, 3660259, 3660260), completely deviating from the 60-txn baseline which had zero product C charges.",
+        "claim": "Card C12975-K2 experienced an abrupt behavioural shift with an unprecedented run of 6 online micro-authorizations under $10 for product C between 2017-01-05 and 2017-01-26 totaling $23.99, departing from its established baseline of in-person product W transactions.",
         "source": "graph",
         "ref": "query:new_kind_run(card=C12975-K2, 2016-12-27..alert)",
         "entity_ids": [
-          "C12975-K2",
           "3660255",
           "3660256",
           "3660257",
           "3660258",
           "3660259",
-          "3660260"
-        ]
-      },
-      {
-        "claim": "Holder baseline analysis for C12975-K2|337|194 shows zero prior transactions and confirms the flagged $2.90 charge has fewer than two prior similar charges, failing to match any established recurring charge pattern.",
-        "source": "graph",
-        "ref": "query:holder_history(holder=C12975-K2|337|194, before=2017-01-26)",
-        "entity_ids": [
+          "3660260",
           "C12975-K2"
         ]
       },
       {
-        "claim": "Card C12975-K2 was previously subject to confirmed fraud in closed case CC-4890 in October 2016 where 2 online transactions totaling $800.03 were confirmed as card-not-present fraud.",
+        "claim": "Card C12975-K2 was previously compromised in closed case CC-4890 in October 2016 for card-not-present fraud involving unrecognized online purchases totaling $800.03.",
         "source": "graph",
         "ref": "query:linked_cases(tx=3660260)",
         "entity_ids": [
+          "3660260",
           "C12975-K2",
           "CC-4890"
         ]
       },
       {
-        "claim": "Device D000168, used in related micro-charge 3660259, is a generic Internet Explorer 11 desktop browser profile seen across 480 cards and linked to 41 closed cases (37 confirmed fraud), representing weak non-specific device risk.",
+        "claim": "Transaction 3660259 in the micro-charge run was executed using device D000168, a generic desktop IE 11 profile associated with 45 cards in the window and 41 historical closed fraud cases including CC-5084.",
         "source": "graph",
         "ref": "query:device_neighbors(device=D000168, 2016-12-27..2017-01-26)",
         "entity_ids": [
-          "3660259"
+          "3660259",
+          "C12975-K2",
+          "C13005-K1",
+          "CC-5084"
         ]
       },
       {
-        "claim": "Flagged transaction 3660260 scored 0.0 on the fraud model with an estimated historical fraud rate of 0.0063 and a low risk score of 0.04, indicating no real-time model detection.",
+        "claim": "The micro-authorizations on card C12975-K2 were spaced across 21 days rather than clustered within one hour, and were not followed by a large authorization over $100, which does not fit standard Rule R5 card testing.",
         "source": "graph",
-        "ref": "query:alert_context(tx=3660260)",
+        "ref": "query:new_kind_run(card=C12975-K2, 2016-12-27..alert)",
         "entity_ids": [
-          "3660260"
+          "3660255",
+          "3660260",
+          "C12975-K2"
         ]
       },
       {
-        "claim": "Billing region 337 is an established region for card C12975-K2 with 28 prior transactions, and shared origin analysis for region 337 shows an unremarkable fraud lift of 0.14 vs all transactions.",
+        "claim": "Region 337 is familiar to card C12975-K2, accounting for 28 prior transactions (14.1% of card history), and shows no elevated fraud concentration with a lift of only 0.14 vs base rate in the 7-day window.",
         "source": "graph",
         "ref": "query:shared_origin(tx=3660260, window=+/-7d)",
         "entity_ids": [
           "3660260",
-          "C12975-K2"
+          "C12975-K2",
+          "C03108-K1"
         ]
       },
       {
@@ -205,7 +188,7 @@
         "entity_ids": []
       },
       {
-        "claim": "Matches published guidance \u2014 FFIEC: Money Laundering and Terrorist Financing Red Flags (part 1): \"FFIEC BSA/AML Appendices - Appendix F \u2013 Money Laundering and Terrorist Financing Red Flags JavaScript must be enabled in your browser in order to use some functions. BSA/AML Manual BSA/AML Manual Appendices Appendix F \u2013 Money Laundering and Terrorist Financing Red Flags Appendices APPENDIX F: MONEY LAUNDERING AND TERRORIST FINANCING \"\"RED FLAGS\"\" The following are examples of potentially suspicio",
+        "claim": "Matches published guidance \u2014 OFAC: Specially Designated Nationals list (part 2): \"or blocked persons may be published at any time. Users are advised to check the Federal Register and this electronic publication routinely for additional names or other changes to the SDN List. 0DAY TECHNOLOGIES (a.k.a. LIMITED 0DAY TECHNOLOGIES; a.k.a. LLC ZIROUDEY TEKHNOLODZHIS (Cyrillic: \u041e\u041e\u041e \u0417\u0418\u0420\u041e\u0423\u0414\u042d\u0419 \u0422\u0415\u0425\u041d\u041e\u041b\u041e\u0414\u0416\u0418\u0421); a.k.a. \"\"LTD 0DT\"\")",
         "source": "external",
         "ref": "query:policy_search(\"red flags for undocumented: coordinated_undocumented\", regulator)",
         "entity_ids": []
@@ -215,7 +198,7 @@
       "CC-4890",
       "CC-3841"
     ],
-    "summary": "Cardholder C12975 reported unauthorized activity on card C12975-K2 regarding disputed transaction 3660260. An investigation identified six unauthorized online micro-authorizations for product C totaling $23.99 between January 5 and January 26, 2017, completely deviating from the card's in-person retail baseline. Network graph analysis confirmed an identical micro-billing pattern surging across 20 other customer accounts during the same period, indicating a coordinated multi-customer abuse scheme. The card was confirmed compromised under an undocumented fraud pattern, prompting card blocking, monitoring of connected accounts, and filing of a regulatory report.",
+    "summary": "Customer C12975 reported unauthorized activity after transaction 3660260 was flagged, uncovering an episode of six online micro-authorizations for product C totaling $23.99 between January 5 and January 26, 2017. These charges represent an unprecedented departure from the cardholder's established baseline of in-person product W transactions. Graph analysis revealed an identical micro-authorization signature across 20 other cards and customers active in the same 30-day period. Transaction 3660259 was conducted via device D000168, which is tied to 41 prior fraud cases, and card C12975-K2 was previously compromised in case CC-4890. The activity was confirmed as an undocumented coordinated micro-billing fraud scheme, resulting in card blockage, scheme monitoring, and regulatory reporting.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHF-004"
   },
@@ -280,30 +263,30 @@
   "sar": {
     "file": true,
     "reason": "R9 and 3a: coordinated abuse that fits no documented pattern",
-    "narrative": "This Suspicious Activity Report details a coordinated online micro-authorization abuse scheme affecting customer C12975 and card C12975-K2. Between January 5, 2017, and January 26, 2017, six unauthorized card-not-present transactions totaling $23.99 were processed for product C in billing regions 191 and 337. The unauthorized charges include transactions 3660255 ($3.51), 3660256 ($5.18), 3660257 ($2.66), 3660258 ($4.75), 3660259 ($4.99), and 3660260 ($2.90). Customer C12975 reported transaction 3660260 as fraudulent and denied making the purchases. Prior to these events, the card baseline consisted exclusively of in-person retail purchases with zero online product C history. Transaction 3660259 was conducted using device D000168, associated with an Internet Explorer 11 desktop browser profile. The card previously suffered confirmed card-not-present fraud under closed case CC-4890 in October 2016. Graph analysis revealed the identical micro-billing pattern active across 20 other customer cards during the same thirty-day period, including C05083-K1, C09471-K2, and C00348-K1. Scheme peer activity surged from four cards two months prior to twenty cards currently, confirming widespread coordinated testing or abuse. The bank blocked card C12975-K2 and initiated monitoring across all identified connected cards.",
+    "narrative": "This Suspicious Activity Report details a coordinated online micro-billing fraud scheme identified on account card C12975-K2, belonging to customer C12975. Between January 5, 2017, and January 26, 2017, six unauthorized online transactions totaling $23.99 for product C were processed against card C12975-K2. The individual transactions comprise 3660255 ($3.51), 3660256 ($5.18), 3660257 ($2.66), 3660258 ($4.75), 3660259 ($4.99), and 3660260 ($2.90). All six transactions occurred in the card-not-present online channel, originating from billing regions 191 and 337. On January 26, 2017, customer C12975 formally alerted the financial institution disavowing transaction 3660260 and confirming that they did not authorize the charges. Historical analysis revealed that card C12975-K2 had no prior history of online product C purchases, as its established baseline consisted exclusively of in-person retail product W transactions. One of the transactions, 3660259, was conducted using device D000168, a desktop Internet Explorer 11 profile that has appeared across 45 cards and 41 prior confirmed fraud cases, including case CC-5084. Furthermore, graph network analysis identified an identical pattern of low-value online micro-authorizations under $10 across 20 other customer cards, including peer cards C05083-K1, C00348-K1, and C09471-K2 during the same 30-day timeframe. The low monetary values, extended multi-week spacing, and parallel occurrence across unrelated accounts indicate an automated card enumeration or illicit subscription skimming campaign designed to evade velocity controls. In response to this confirmed compromise, card C12975-K2 was blocked to prevent further loss, the 20 connected peer accounts were flagged for monitoring, and internal case HHF-004 was escalated for comprehensive scheme tracking.",
     "subjects": [
       "C12975",
       "C12975-K2",
       "C05083-K1",
-      "C09471-K2",
       "C00348-K1",
-      "C08972-K1",
-      "C12223-K1",
-      "C03611-K2",
-      "C12030-K1",
-      "C09582-K1",
+      "C09471-K2",
       "C01326-K2",
-      "C10035-K2",
-      "C05704-K2",
-      "C04528-K1",
-      "C11332-K1",
-      "C13290-K1",
+      "C03611-K2",
       "C04105-K2",
-      "C10654-K1",
+      "C04528-K1",
+      "C05704-K2",
+      "C08972-K1",
+      "C09582-K1",
+      "C10035-K2",
+      "C11332-K1",
+      "C12030-K1",
+      "C12223-K1",
+      "C13290-K1",
       "C00129-K1",
-      "C05263-K2",
       "C03427-K2",
-      "C06198-K1"
+      "C05263-K2",
+      "C06198-K1",
+      "C10654-K1"
     ],
     "total_amount_usd": 23.99,
     "activity_dates": [
@@ -311,8 +294,8 @@
       "2017-01-26"
     ]
   },
-  "stop_reason": "The investigation stopped pursuant to policy section 6 because the fraud probability reached a decisive level of 0.966 supported by multiple independent incriminating findings, including the customer dispute, a sharp baseline behavioral anomaly, and cross-card graph links establishing coordinated scheme activity, such that further inquiry would not change the disposition.",
-  "tool_calls": 74,
-  "tokens": 210412,
-  "latency_s": 282.1
+  "stop_reason": "The investigation was stopped pursuant to Policy Section 6 because the fraud probability reached 0.941, exceeding the decisive threshold, supported by multiple independent evidentiary bases including an acute cardholder behavioral shift, cross-card links to 20 peer accounts, and device linkage to historical fraud cases. Under policy guidelines, additional verification steps were unnecessary as they would not alter the final actions to block the card, monitor connected cards, and file a regulatory report.",
+  "tool_calls": 75,
+  "tokens": 202075,
+  "latency_s": 340.8
 }

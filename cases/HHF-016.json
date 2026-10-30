@@ -3,7 +3,7 @@
   "case": {
     "status": "closed_legitimate",
     "verdict": "legitimate",
-    "fraud_probability": 0.093,
+    "fraud_probability": 0.07,
     "pattern": "none",
     "pattern_description": "",
     "affected_txn_ids": [],
@@ -13,17 +13,18 @@
     "exposure_usd": 0,
     "evidence": [
       {
-        "claim": "Flagged transaction 3611043 received a second-generation model score of 0.001 with a calibrated historical fraud rate of 0.0063 (0.63%), indicating that transactions with this profile are overwhelmingly legitimate despite the legacy risk score alert of 0.79.",
+        "claim": "Flagged transaction 3611043 occurred in region 123, which is the primary billing region for card C02502-K2, accounting for 59.5% of its prior transaction volume (1,431 of 2,405 transactions).",
         "source": "graph",
         "ref": "query:alert_context(tx=3611043)",
         "entity_ids": [
-          "3611043"
+          "3611043",
+          "C02502-K2"
         ]
       },
       {
-        "claim": "Flagged transaction 3611043 involves a large in-person charge of $3,008.76 occurring 67 minutes after another large charge of $3,025.17 (transaction 3611104) on card C02502-K2.",
+        "claim": "The flagged transaction is an in-person purchase of product W matching 95% of card C02502-K2's historical transactions (2,285 of 2,405) and directly follows another in-person product W charge of $3,025.17 (transaction 3611104) by the same holder one hour prior. The holder has zero transactions in confirmed fraud cases.",
         "source": "graph",
-        "ref": "query:card_window(card=C02502-K2, 2016-12-22..2017-01-01)",
+        "ref": "query:holder_history(holder=C02502-K2|123|183, before=2017-01-01)",
         "entity_ids": [
           "3611043",
           "3611104",
@@ -31,39 +32,40 @@
         ]
       },
       {
-        "claim": "Holder C02502-K2|123|183 has zero prior transactions in confirmed fraud cases, and transaction 3611043 matches the holder baseline established by transaction 3611104 ($3,025.17) in product W and region 123, with no flags for new region, product, device, or amount above prior max.",
+        "claim": "Transaction 3611043 for $3,008.76 represents an unusually large single in-person purchase amount compared to the card's typical transaction size.",
         "source": "graph",
-        "ref": "query:holder_history(holder=C02502-K2|123|183, before=2017-01-01)",
-        "entity_ids": [
-          "3611043",
-          "3611104"
-        ]
-      },
-      {
-        "claim": "Transaction 3611043 was conducted in-person in region 123, the primary region for card C02502-K2 accounting for 1,431 of 2,405 prior transactions, and region 123 has a low 7-day fraud lift of 0.63.",
-        "source": "graph",
-        "ref": "query:shared_origin(tx=3611043, window=+/-7d)",
+        "ref": "query:alert_context(tx=3611043)",
         "entity_ids": [
           "3611043",
           "C02502-K2"
         ]
       },
       {
-        "claim": "Card C02502-K2 has ring_id -1 and no shared devices or testing sequences in this episode, though it is placed in Louvain community 157286655 which has a mild fraud lift of 1.8 vs base rate.",
+        "claim": "Card C02502-K2 has no fraud ring affiliation (ring_id -1), and its device community 157286655 has a low lift of 1.8 over base rate (2 of 11 cards with confirmed fraud, including C06224-K2).",
         "source": "graph",
         "ref": "query:community_profile(card=C02502-K2)",
         "entity_ids": [
-          "C02502-K2"
+          "C02502-K2",
+          "C06224-K2"
         ]
       },
       {
-        "claim": "Similar closed cases CC-3639 and CC-3761 demonstrate that high model score alerts on large transactions above $2,500 were cleared as legitimate cardholder purchases; similarly, card C02502-K2 had a high model score alert cleared in CC-1878.",
+        "claim": "Prior closed cases for high-dollar transactions flagged by model scores without customer disputes (such as CC-3639 for $2,524.15 and CC-3761 for $3,891.01) were cleared as confirmed legitimate customer spending.",
         "source": "graph",
         "ref": "query:similar_closed_cases(\"risk score: Real-time model scored transaction 3611043 ($3,0...\", k=6)",
         "entity_ids": [
           "CC-3639",
-          "CC-3761",
-          "CC-1878"
+          "CC-3761"
+        ]
+      },
+      {
+        "claim": "Prior confirmed fraud cases on card C02502-K2 (e.g. CC-5443, CC-5323) involved out-of-region card-present fraud in regions where the cardholder had no history, unlike transaction 3611043 which occurred in the card's home region.",
+        "source": "graph",
+        "ref": "query:linked_cases(tx=3611043)",
+        "entity_ids": [
+          "C02502-K2",
+          "CC-5443",
+          "CC-5323"
         ]
       },
       {
@@ -84,9 +86,11 @@
     "similar_prior_cases": [
       "CC-3639",
       "CC-3761",
-      "CC-1878"
+      "CC-1878",
+      "CC-5443",
+      "CC-5323"
     ],
-    "summary": "An alert was triggered by a legacy real-time risk score of 0.79 on card C02502-K2 for in-person transaction 3611043 totaling $3,008.76. The bank's calibrated second-generation model scored the transaction at 0.001 with an expected historical fraud rate of only 0.63%. The activity occurred in region 123, which is the cardholder's primary region representing over half of historical volume, and mirrors an earlier transaction of $3,025.17 in the same category without anomalous flags. Furthermore, previous large-dollar model alerts on this account and similar profiles have consistently cleared as legitimate cardholder spend. The alert is confirmed as a false alarm, and the case is closed as legitimate with no fraud.",
+    "summary": "Alert HHF-016 was triggered when transaction 3611043 ($3,008.76) on card C02502-K2 received an automated risk score of 0.79 without a customer dispute. Investigation confirmed that the in-person purchase took place in region 123, the primary billing region accounting for 59.5% of the card's lifetime activity, and involved product W, which represents 95% of card history. The charge closely followed another in-person product W transaction of $3,025.17 an hour earlier by the same holder, whose profile has no history of fraud. The card has no fraud ring affiliation, and past confirmed fraud cases on this account involved out-of-region card-present transactions rather than home-region activity. The transaction represents legitimate cardholder spending, and the case is cleared.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHF-016"
   },
@@ -96,14 +100,14 @@
       {
         "action": "CLOSE_NO_FRAUD",
         "route": "auto",
-        "reason": "Section 6: probability 0.09 <= 0.15 on 5 independent signals"
+        "reason": "Section 6: probability 0.07 <= 0.15 on 5 independent signals"
       }
     ],
     "final": [
       {
         "action": "CLOSE_NO_FRAUD",
         "route": "auto",
-        "reason": "Section 6: probability 0.09 <= 0.15 on 5 independent signals"
+        "reason": "Section 6: probability 0.07 <= 0.15 on 5 independent signals"
       }
     ],
     "what_changed": "nothing"
@@ -116,8 +120,8 @@
     "total_amount_usd": 0,
     "activity_dates": []
   },
-  "stop_reason": "The investigation stopped pursuant to policy section 6 because the calculated fraud probability of 0.09 is below the 0.15 threshold supported by five independent signals, and further investigative steps would not alter the decision.",
-  "tool_calls": 16,
-  "tokens": 178535,
-  "latency_s": 224.2
+  "stop_reason": "The investigation was concluded under Policy Section 6 because the fraud probability reached 0.07, well below the 0.15 threshold for no-fraud closure, supported by multiple independent exculpatory evidence bases including home-region alignment, established holder product history, and absence of ring affiliation, such that further inquiry would not alter the decision.",
+  "tool_calls": 18,
+  "tokens": 227148,
+  "latency_s": 266.2
 }

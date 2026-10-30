@@ -3,7 +3,7 @@
   "case": {
     "status": "closed_fraud",
     "verdict": "fraud",
-    "fraud_probability": 0.964,
+    "fraud_probability": 0.923,
     "pattern": "card_testing",
     "pattern_description": "",
     "affected_txn_ids": [
@@ -40,22 +40,9 @@
         ]
       },
       {
-        "claim": "Four small online authorizations of $1.53, $3.46, $3.33, and $1.78 occurred within 27 minutes on 2017-01-14, followed immediately by the $236.28 purchase (3660350), matching the Rule R5 card testing sequence.",
+        "claim": "Card C09582-K1 exhibited an indisputable card-testing sequence (Rule R5): four small online authorizations of $1.53, $3.46, $3.33, and $1.78 occurred between 13:05:30 and 13:32:30 on 2017-01-14, followed immediately at 13:57:30 by a larger purchase of $236.28 (txn 3660350).",
         "source": "graph",
         "ref": "query:card_window(card=C09582-K1, 2017-01-04..2017-01-14)",
-        "entity_ids": [
-          "3660346",
-          "3660347",
-          "3660348",
-          "3660349",
-          "3660350",
-          "C09582-K1"
-        ]
-      },
-      {
-        "claim": "Card C09582-K1 had 219 baseline transactions since October 2016 exclusively conducted in person for product W, making the sudden online product C run an anomalous departure from historical behaviour.",
-        "source": "graph",
-        "ref": "query:new_kind_run(card=C09582-K1, 2016-12-15..alert)",
         "entity_ids": [
           "C09582-K1",
           "3660346",
@@ -66,23 +53,25 @@
         ]
       },
       {
-        "claim": "Flagged transaction 3660350 was assigned a low model_score of 0.003 and risk_score of 0.19 with a historical fraud rate of 0.0063.",
+        "claim": "Card C09582-K1 had an established baseline of 703 in-person transactions and only 5 online transactions, almost exclusively on product W (703 txns) with zero prior product-C transactions, representing an abrupt shift to online product-C use.",
         "source": "graph",
-        "ref": "query:alert_context(tx=3660350)",
+        "ref": "query:new_kind_run(card=C09582-K1, 2016-12-15..alert)",
         "entity_ids": [
+          "C09582-K1",
           "3660350"
         ]
       },
       {
-        "claim": "The device status for flagged transaction 3660350 is recorded as New for the account.",
+        "claim": "Disputed transaction 3660350 was initiated with device_status marked as New for this account.",
         "source": "graph",
         "ref": "query:alert_context(tx=3660350)",
         "entity_ids": [
+          "C09582-K1",
           "3660350"
         ]
       },
       {
-        "claim": "Card C09582-K1 belongs to Louvain community 96469142 with a lift vs base rate of 1.1, indicating near-average community fraud incidence.",
+        "claim": "Card C09582-K1 is not a member of any suspicious device ring (ring_id -1, ring_size 1), and its Louvain community 96469142 exhibits a low lift of 1.1 vs base rate (fraud rate 0.115 vs 0.101 baseline).",
         "source": "graph",
         "ref": "query:community_profile(card=C09582-K1)",
         "entity_ids": [
@@ -90,13 +79,21 @@
         ]
       },
       {
-        "claim": "Prior closed cases CC-2643, CC-0370, and CC-2673 establish confirmed fraud precedents where runs of small online authorizations preceded larger purchases.",
+        "claim": "Billing region 476 shows no anomalous fraud concentration in the 7-day window surrounding the alert, with a lift of 0.0 vs all transactions and 0 of 263 transactions scoring >= 0.5.",
         "source": "graph",
-        "ref": "query:similar_closed_cases(\"card testing R5 small online authorizations under $5 followe...\", k=6)",
+        "ref": "query:shared_origin(tx=3660350, window=+/-7d)",
         "entity_ids": [
-          "CC-2643",
-          "CC-0370",
-          "CC-2673"
+          "C09582-K1",
+          "3660350"
+        ]
+      },
+      {
+        "claim": "Prior closed case CC-1645 on card C09582-K1 was cleared after the cardholder confirmed travel, showing past false alerts on this card.",
+        "source": "graph",
+        "ref": "query:linked_cases(tx=3660350)",
+        "entity_ids": [
+          "C09582-K1",
+          "CC-1645"
         ]
       },
       {
@@ -112,18 +109,16 @@
         "entity_ids": []
       },
       {
-        "claim": "Matches published guidance \u2014 FFIEC: Money Laundering and Terrorist Financing Red Flags (part 1): \"FFIEC BSA/AML Appendices - Appendix F \u2013 Money Laundering and Terrorist Financing Red Flags JavaScript must be enabled in your browser in order to use some functions. BSA/AML Manual BSA/AML Manual Appendices Appendix F \u2013 Money Laundering and Terrorist Financing Red Flags Appendices APPENDIX F: MONEY LAUNDERING AND TERRORIST FINANCING \"\"RED FLAGS\"\" The following are examples of potentially suspicio",
+        "claim": "Matches published guidance \u2014 FFIEC: Suspicious Activity Reporting (part 36): \"and Guidance,\"\" The SAR Activity Review \u2014 Trends",
         "source": "external",
         "ref": "query:policy_search(\"red flags for card testing: card_testing, card_testing_purch\", regulator)",
         "entity_ids": []
       }
     ],
     "similar_prior_cases": [
-      "CC-2643",
-      "CC-0370",
-      "CC-2673"
+      "CC-2822"
     ],
-    "summary": "Customer C09582 disputed transaction 3660350 ($236.28) on card C09582-K1. Analysis of transaction records revealed a classic card-testing sequence on 2017-01-14, wherein four small online product C authorizations between $1.53 and $3.46 were executed within 27 minutes directly preceding the disputed purchase. This sudden online activity represents an anomalous departure from the cardholder's baseline of 219 consecutive in-person product W transactions. Under Rule R5, the activity is confirmed as card-testing fraud with a total exposure of $246.38, resulting in the card being blocked and pending charges declined.",
+    "summary": "Customer C09582 reported an unauthorized online transaction of $236.28 (3660350) on card C09582-K1. Investigation revealed a definitive card-testing sequence on 2017-01-14, where four low-value online authorizations between $1.53 and $3.46 were executed within 27 minutes immediately prior to the larger purchase. This online activity on product C represents an abrupt shift from the holder's established historical baseline of over 700 in-person transactions on product W. The episode is confirmed as card_testing fraud with total exposure of $246.38, leading to card blocking and transaction declines.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHF-007"
   },
@@ -183,8 +178,8 @@
     "total_amount_usd": 0,
     "activity_dates": []
   },
-  "stop_reason": "The investigation concluded under policy section 6 because a decisive fraud probability of 0.964 was established through multiple independent lines of evidence, specifically decisive card-testing timing patterns and strong baseline behavioural anomalies, meaning additional steps would not change the outcome.",
-  "tool_calls": 47,
-  "tokens": 151849,
-  "latency_s": 119.4
+  "stop_reason": "The investigation concluded under Policy Section 6 because the fraud probability reached a decisive level of 0.923 supported by multiple independent evidence bases, including decisive amount and timing patterns alongside significant behavioral departure from baseline, such that further inquiries would not change the decision.",
+  "tool_calls": 44,
+  "tokens": 155442,
+  "latency_s": 168.8
 }

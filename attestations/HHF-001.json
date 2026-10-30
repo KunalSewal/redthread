@@ -1,0 +1,797 @@
+{
+ "case_id": "HHF-001",
+ "attested_at": "2026-10-30T09:41:01Z",
+ "data": {
+  "files_bytes": {
+   "transactions.csv": 707936515,
+   "transactions_2017q1.csv": 70087600,
+   "closed_cases_history.csv": 2714120,
+   "case_pack_final.csv": 3735
+  },
+  "graph": "RedThread",
+  "graph_vertex_counts": {
+   "Txn": 650938,
+   "Card": 14317,
+   "ClosedCase": 5586
+  }
+ },
+ "claims": [
+  {
+   "what": "Card C05061-K1 made 3 online product-C charges totalling $2,189.02 over 2.6 days (3660106, 3660107, 3660108); in its 34 transactions of the 60 days before, that kind made up 0%.",
+   "evidence": {
+    "transactions": [
+     "3660106",
+     "3660107",
+     "3660108"
+    ],
+    "cards": [
+     "C05061-K1"
+    ],
+    "customers": [
+     "C05061"
+    ],
+    "closed_cases": []
+   },
+   "how": [
+    {
+     "query": "new_kind_run",
+     "params": {
+      "card": "C05061-K1",
+      "as_of": "2017-01-15 01:25:19"
+     },
+     "ran_at": "2026-10-30T07:48:18Z"
+    },
+    {
+     "query": "alert_context",
+     "params": {
+      "tx": "3660108",
+      "as_of": "2017-01-15 01:25:19"
+     },
+     "ran_at": "2026-10-30T07:48:18Z"
+    }
+   ],
+   "ref": "query:new_kind_run(card=C05061-K1, 2016-12-16..alert)",
+   "when": [
+    "2026-10-30T07:48:18Z"
+   ],
+   "attested": true,
+   "reverified": {
+    "verified": true,
+    "missing": []
+   }
+  },
+  {
+   "what": "2 other cards (2 other customers) newly show the same signature in the 30 days to the alert - 2+ online product-C charges of $358-$1,113 from a device new to the account behind a proxy, on a card that had not made such charges before - against 1 and 0 in the same window one and two months earlier: C11543-K2, C07212-K2.",
+   "evidence": {
+    "transactions": [],
+    "cards": [
+     "C11543-K2",
+     "C07212-K2"
+    ],
+    "customers": [
+     "C05061",
+     "C07212",
+     "C11543"
+    ],
+    "closed_cases": []
+   },
+   "how": [
+    {
+     "query": "scheme_peers",
+     "params": {
+      "product": "C",
+      "channel": "online",
+      "amount_lo": 358.36,
+      "amount_hi": 1113.49,
+      "need_new_device": true,
+      "need_proxy": true,
+      "min_txns": 2,
+      "from_ts": "2016-12-16 01:25:19",
+      "to_ts": "2017-01-15 01:25:19",
+      "as_of": "2017-01-15 01:25:19"
+     },
+     "ran_at": "2026-10-30T07:48:19Z"
+    },
+    {
+     "query": "scheme_peers",
+     "params": {
+      "product": "C",
+      "channel": "online",
+      "amount_lo": 358.36,
+      "amount_hi": 1113.49,
+      "need_new_device": true,
+      "need_proxy": true,
+      "min_txns": 2,
+      "from_ts": "2016-11-16 01:25:19",
+      "to_ts": "2016-12-16 01:25:19",
+      "as_of": "2017-01-15 01:25:19"
+     },
+     "ran_at": "2026-10-30T07:48:19Z"
+    },
+    {
+     "query": "scheme_peers",
+     "params": {
+      "product": "C",
+      "channel": "online",
+      "amount_lo": 358.36,
+      "amount_hi": 1113.49,
+      "need_new_device": true,
+      "need_proxy": true,
+      "min_txns": 2,
+      "from_ts": "2016-10-17 01:25:19",
+      "to_ts": "2016-11-16 01:25:19",
+      "as_of": "2017-01-15 01:25:19"
+     },
+     "ran_at": "2026-10-30T07:48:19Z"
+    },
+    {
+     "query": "alert_context",
+     "params": {
+      "tx": "3660108",
+      "as_of": "2017-01-15 01:25:19"
+     },
+     "ran_at": "2026-10-30T07:48:18Z"
+    }
+   ],
+   "ref": "query:scheme_peers(2+ online product-C charges of $358-$1,113 from a device new to the account behind a proxy, on a card that had not made such charges before, 2016-12-16..2017-01-15)",
+   "when": [
+    "2026-10-30T07:48:18Z",
+    "2026-10-30T07:48:19Z"
+   ],
+   "attested": true,
+   "reverified": {
+    "verified": true,
+    "missing": []
+   }
+  },
+  {
+   "what": "Card C05061-K1 experienced an anomalous burst of 3 online product-C charges totaling $2,189.02 between 2017-01-12 and 2017-01-14, all utilizing new devices behind an anonymous IP proxy.",
+   "evidence": {
+    "transactions": [
+     "3660106",
+     "3660107",
+     "3660108"
+    ],
+    "cards": [
+     "C05061-K1"
+    ],
+    "customers": [
+     "C05061"
+    ],
+    "closed_cases": []
+   },
+   "how": [
+    {
+     "query": "new_kind_run",
+     "params": {
+      "card": "C05061-K1",
+      "as_of": "2017-01-15 01:25:19"
+     },
+     "ran_at": "2026-10-30T07:48:18Z"
+    },
+    {
+     "query": "alert_context",
+     "params": {
+      "tx": "3660108",
+      "as_of": "2017-01-15 01:25:19"
+     },
+     "ran_at": "2026-10-30T07:48:18Z"
+    }
+   ],
+   "ref": "query:new_kind_run(card=C05061-K1, 2016-12-16..alert)",
+   "when": [
+    "2026-10-30T07:48:18Z"
+   ],
+   "attested": true,
+   "reverified": {
+    "verified": true,
+    "missing": []
+   }
+  },
+  {
+   "what": "Flagged transaction 3660108 and prior transaction 3660106 used device D009708, marked New to the account and routed through an anonymous proxy IP_PROXY:ANONYMOUS.",
+   "evidence": {
+    "transactions": [
+     "3660106",
+     "3660108"
+    ],
+    "cards": [
+     "C05061-K1"
+    ],
+    "customers": [
+     "C05061"
+    ],
+    "closed_cases": []
+   },
+   "how": [
+    {
+     "query": "device_neighbors",
+     "params": {
+      "device": "D009708",
+      "from_ts": "2016-12-15 20:25:19",
+      "to_ts": "2017-01-15 01:25:19",
+      "as_of": "2017-01-15 01:25:19"
+     },
+     "ran_at": "2026-10-30T07:48:20Z"
+    },
+    {
+     "query": "alert_context",
+     "params": {
+      "tx": "3660108",
+      "as_of": "2017-01-15 01:25:19"
+     },
+     "ran_at": "2026-10-30T07:48:18Z"
+    }
+   ],
+   "ref": "query:device_neighbors(device=D009708, 2016-12-15..2017-01-15)",
+   "when": [
+    "2026-10-30T07:48:18Z",
+    "2026-10-30T07:48:20Z"
+   ],
+   "attested": true,
+   "reverified": {
+    "verified": true,
+    "missing": []
+   }
+  },
+  {
+   "what": "The identical operational signature of 2+ online product-C charges ($358-$1,113) from new devices behind proxies appears simultaneously on peer cards C07212-K2 and C11543-K2 in the same weekly window.",
+   "evidence": {
+    "transactions": [],
+    "cards": [
+     "C05061-K1",
+     "C07212-K2",
+     "C11543-K2"
+    ],
+    "customers": [
+     "C05061",
+     "C07212",
+     "C11543"
+    ],
+    "closed_cases": []
+   },
+   "how": [
+    {
+     "query": "scheme_peers",
+     "params": {
+      "product": "C",
+      "channel": "online",
+      "amount_lo": 358.36,
+      "amount_hi": 1113.49,
+      "need_new_device": true,
+      "need_proxy": true,
+      "min_txns": 2,
+      "from_ts": "2016-12-16 01:25:19",
+      "to_ts": "2017-01-15 01:25:19",
+      "as_of": "2017-01-15 01:25:19"
+     },
+     "ran_at": "2026-10-30T07:48:19Z"
+    },
+    {
+     "query": "scheme_peers",
+     "params": {
+      "product": "C",
+      "channel": "online",
+      "amount_lo": 358.36,
+      "amount_hi": 1113.49,
+      "need_new_device": true,
+      "need_proxy": true,
+      "min_txns": 2,
+      "from_ts": "2016-11-16 01:25:19",
+      "to_ts": "2016-12-16 01:25:19",
+      "as_of": "2017-01-15 01:25:19"
+     },
+     "ran_at": "2026-10-30T07:48:19Z"
+    },
+    {
+     "query": "scheme_peers",
+     "params": {
+      "product": "C",
+      "channel": "online",
+      "amount_lo": 358.36,
+      "amount_hi": 1113.49,
+      "need_new_device": true,
+      "need_proxy": true,
+      "min_txns": 2,
+      "from_ts": "2016-10-17 01:25:19",
+      "to_ts": "2016-11-16 01:25:19",
+      "as_of": "2017-01-15 01:25:19"
+     },
+     "ran_at": "2026-10-30T07:48:19Z"
+    },
+    {
+     "query": "alert_context",
+     "params": {
+      "tx": "3660108",
+      "as_of": "2017-01-15 01:25:19"
+     },
+     "ran_at": "2026-10-30T07:48:18Z"
+    }
+   ],
+   "ref": "query:scheme_peers(2+ online product-C charges of $358-$1,113 from a device new to the account behind a proxy, on a card that had not made such charges before, 2016-12-16..2017-01-15)",
+   "when": [
+    "2026-10-30T07:48:18Z",
+    "2026-10-30T07:48:19Z"
+   ],
+   "attested": true,
+   "reverified": {
+    "verified": true,
+    "missing": []
+   }
+  },
+  {
+   "what": "Scheme peer card C07212-K2 is a member of fraud ring 34603052 with 19 confirmed fraud closed cases, linking the scheme to an active criminal syndicate.",
+   "evidence": {
+    "transactions": [],
+    "cards": [
+     "C07212-K2"
+    ],
+    "customers": [
+     "C05061",
+     "C07212"
+    ],
+    "closed_cases": []
+   },
+   "how": [
+    {
+     "query": "ring_members",
+     "params": {
+      "ring_id": 34603052,
+      "from_ts": "2016-11-30 20:25:19",
+      "to_ts": "2017-01-15 01:25:19",
+      "as_of": "2017-01-15 01:25:19"
+     },
+     "ran_at": "2026-10-30T07:48:51Z"
+    },
+    {
+     "query": "alert_context",
+     "params": {
+      "tx": "3660108",
+      "as_of": "2017-01-15 01:25:19"
+     },
+     "ran_at": "2026-10-30T07:48:18Z"
+    }
+   ],
+   "ref": "query:ring_members(ring=34603052)",
+   "when": [
+    "2026-10-30T07:48:18Z",
+    "2026-10-30T07:48:51Z"
+   ],
+   "attested": true,
+   "reverified": {
+    "verified": true,
+    "missing": []
+   }
+  },
+  {
+   "what": "Card C05061-K1 has prior confirmed fraud case CC-2420 involving unauthorized online purchases from a new device inconsistent with history.",
+   "evidence": {
+    "transactions": [],
+    "cards": [
+     "C05061-K1"
+    ],
+    "customers": [
+     "C05061"
+    ],
+    "closed_cases": [
+     "CC-2420"
+    ]
+   },
+   "how": [
+    {
+     "query": "linked_cases",
+     "params": {
+      "tx": "3660108",
+      "as_of": "2017-01-15 01:25:19"
+     },
+     "ran_at": "2026-10-30T07:48:21Z"
+    },
+    {
+     "query": "alert_context",
+     "params": {
+      "tx": "3660108",
+      "as_of": "2017-01-15 01:25:19"
+     },
+     "ran_at": "2026-10-30T07:48:18Z"
+    }
+   ],
+   "ref": "query:linked_cases(tx=3660108)",
+   "when": [
+    "2026-10-30T07:48:18Z",
+    "2026-10-30T07:48:21Z"
+   ],
+   "attested": true,
+   "reverified": {
+    "verified": true,
+    "missing": []
+   }
+  },
+  {
+   "what": "Section 3a. A case is not a report: Section 3a. A case is not a report. Two different things, and the agent produces both. **A case** (`CREATE_CASE`) is the bank's internal record of an investigation. Open one whenever fraud probability reaches 0.30, whenever you request evidence, or whenever a customer disputes a charge. A case can be closed as fraud or as legitimate. It can be updated when new evidence arrives. It should be writte",
+   "evidence": {
+    "transactions": [],
+    "cards": [],
+    "customers": [
+     "C05061"
+    ],
+    "closed_cases": []
+   },
+   "how": [
+    {
+     "query": "policy_sections",
+     "params": {
+      "doc_source": "fraud_policy",
+      "k": 40
+     },
+     "ran_at": "2026-10-30T07:57:16Z"
+    },
+    {
+     "query": "alert_context",
+     "params": {
+      "tx": "3660108",
+      "as_of": "2017-01-15 01:25:19"
+     },
+     "ran_at": "2026-10-30T07:48:18Z"
+    }
+   ],
+   "ref": "query:policy_sections(section=Section 3a. A case is not a report)",
+   "when": [
+    "2026-10-30T07:48:18Z",
+    "2026-10-30T07:57:16Z"
+   ],
+   "attested": true,
+   "reverified": {
+    "verified": null,
+    "reason": "nothing to re-run"
+   }
+  },
+  {
+   "what": "Rule R6: Shared origin: Rule R6: Shared origin. When several cards show fraud from the same device profile, the same billing region, or the same recipient email in one window, name the shared element, recommend `CREATE_CASE` and `FILE_REPORT`, and `MONITOR_CONNECTED_CARDS` for every card that shares it.",
+   "evidence": {
+    "transactions": [],
+    "cards": [],
+    "customers": [
+     "C05061"
+    ],
+    "closed_cases": []
+   },
+   "how": [
+    {
+     "query": "alert_context",
+     "params": {
+      "tx": "3660108",
+      "as_of": "2017-01-15 01:25:19"
+     },
+     "ran_at": "2026-10-30T07:48:18Z"
+    }
+   ],
+   "ref": "query:policy_sections(section=Rule R6: Shared origin)",
+   "when": [
+    "2026-10-30T07:48:18Z"
+   ],
+   "attested": true,
+   "reverified": {
+    "verified": null,
+    "reason": "nothing to re-run"
+   }
+  },
+  {
+   "what": "The fraud episode is 3 transaction(s) totalling $2,189.02, starting at 3660106.",
+   "evidence": {
+    "transactions": [
+     "3660106",
+     "3660107",
+     "3660108"
+    ],
+    "cards": [
+     "C05061-K1"
+    ],
+    "customers": [
+     "C05061"
+    ],
+    "closed_cases": []
+   },
+   "how": [
+    {
+     "query": "card_window",
+     "params": {
+      "card": "C05061-K1",
+      "from_ts": "2017-01-04 20:25:19",
+      "to_ts": "2017-01-15 01:25:19",
+      "as_of": "2017-01-15 01:25:19"
+     },
+     "ran_at": "2026-10-30T07:48:18Z"
+    },
+    {
+     "query": "new_kind_run",
+     "params": {
+      "card": "C05061-K1",
+      "as_of": "2017-01-15 01:25:19"
+     },
+     "ran_at": "2026-10-30T07:48:18Z"
+    },
+    {
+     "query": "card_window",
+     "params": {
+      "card": "C11543-K2",
+      "from_ts": "2017-01-01 12:00:00",
+      "to_ts": "2017-01-15 01:25:19",
+      "as_of": "2017-01-15 01:25:19"
+     },
+     "ran_at": "2026-10-30T07:48:39Z"
+    },
+    {
+     "query": "card_window",
+     "params": {
+      "card": "C07212-K2",
+      "from_ts": "2017-01-05 12:00:00",
+      "to_ts": "2017-01-11 12:00:00",
+      "as_of": "2017-01-15 01:25:19"
+     },
+     "ran_at": "2026-10-30T07:48:45Z"
+    }
+   ],
+   "ref": "case.affected_txn_ids",
+   "when": [
+    "2026-10-30T07:48:18Z",
+    "2026-10-30T07:48:39Z",
+    "2026-10-30T07:48:45Z"
+   ],
+   "attested": true,
+   "reverified": {
+    "verified": true,
+    "missing": []
+   }
+  },
+  {
+   "what": "2 other card(s) are connected to this case.",
+   "evidence": {
+    "transactions": [],
+    "cards": [
+     "C07212-K2",
+     "C11543-K2"
+    ],
+    "customers": [
+     "C07212",
+     "C11543"
+    ],
+    "closed_cases": []
+   },
+   "how": [
+    {
+     "query": "scheme_peers",
+     "params": {
+      "product": "C",
+      "channel": "online",
+      "amount_lo": 358.36,
+      "amount_hi": 1113.49,
+      "need_new_device": true,
+      "need_proxy": true,
+      "min_txns": 2,
+      "from_ts": "2016-12-16 01:25:19",
+      "to_ts": "2017-01-15 01:25:19",
+      "as_of": "2017-01-15 01:25:19"
+     },
+     "ran_at": "2026-10-30T07:48:19Z"
+    },
+    {
+     "query": "scheme_peers",
+     "params": {
+      "product": "C",
+      "channel": "online",
+      "amount_lo": 358.36,
+      "amount_hi": 1113.49,
+      "need_new_device": true,
+      "need_proxy": true,
+      "min_txns": 2,
+      "from_ts": "2016-11-16 01:25:19",
+      "to_ts": "2016-12-16 01:25:19",
+      "as_of": "2017-01-15 01:25:19"
+     },
+     "ran_at": "2026-10-30T07:48:19Z"
+    },
+    {
+     "query": "scheme_peers",
+     "params": {
+      "product": "C",
+      "channel": "online",
+      "amount_lo": 358.36,
+      "amount_hi": 1113.49,
+      "need_new_device": true,
+      "need_proxy": true,
+      "min_txns": 2,
+      "from_ts": "2016-10-17 01:25:19",
+      "to_ts": "2016-11-16 01:25:19",
+      "as_of": "2017-01-15 01:25:19"
+     },
+     "ran_at": "2026-10-30T07:48:19Z"
+    },
+    {
+     "query": "recipient_cards",
+     "params": {
+      "domain": "gmail.com",
+      "from_ts": "2016-12-16 01:25:19",
+      "to_ts": "2017-01-15 01:25:19",
+      "as_of": "2017-01-15 01:25:19"
+     },
+     "ran_at": "2026-10-30T07:48:19Z"
+    },
+    {
+     "query": "recipient_cards",
+     "params": {
+      "domain": "gmail.com",
+      "from_ts": "2016-11-16 01:25:19",
+      "to_ts": "2016-12-16 01:25:19",
+      "as_of": "2017-01-15 01:25:19"
+     },
+     "ran_at": "2026-10-30T07:48:19Z"
+    },
+    {
+     "query": "recipient_cards",
+     "params": {
+      "domain": "gmail.com",
+      "from_ts": "2016-10-17 01:25:19",
+      "to_ts": "2016-11-16 01:25:19",
+      "as_of": "2017-01-15 01:25:19"
+     },
+     "ran_at": "2026-10-30T07:48:20Z"
+    },
+    {
+     "query": "device_neighbors",
+     "params": {
+      "device": "D009708",
+      "from_ts": "2016-12-15 20:25:19",
+      "to_ts": "2017-01-15 01:25:19",
+      "as_of": "2017-01-15 01:25:19"
+     },
+     "ran_at": "2026-10-30T07:48:20Z"
+    },
+    {
+     "query": "shared_origin",
+     "params": {
+      "tx": "3660108",
+      "window_days": 7,
+      "score_min": 0.5,
+      "as_of": "2017-01-15 01:25:19"
+     },
+     "ran_at": "2026-10-30T07:48:21Z"
+    },
+    {
+     "query": "device_neighbors",
+     "params": {
+      "device": "D009709",
+      "from_ts": "2016-12-15 20:25:19",
+      "to_ts": "2017-01-15 01:25:19",
+      "as_of": "2017-01-15 01:25:19"
+     },
+     "ran_at": "2026-10-30T07:48:35Z"
+    },
+    {
+     "query": "device_neighbors",
+     "params": {
+      "device": "D009706",
+      "from_ts": "2016-12-15 20:25:19",
+      "to_ts": "2017-01-15 01:25:19",
+      "as_of": "2017-01-15 01:25:19"
+     },
+     "ran_at": "2026-10-30T07:48:42Z"
+    },
+    {
+     "query": "device_neighbors",
+     "params": {
+      "device": "D009707",
+      "from_ts": "2016-12-15 20:25:19",
+      "to_ts": "2017-01-15 01:25:19",
+      "as_of": "2017-01-15 01:25:19"
+     },
+     "ran_at": "2026-10-30T07:48:48Z"
+    }
+   ],
+   "ref": "case.connected_card_ids",
+   "when": [
+    "2026-10-30T07:48:19Z",
+    "2026-10-30T07:48:20Z",
+    "2026-10-30T07:48:21Z",
+    "2026-10-30T07:48:35Z",
+    "2026-10-30T07:48:42Z",
+    "2026-10-30T07:48:48Z"
+   ],
+   "attested": true,
+   "reverified": {
+    "verified": true,
+    "missing": []
+   }
+  }
+ ],
+ "sar_sentences": [
+  {
+   "sentence": "This suspicious activity report details an organized card-not-present fraud scheme affecting customer C05061 and payment card C05061-K1, along with connected cards C07212-K2 and C11543-K2.",
+   "ids": [
+    "C05061",
+    "C05061-K1",
+    "C07212-K2",
+    "C11543-K2"
+   ],
+   "supported": true,
+   "unattested_ids": []
+  },
+  {
+   "sentence": "Between January 12, 2017, and January 14, 2017, three unauthorized online product-C transactions totaling $2,189.02 were charged to card C05061-K1.",
+   "ids": [
+    "C05061-K1"
+   ],
+   "supported": true,
+   "unattested_ids": []
+  },
+  {
+   "sentence": "The unauthorized activity comprised transaction 3660106 for $850.28 on January 12, transaction 3660107 for $890.79 on January 13, and transaction 3660108 for $447.95 on January 14.",
+   "ids": [
+    "3660106",
+    "3660107",
+    "3660108"
+   ],
+   "supported": true,
+   "unattested_ids": []
+  },
+  {
+   "sentence": "All transactions occurred in the online channel and were routed through billing regions 492 and 264 utilizing devices identified as new to the account.",
+   "ids": [],
+   "supported": false,
+   "unattested_ids": []
+  },
+  {
+   "sentence": "Transactions 3660106 and 3660108 were conducted via device D009708 with the profile RCT6303W87M7 Build/MRA58K on Windows 7 with Internet Explorer 11.0 desktop.",
+   "ids": [
+    "3660106",
+    "3660108"
+   ],
+   "supported": true,
+   "unattested_ids": []
+  },
+  {
+   "sentence": "Transaction 3660107 was conducted via device D009709 with the profile RCT6303W87M7 Build/MRA58K on Windows 10 with Internet Explorer 11.0 tablet.",
+   "ids": [
+    "3660107"
+   ],
+   "supported": true,
+   "unattested_ids": []
+  },
+  {
+   "sentence": "Both devices connected through an anonymous IP proxy to obfuscate the perpetrator's origin and identity.",
+   "ids": [],
+   "supported": false,
+   "unattested_ids": []
+  },
+  {
+   "sentence": "The abrupt high-value product-C charges completely deviated from the cardholder's historical profile, which showed zero product-C transactions over the prior sixty days.",
+   "ids": [],
+   "supported": false,
+   "unattested_ids": []
+  },
+  {
+   "sentence": "Graph analytics identified an identical attack pattern occurring simultaneously across cards C07212-K2 and C11543-K2, which each suffered multiple high-value product-C charges from new devices behind proxies.",
+   "ids": [
+    "C07212-K2",
+    "C11543-K2"
+   ],
+   "supported": true,
+   "unattested_ids": []
+  },
+  {
+   "sentence": "Furthermore, peer card C07212-K2 is linked to fraud ring 34603052 with nineteen confirmed fraud closed cases.",
+   "ids": [
+    "C07212-K2"
+   ],
+   "supported": true,
+   "unattested_ids": []
+  },
+  {
+   "sentence": "The bank has blocked card C05061-K1, placed connected cards on automated monitoring, and submitted this report regarding the coordinated $2,189.02 fraud episode.",
+   "ids": [
+    "C05061-K1"
+   ],
+   "supported": true,
+   "unattested_ids": []
+  }
+ ]
+}

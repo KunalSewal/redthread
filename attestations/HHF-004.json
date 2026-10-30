@@ -1,0 +1,1408 @@
+{
+ "case_id": "HHF-004",
+ "attested_at": "2026-10-30T09:41:18Z",
+ "data": {
+  "files_bytes": {
+   "transactions.csv": 707936515,
+   "transactions_2017q1.csv": 70087600,
+   "closed_cases_history.csv": 2714120,
+   "case_pack_final.csv": 3735
+  },
+  "graph": "RedThread",
+  "graph_vertex_counts": {
+   "Txn": 650938,
+   "Card": 14317,
+   "ClosedCase": 5586
+  }
+ },
+ "claims": [
+  {
+   "what": "Customer reported: Customer C12975 message: 'I did not make these charges on my card. Please look into it.' Refers to 3660260.",
+   "evidence": {
+    "transactions": [
+     "3660260"
+    ],
+    "cards": [],
+    "customers": [
+     "C12975"
+    ],
+    "closed_cases": []
+   },
+   "how": [
+    {
+     "source": "case pack row",
+     "case_id": "HHF-004",
+     "field": "trigger_text"
+    }
+   ],
+   "ref": "trigger:customer_report",
+   "when": [],
+   "attested": true,
+   "reverified": {
+    "verified": null,
+    "reason": "nothing to re-run"
+   }
+  },
+  {
+   "what": "Card C12975-K2 made 6 online product-C charges totalling $23.99 over 21.2 days (3660255, 3660256, 3660257, 3660258, 3660259, 3660260); in its 60 transactions of the 60 days before, that kind made up 0%. Every one is a tiny authorisation, spread over days with no larger purchase after them, so they are not R5's sequence of three within an hour followed by a purchase.",
+   "evidence": {
+    "transactions": [
+     "3660255",
+     "3660256",
+     "3660257",
+     "3660258",
+     "3660259",
+     "3660260"
+    ],
+    "cards": [
+     "C12975-K2"
+    ],
+    "customers": [
+     "C12975"
+    ],
+    "closed_cases": []
+   },
+   "how": [
+    {
+     "query": "new_kind_run",
+     "params": {
+      "card": "C12975-K2",
+      "as_of": "2017-01-26 21:09:37"
+     },
+     "ran_at": "2026-10-30T08:18:26Z"
+    },
+    {
+     "query": "alert_context",
+     "params": {
+      "tx": "3660260",
+      "as_of": "2017-01-26 21:09:37"
+     },
+     "ran_at": "2026-10-30T08:18:25Z"
+    }
+   ],
+   "ref": "query:new_kind_run(card=C12975-K2, 2016-12-27..alert)",
+   "when": [
+    "2026-10-30T08:18:25Z",
+    "2026-10-30T08:18:26Z"
+   ],
+   "attested": true,
+   "reverified": {
+    "verified": true,
+    "missing": []
+   }
+  },
+  {
+   "what": "20 other cards (20 other customers) newly show the same signature in the 30 days to the alert - 3+ online authorisations under $10, on a card that had not made such charges before - against 8 and 4 in the same window one and two months earlier: C05083-K1, C00348-K1, C09471-K2, C01326-K2, C03611-K2, C04105-K2, C04528-K1, C05704-K2, C08972-K1, C09582-K1, C10035-K2, C11332-K1.",
+   "evidence": {
+    "transactions": [],
+    "cards": [
+     "C05083-K1",
+     "C00348-K1",
+     "C09471-K2",
+     "C01326-K2",
+     "C03611-K2",
+     "C04105-K2",
+     "C04528-K1",
+     "C05704-K2",
+     "C08972-K1",
+     "C09582-K1",
+     "C10035-K2",
+     "C11332-K1",
+     "C12030-K1",
+     "C12223-K1",
+     "C13290-K1",
+     "C00129-K1",
+     "C03427-K2",
+     "C05263-K2",
+     "C06198-K1",
+     "C10654-K1"
+    ],
+    "customers": [
+     "C00129",
+     "C00348",
+     "C01326",
+     "C03427",
+     "C03611",
+     "C04105",
+     "C04528",
+     "C05083",
+     "C05263",
+     "C05704",
+     "C06198",
+     "C08972",
+     "C09471",
+     "C09582",
+     "C10035",
+     "C10654",
+     "C11332",
+     "C12030",
+     "C12223",
+     "C12975",
+     "C13290"
+    ],
+    "closed_cases": []
+   },
+   "how": [
+    {
+     "query": "scheme_peers",
+     "params": {
+      "product": "C",
+      "channel": "online",
+      "amount_lo": 0.0,
+      "amount_hi": 10.0,
+      "need_new_device": false,
+      "need_proxy": false,
+      "min_txns": 3,
+      "from_ts": "2016-12-27 21:09:37",
+      "to_ts": "2017-01-26 21:09:37",
+      "as_of": "2017-01-26 21:09:37"
+     },
+     "ran_at": "2026-10-30T08:18:26Z"
+    },
+    {
+     "query": "scheme_peers",
+     "params": {
+      "product": "C",
+      "channel": "online",
+      "amount_lo": 0.0,
+      "amount_hi": 10.0,
+      "need_new_device": false,
+      "need_proxy": false,
+      "min_txns": 3,
+      "from_ts": "2016-11-27 21:09:37",
+      "to_ts": "2016-12-27 21:09:37",
+      "as_of": "2017-01-26 21:09:37"
+     },
+     "ran_at": "2026-10-30T08:18:26Z"
+    },
+    {
+     "query": "scheme_peers",
+     "params": {
+      "product": "C",
+      "channel": "online",
+      "amount_lo": 0.0,
+      "amount_hi": 10.0,
+      "need_new_device": false,
+      "need_proxy": false,
+      "min_txns": 3,
+      "from_ts": "2016-10-28 21:09:37",
+      "to_ts": "2016-11-27 21:09:37",
+      "as_of": "2017-01-26 21:09:37"
+     },
+     "ran_at": "2026-10-30T08:18:27Z"
+    },
+    {
+     "query": "alert_context",
+     "params": {
+      "tx": "3660260",
+      "as_of": "2017-01-26 21:09:37"
+     },
+     "ran_at": "2026-10-30T08:18:25Z"
+    }
+   ],
+   "ref": "query:scheme_peers(3+ online authorisations under $10, on a card that had not made such charges before, 2016-12-27..2017-01-26)",
+   "when": [
+    "2026-10-30T08:18:25Z",
+    "2026-10-30T08:18:26Z",
+    "2026-10-30T08:18:27Z"
+   ],
+   "attested": true,
+   "reverified": {
+    "verified": true,
+    "missing": []
+   }
+  },
+  {
+   "what": "A coordinated scheme of 3+ online micro-authorizations under $10 on cards with no prior history was detected across 20 cards and 20 customers in the 30-day window, including peer cards C05083-K1 and C00348-K1.",
+   "evidence": {
+    "transactions": [],
+    "cards": [
+     "C12975-K2",
+     "C05083-K1",
+     "C00348-K1",
+     "C09471-K2"
+    ],
+    "customers": [
+     "C00348",
+     "C05083",
+     "C09471",
+     "C12975"
+    ],
+    "closed_cases": []
+   },
+   "how": [
+    {
+     "query": "scheme_peers",
+     "params": {
+      "product": "C",
+      "channel": "online",
+      "amount_lo": 0.0,
+      "amount_hi": 10.0,
+      "need_new_device": false,
+      "need_proxy": false,
+      "min_txns": 3,
+      "from_ts": "2016-12-27 21:09:37",
+      "to_ts": "2017-01-26 21:09:37",
+      "as_of": "2017-01-26 21:09:37"
+     },
+     "ran_at": "2026-10-30T08:18:26Z"
+    },
+    {
+     "query": "scheme_peers",
+     "params": {
+      "product": "C",
+      "channel": "online",
+      "amount_lo": 0.0,
+      "amount_hi": 10.0,
+      "need_new_device": false,
+      "need_proxy": false,
+      "min_txns": 3,
+      "from_ts": "2016-11-27 21:09:37",
+      "to_ts": "2016-12-27 21:09:37",
+      "as_of": "2017-01-26 21:09:37"
+     },
+     "ran_at": "2026-10-30T08:18:26Z"
+    },
+    {
+     "query": "scheme_peers",
+     "params": {
+      "product": "C",
+      "channel": "online",
+      "amount_lo": 0.0,
+      "amount_hi": 10.0,
+      "need_new_device": false,
+      "need_proxy": false,
+      "min_txns": 3,
+      "from_ts": "2016-10-28 21:09:37",
+      "to_ts": "2016-11-27 21:09:37",
+      "as_of": "2017-01-26 21:09:37"
+     },
+     "ran_at": "2026-10-30T08:18:27Z"
+    },
+    {
+     "query": "alert_context",
+     "params": {
+      "tx": "3660260",
+      "as_of": "2017-01-26 21:09:37"
+     },
+     "ran_at": "2026-10-30T08:18:25Z"
+    }
+   ],
+   "ref": "query:scheme_peers(3+ online authorisations under $10, on a card that had not made such charges before, 2016-12-27..2017-01-26)",
+   "when": [
+    "2026-10-30T08:18:25Z",
+    "2026-10-30T08:18:26Z",
+    "2026-10-30T08:18:27Z"
+   ],
+   "attested": true,
+   "reverified": {
+    "verified": true,
+    "missing": []
+   }
+  },
+  {
+   "what": "Card C12975-K2 experienced an abrupt behavioural shift with an unprecedented run of 6 online micro-authorizations under $10 for product C between 2017-01-05 and 2017-01-26 totaling $23.99, departing from its established baseline of in-person product W transactions.",
+   "evidence": {
+    "transactions": [
+     "3660255",
+     "3660256",
+     "3660257",
+     "3660258",
+     "3660259",
+     "3660260"
+    ],
+    "cards": [
+     "C12975-K2"
+    ],
+    "customers": [
+     "C12975"
+    ],
+    "closed_cases": []
+   },
+   "how": [
+    {
+     "query": "new_kind_run",
+     "params": {
+      "card": "C12975-K2",
+      "as_of": "2017-01-26 21:09:37"
+     },
+     "ran_at": "2026-10-30T08:18:26Z"
+    },
+    {
+     "query": "alert_context",
+     "params": {
+      "tx": "3660260",
+      "as_of": "2017-01-26 21:09:37"
+     },
+     "ran_at": "2026-10-30T08:18:25Z"
+    }
+   ],
+   "ref": "query:new_kind_run(card=C12975-K2, 2016-12-27..alert)",
+   "when": [
+    "2026-10-30T08:18:25Z",
+    "2026-10-30T08:18:26Z"
+   ],
+   "attested": true,
+   "reverified": {
+    "verified": true,
+    "missing": []
+   }
+  },
+  {
+   "what": "Card C12975-K2 was previously compromised in closed case CC-4890 in October 2016 for card-not-present fraud involving unrecognized online purchases totaling $800.03.",
+   "evidence": {
+    "transactions": [
+     "3660260"
+    ],
+    "cards": [
+     "C12975-K2"
+    ],
+    "customers": [
+     "C12975"
+    ],
+    "closed_cases": [
+     "CC-4890"
+    ]
+   },
+   "how": [
+    {
+     "query": "linked_cases",
+     "params": {
+      "tx": "3660260",
+      "as_of": "2017-01-26 21:09:37"
+     },
+     "ran_at": "2026-10-30T08:18:27Z"
+    },
+    {
+     "query": "alert_context",
+     "params": {
+      "tx": "3660260",
+      "as_of": "2017-01-26 21:09:37"
+     },
+     "ran_at": "2026-10-30T08:18:25Z"
+    }
+   ],
+   "ref": "query:linked_cases(tx=3660260)",
+   "when": [
+    "2026-10-30T08:18:25Z",
+    "2026-10-30T08:18:27Z"
+   ],
+   "attested": true,
+   "reverified": {
+    "verified": true,
+    "missing": []
+   }
+  },
+  {
+   "what": "Transaction 3660259 in the micro-charge run was executed using device D000168, a generic desktop IE 11 profile associated with 45 cards in the window and 41 historical closed fraud cases including CC-5084.",
+   "evidence": {
+    "transactions": [
+     "3660259"
+    ],
+    "cards": [
+     "C12975-K2",
+     "C13005-K1"
+    ],
+    "customers": [
+     "C12975",
+     "C13005"
+    ],
+    "closed_cases": [
+     "CC-5084"
+    ]
+   },
+   "how": [
+    {
+     "query": "device_neighbors",
+     "params": {
+      "device": "D000168",
+      "from_ts": "2016-12-27 15:09:37",
+      "to_ts": "2017-01-26 21:09:37",
+      "as_of": "2017-01-26 21:09:37"
+     },
+     "ran_at": "2026-10-30T08:18:40Z"
+    },
+    {
+     "query": "alert_context",
+     "params": {
+      "tx": "3660260",
+      "as_of": "2017-01-26 21:09:37"
+     },
+     "ran_at": "2026-10-30T08:18:25Z"
+    }
+   ],
+   "ref": "query:device_neighbors(device=D000168, 2016-12-27..2017-01-26)",
+   "when": [
+    "2026-10-30T08:18:25Z",
+    "2026-10-30T08:18:40Z"
+   ],
+   "attested": true,
+   "reverified": {
+    "verified": true,
+    "missing": []
+   }
+  },
+  {
+   "what": "The micro-authorizations on card C12975-K2 were spaced across 21 days rather than clustered within one hour, and were not followed by a large authorization over $100, which does not fit standard Rule R5 card testing.",
+   "evidence": {
+    "transactions": [
+     "3660255",
+     "3660260"
+    ],
+    "cards": [
+     "C12975-K2"
+    ],
+    "customers": [
+     "C12975"
+    ],
+    "closed_cases": []
+   },
+   "how": [
+    {
+     "query": "new_kind_run",
+     "params": {
+      "card": "C12975-K2",
+      "as_of": "2017-01-26 21:09:37"
+     },
+     "ran_at": "2026-10-30T08:18:26Z"
+    },
+    {
+     "query": "alert_context",
+     "params": {
+      "tx": "3660260",
+      "as_of": "2017-01-26 21:09:37"
+     },
+     "ran_at": "2026-10-30T08:18:25Z"
+    }
+   ],
+   "ref": "query:new_kind_run(card=C12975-K2, 2016-12-27..alert)",
+   "when": [
+    "2026-10-30T08:18:25Z",
+    "2026-10-30T08:18:26Z"
+   ],
+   "attested": true,
+   "reverified": {
+    "verified": true,
+    "missing": []
+   }
+  },
+  {
+   "what": "Region 337 is familiar to card C12975-K2, accounting for 28 prior transactions (14.1% of card history), and shows no elevated fraud concentration with a lift of only 0.14 vs base rate in the 7-day window.",
+   "evidence": {
+    "transactions": [
+     "3660260"
+    ],
+    "cards": [
+     "C12975-K2",
+     "C03108-K1"
+    ],
+    "customers": [
+     "C03108",
+     "C12975"
+    ],
+    "closed_cases": []
+   },
+   "how": [
+    {
+     "query": "shared_origin",
+     "params": {
+      "tx": "3660260",
+      "window_days": 7,
+      "score_min": 0.5,
+      "as_of": "2017-01-26 21:09:37"
+     },
+     "ran_at": "2026-10-30T08:18:27Z"
+    },
+    {
+     "query": "alert_context",
+     "params": {
+      "tx": "3660260",
+      "as_of": "2017-01-26 21:09:37"
+     },
+     "ran_at": "2026-10-30T08:18:25Z"
+    }
+   ],
+   "ref": "query:shared_origin(tx=3660260, window=+/-7d)",
+   "when": [
+    "2026-10-30T08:18:25Z",
+    "2026-10-30T08:18:27Z"
+   ],
+   "attested": true,
+   "reverified": {
+    "verified": true,
+    "missing": []
+   }
+  },
+  {
+   "what": "The alert text also contained 2 segment(s) addressed to the system rather than an analyst (outcome_directive, override, role_marker). They were set aside and used neither as evidence nor as instruction; the decision rests on the evidence above.",
+   "evidence": {
+    "transactions": [
+     "3660260"
+    ],
+    "cards": [],
+    "customers": [
+     "C12975"
+    ],
+    "closed_cases": []
+   },
+   "how": [
+    {
+     "source": "case pack row",
+     "case_id": "HHF-004",
+     "field": "trigger_text"
+    }
+   ],
+   "ref": "guard:alert_text",
+   "when": [],
+   "attested": true,
+   "reverified": {
+    "verified": null,
+    "reason": "nothing to re-run"
+   }
+  },
+  {
+   "what": "Rule R2: Customer denies the transaction: Rule R2: Customer denies the transaction. Recommend `BLOCK_CARD` and `CREATE_CASE`. Add `FILE_REPORT` if exposure exceeds $1,000 or the case connects to a shared device profile or another card's fraud.",
+   "evidence": {
+    "transactions": [],
+    "cards": [],
+    "customers": [
+     "C12975"
+    ],
+    "closed_cases": []
+   },
+   "how": [
+    {
+     "query": "policy_sections",
+     "params": {
+      "doc_source": "fraud_policy",
+      "k": 40
+     },
+     "ran_at": "2026-10-30T08:23:32Z"
+    },
+    {
+     "query": "alert_context",
+     "params": {
+      "tx": "3660260",
+      "as_of": "2017-01-26 21:09:37"
+     },
+     "ran_at": "2026-10-30T08:18:25Z"
+    }
+   ],
+   "ref": "query:policy_sections(section=Rule R2: Customer denies the transaction)",
+   "when": [
+    "2026-10-30T08:18:25Z",
+    "2026-10-30T08:23:32Z"
+   ],
+   "attested": true,
+   "reverified": {
+    "verified": null,
+    "reason": "nothing to re-run"
+   }
+  },
+  {
+   "what": "Rule R9: Undocumented patterns: Rule R9: Undocumented patterns. When activity fits none of the known patterns but the evidence shows coordinated or repeated abuse across customers, recommend `CREATE_CASE`, `FILE_REPORT`, and `ESCALATE_TO_ANALYST`, and describe the pattern in your own words. Do not force it into a known category.",
+   "evidence": {
+    "transactions": [],
+    "cards": [],
+    "customers": [
+     "C12975"
+    ],
+    "closed_cases": []
+   },
+   "how": [
+    {
+     "query": "alert_context",
+     "params": {
+      "tx": "3660260",
+      "as_of": "2017-01-26 21:09:37"
+     },
+     "ran_at": "2026-10-30T08:18:25Z"
+    }
+   ],
+   "ref": "query:policy_sections(section=Rule R9: Undocumented patterns)",
+   "when": [
+    "2026-10-30T08:18:25Z"
+   ],
+   "attested": true,
+   "reverified": {
+    "verified": null,
+    "reason": "nothing to re-run"
+   }
+  },
+  {
+   "what": "Section 3a. A case is not a report: Section 3a. A case is not a report. Two different things, and the agent produces both. **A case** (`CREATE_CASE`) is the bank's internal record of an investigation. Open one whenever fraud probability reaches 0.30, whenever you request evidence, or whenever a customer disputes a charge. A case can be closed as fraud or as legitimate. It can be updated when new evidence arrives. It should be writte",
+   "evidence": {
+    "transactions": [],
+    "cards": [],
+    "customers": [
+     "C12975"
+    ],
+    "closed_cases": []
+   },
+   "how": [
+    {
+     "query": "alert_context",
+     "params": {
+      "tx": "3660260",
+      "as_of": "2017-01-26 21:09:37"
+     },
+     "ran_at": "2026-10-30T08:18:25Z"
+    }
+   ],
+   "ref": "query:policy_sections(section=Section 3a. A case is not a report)",
+   "when": [
+    "2026-10-30T08:18:25Z"
+   ],
+   "attested": true,
+   "reverified": {
+    "verified": null,
+    "reason": "nothing to re-run"
+   }
+  },
+  {
+   "what": "Rule R6: Shared origin: Rule R6: Shared origin. When several cards show fraud from the same device profile, the same billing region, or the same recipient email in one window, name the shared element, recommend `CREATE_CASE` and `FILE_REPORT`, and `MONITOR_CONNECTED_CARDS` for every card that shares it.",
+   "evidence": {
+    "transactions": [],
+    "cards": [],
+    "customers": [
+     "C12975"
+    ],
+    "closed_cases": []
+   },
+   "how": [
+    {
+     "query": "alert_context",
+     "params": {
+      "tx": "3660260",
+      "as_of": "2017-01-26 21:09:37"
+     },
+     "ran_at": "2026-10-30T08:18:25Z"
+    }
+   ],
+   "ref": "query:policy_sections(section=Rule R6: Shared origin)",
+   "when": [
+    "2026-10-30T08:18:25Z"
+   ],
+   "attested": true,
+   "reverified": {
+    "verified": null,
+    "reason": "nothing to re-run"
+   }
+  },
+  {
+   "what": "Matches published guidance \u2014 OFAC: Specially Designated Nationals list (part 2): \"or blocked persons may be published at any time. Users are advised to check the Federal Register and this electronic publication routinely for additional names or other changes to the SDN List. 0DAY TECHNOLOGIES (a.k.a. LIMITED 0DAY TECHNOLOGIES; a.k.a. LLC ZIROUDEY TEKHNOLODZHIS (Cyrillic: \u041e\u041e\u041e \u0417\u0418\u0420\u041e\u0423\u0414\u042d\u0419 \u0422\u0415\u0425\u041d\u041e\u041b\u041e\u0414\u0416\u0418\u0421); a.k.a. \"\"LTD 0DT\"\")",
+   "evidence": {
+    "transactions": [],
+    "cards": [],
+    "customers": [
+     "C12975"
+    ],
+    "closed_cases": []
+   },
+   "how": [
+    {
+     "query": "policy_search",
+     "params": {
+      "qv": [
+       -0.057672999799251556,
+       -0.01926499977707863,
+       -0.0779699981212616,
+       -0.015622000209987164,
+       0.06998399645090103,
+       -0.04785199835896492,
+       -0.009765000082552433,
+       0.05815799906849861,
+       -0.029324999079108238,
+       -0.01278700027614832,
+       0.10981500148773193,
+       0.018982000648975372,
+       -0.0032210000790655613,
+       -0.06716100126504898,
+       -0.019084999337792397,
+       -0.00026699999580159783,
+       -0.022412000223994255,
+       0.08102399855852127,
+       -0.03830400109291077,
+       0.002377999946475029,
+       -0.054861001670360565,
+       0.027444999665021896,
+       -0.048916999250650406,
+       0.009926999919116497,
+       0.02491299994289875,
+       0.045756999403238297,
+       -0.06399399787187576,
+       -0.03503600135445595,
+       -0.04156599938869476,
+       -0.1427599936723709,
+       -0.0015219999477267265,
+       0.03989899903535843,
+       0.01525299996137619,
+       0.027705999091267586,
+       0.06442400068044662,
+       -0.031062999740242958,
+       0.00042600001324899495,
+       0.05800100043416023,
+       -0.005363999865949154,
+       -0.059158001095056534,
+       0.017423000186681747,
+       0.02553899958729744,
+       0.004602999892085791,
+       0.02890699915587902,
+       -0.02453700080513954,
+       -0.007286000065505505,
+       -0.07440999895334244,
+       0.023273000493645668,
+       -0.036649998277425766,
+       0.017607999965548515,
+       0.09869500249624252,
+       -0.039441000670194626,
+       0.01291900034993887,
+       0.09481500089168549,
+       -0.0005970000056549907,
+       0.0543459989130497,
+       0.06018399819731712,
+       -0.007505999878048897,
+       -0.0263069998472929,
+       -0.009410999715328217,
+       0.06440500169992447,
+       0.016674000769853592,
+       -0.1299089938402176,
+       0.03342299908399582,
+       0.0429299995303154,
+       -0.0028570001013576984,
+       0.025224000215530396,
+       -0.05075199902057648,
+       0.032864999026060104,
+       -0.021702999249100685,
+       0.01583999954164028,
+       0.014758000150322914,
+       -0.02692900039255619,
+       0.022081000730395317,
+       0.046271998435258865,
+       0.018869999796152115,
+       -0.04088899865746498,
+       0.006173000205308199,
+       -0.023713000118732452,
+       -0.009863000363111496,
+       -0.009936000220477581,
+       0.018417000770568848,
+       -0.07680000364780426,
+       -0.020522000268101692,
+       0.03670300170779228,
+       -0.00712500000372529,
+       -0.04798499867320061,
+       -0.01841600053012371,
+       0.0029100000392645597,
+       0.01927799917757511,
+       0.05617799982428551,
+       -0.017719000577926636,
+       0.15644699335098267,
+       -0.008143999613821507,
+       -0.06631100177764893,
+       -0.007837999612092972,
+       -0.003785999957472086,
+       0.021136000752449036,
+       -0.0036949999630451202,
+       0.32258498668670654,
+       0.009585999883711338,
+       -0.06032500043511391,
+       0.0134680001065135,
+       0.017016999423503876,
+       0.01922599971294403,
+       -0.044589001685380936,
+       0.06888700276613235,
+       -0.053137000650167465,
+       0.012183000333607197,
+       0.021933000534772873,
+       -0.021748000755906105,
+       -0.011521000415086746,
+       0.04690999910235405,
+       -0.024268999695777893,
+       0.07395000010728836,
+       0.003717999905347824,
+       0.019491000100970268,
+       0.01717500016093254,
+       -0.029392000287771225,
+       -0.0002809999859891832,
+       -0.033330000936985016,
+       0.0008679999737069011,
+       0.0554950013756752,
+       -0.018710000440478325,
+       0.052333999425172806,
+       -0.022052999585866928,
+       -0.03544300049543381,
+       0.1251170039176941,
+       0.027124999091029167,
+       0.035868000239133835,
+       -0.054106999188661575,
+       -0.04091700166463852,
+       0.005167999770492315,
+       0.021555999293923378,
+       0.0030670000705868006,
+       0.01661599986255169,
+       -0.021136999130249023,
+       -0.015607000328600407,
+       0.025601999834179878,
+       0.028605999425053596,
+       -0.057075999677181244,
+       0.03189999982714653,
+       -0.002302000066265464,
+       -0.016428999602794647,
+       -0.037344999611377716,
+       0.07476499676704407,
+       -0.04893700033426285,
+       0.028125999495387077,
+       0.0031399999279528856,
+       0.008204000070691109,
+       -0.03763300180435181,
+       0.04178300127387047,
+       0.06789600104093552,
+       -0.01696999929845333,
+       -0.05087000131607056,
+       0.003011000109836459,
+       0.047200001776218414,
+       0.01687600091099739,
+       -0.015390999615192413,
+       0.015502000227570534,
+       0.025578999891877174,
+       -0.0932919979095459,
+       -0.024918999522924423,
+       0.13945899903774261,
+       -0.002707999898120761,
+       -0.08087199926376343,
+       0.018113000318408012,
+       0.02198600023984909,
+       -0.0392180010676384,
+       -0.013011000119149685,
+       -0.02658800035715103,
+       -0.02621600031852722,
+       0.1218700036406517,
+       -0.041352998465299606,
+       -0.0379129983484745,
+       -0.015490000136196613,
+       -0.0081599997356534,
+       0.012256000190973282,
+       -0.014053000137209892,
+       -0.024738000705838203,
+       0.045889001339673996,
+       -0.03752899914979935,
+       -0.06793899834156036,
+       0.028202999383211136,
+       2.9000000722589903e-05,
+       0.009991000406444073,
+       -0.02875800058245659,
+       -0.011761000379920006,
+       0.10208400338888168,
+       0.018470000475645065,
+       -0.10589700192213058,
+       -0.04241900146007538,
+       -0.04009699821472168,
+       -0.0262410007417202,
+       0.02326899953186512,
+       -0.03070100024342537,
+       -0.0630510002374649,
+       -0.05067199841141701,
+       0.04370800033211708,
+       -0.02639799937605858,
+       0.04869600012898445,
+       0.0845239982008934,
+       0.008318999782204628,
+       0.03350000083446503,
+       -0.0060350000858306885,
+       0.058795999735593796,
+       0.03219300135970116,
+       -0.036285001784563065,
+       -0.04163400083780289,
+       0.06694299727678299,
+       0.01389199960976839,
+       0.04799500107765198,
+       -0.021894000470638275,
+       -0.008039000444114208,
+       -0.018459999933838844,
+       0.003011000109836459,
+       0.005766000133007765,
+       0.032203998416662216,
+       0.029217999428510666,
+       0.01782499998807907,
+       -0.04908100143074989,
+       -0.010054999962449074,
+       0.012550000101327896,
+       -0.3022240102291107,
+       0.007298000156879425,
+       -0.08967500180006027,
+       0.061500001698732376,
+       -0.04501200094819069,
+       -0.006940000224858522,
+       0.012865000404417515,
+       0.00841899961233139,
+       0.030767999589443207,
+       0.08132000267505646,
+       0.021491000428795815,
+       0.06028899922966957,
+       -0.07014799863100052,
+       0.025351999327540398,
+       0.03647800162434578,
+       0.014150000177323818,
+       -0.05702599883079529,
+       -0.04153800010681152,
+       -0.012310000136494637,
+       0.06464400142431259,
+       -0.008910000324249268,
+       0.021678000688552856,
+       -0.06860700249671936,
+       -0.034866999834775925,
+       0.005890000145882368,
+       0.0013689999468624592,
+       0.1471720039844513,
+       0.058455999940633774,
+       -0.016793999820947647,
+       -0.06692200154066086,
+       -0.02881699986755848,
+       0.032944001257419586,
+       -0.006037000101059675,
+       -0.1183139979839325,
+       0.04038900136947632,
+       0.039308998733758926,
+       -0.013771000318229198,
+       0.0034580000210553408,
+       0.0020359999034553766,
+       -0.035027001053094864,
+       -0.016621999442577362,
+       -0.05713000148534775,
+       -0.03695699945092201,
+       -0.09018299728631973,
+       0.012707999907433987,
+       -0.012412000447511673,
+       -0.06948400288820267,
+       0.004354000091552734,
+       0.05990900099277496,
+       0.011060000397264957,
+       -0.013636000454425812,
+       -0.06887199729681015,
+       -0.01117200031876564,
+       0.060454998165369034,
+       -0.022940000519156456,
+       -0.0047690002247691154,
+       -0.0822720006108284,
+       0.01827700063586235,
+       0.0009110000100918114,
+       0.0161530002951622,
+       0.05312899872660637,
+       0.010981000028550625,
+       0.014089999720454216,
+       -0.04229699820280075,
+       0.0757720023393631,
+       0.03422199934720993,
+       -0.045600999146699905,
+       -0.0025919999461621046,
+       -0.006347000133246183,
+       0.011865000240504742,
+       0.003642000025138259,
+       0.17854900658130646,
+       -0.04369800165295601,
+       -0.013810000382363796,
+       0.003647000063210726,
+       0.00812700018286705,
+       -0.04563400149345398,
+       0.0014270000392571092,
+       0.03554999828338623,
+       -0.0014400000218302011,
+       -0.035450998693704605,
+       0.026962000876665115,
+       0.0356689989566803,
+       -0.013891000300645828,
+       -0.008542999625205994,
+       0.041012998670339584,
+       -0.0029949999880045652,
+       -0.01234500017017126,
+       0.04287799820303917,
+       0.02988000027835369,
+       0.026379000395536423,
+       -0.0029619999695569277,
+       0.00659599993377924,
+       0.016056999564170837,
+       0.07943200320005417,
+       -0.017733000218868256,
+       -0.22691099345684052,
+       0.021960999816656113,
+       -0.045490000396966934,
+       -0.0013559999642893672,
+       0.0025760000571608543,
+       -0.010440999642014503,
+       0.056095998734235764,
+       -0.017635999247431755,
+       -0.06551399827003479,
+       -0.0212009996175766,
+       0.007796000223606825,
+       0.043400999158620834,
+       -0.006099000107496977,
+       -0.027533000335097313,
+       0.03478199988603592,
+       -0.0015320000238716602,
+       0.07575900107622147,
+       -0.0004980000085197389,
+       -0.03492100164294243,
+       -0.05344099923968315,
+       0.012520000338554382,
+       0.021906999871134758,
+       0.12249299883842468,
+       0.008194000460207462,
+       -0.055059000849723816,
+       -0.007973999716341496,
+       0.007156000006943941,
+       -0.02770400047302246,
+       0.01079500000923872,
+       -0.003504999913275242,
+       0.028713999316096306,
+       -0.0038060001097619534,
+       0.03449299931526184,
+       -0.035064999014139175,
+       0.009171999990940094,
+       0.005888000130653381,
+       0.05683799833059311,
+       -0.027591999620199203,
+       0.0027119999285787344,
+       -0.030292000621557236,
+       -0.10941900312900543,
+       0.022964000701904297,
+       0.043285999447107315,
+       -0.04597000032663345,
+       0.044443000108003616,
+       -0.03941499814391136,
+       -0.030288999900221825,
+       -0.029485000297427177,
+       0.013403999619185925,
+       -0.024737000465393066,
+       -0.03261199966073036,
+       -0.05370499938726425,
+       -0.07314199954271317,
+       0.03900500014424324,
+       0.07384099811315536,
+       0.04034699872136116,
+       -0.017733000218868256,
+       -0.05181499943137169,
+       0.007038999814540148,
+       -0.015647999942302704,
+       0.08334600180387497,
+       -0.023528000339865685,
+       0.049111999571323395,
+       -0.013756000436842442,
+       -0.02210400067269802
+      ],
+      "k": 4
+     },
+     "ran_at": "2026-10-30T08:23:32Z"
+    },
+    {
+     "query": "alert_context",
+     "params": {
+      "tx": "3660260",
+      "as_of": "2017-01-26 21:09:37"
+     },
+     "ran_at": "2026-10-30T08:18:25Z"
+    }
+   ],
+   "ref": "query:policy_search(\"red flags for undocumented: coordinated_undocumented\", regulator)",
+   "when": [
+    "2026-10-30T08:18:25Z",
+    "2026-10-30T08:23:32Z"
+   ],
+   "attested": true,
+   "reverified": {
+    "verified": null,
+    "reason": "nothing to re-run"
+   }
+  },
+  {
+   "what": "The fraud episode is 6 transaction(s) totalling $23.99, starting at 3660255.",
+   "evidence": {
+    "transactions": [
+     "3660255",
+     "3660256",
+     "3660257",
+     "3660258",
+     "3660259",
+     "3660260"
+    ],
+    "cards": [
+     "C12975-K2"
+    ],
+    "customers": [
+     "C12975"
+    ],
+    "closed_cases": []
+   },
+   "how": [
+    {
+     "query": "card_window",
+     "params": {
+      "card": "C12975-K2",
+      "from_ts": "2017-01-16 15:09:37",
+      "to_ts": "2017-01-26 21:09:37",
+      "as_of": "2017-01-26 21:09:37"
+     },
+     "ran_at": "2026-10-30T08:18:26Z"
+    },
+    {
+     "query": "new_kind_run",
+     "params": {
+      "card": "C12975-K2",
+      "as_of": "2017-01-26 21:09:37"
+     },
+     "ran_at": "2026-10-30T08:18:26Z"
+    },
+    {
+     "query": "card_window",
+     "params": {
+      "card": "C05083-K1",
+      "from_ts": "2017-01-16 15:09:37",
+      "to_ts": "2017-01-26 21:09:37",
+      "as_of": "2017-01-26 21:09:37"
+     },
+     "ran_at": "2026-10-30T08:19:49Z"
+    },
+    {
+     "query": "card_window",
+     "params": {
+      "card": "C12975-K2",
+      "from_ts": "2016-12-27 21:09:37",
+      "to_ts": "2017-01-26 21:09:37",
+      "as_of": "2017-01-26 21:09:37"
+     },
+     "ran_at": "2026-10-30T08:19:59Z"
+    }
+   ],
+   "ref": "case.affected_txn_ids",
+   "when": [
+    "2026-10-30T08:18:26Z",
+    "2026-10-30T08:19:49Z",
+    "2026-10-30T08:19:59Z"
+   ],
+   "attested": true,
+   "reverified": {
+    "verified": true,
+    "missing": []
+   }
+  },
+  {
+   "what": "20 other card(s) are connected to this case.",
+   "evidence": {
+    "transactions": [],
+    "cards": [
+     "C05083-K1",
+     "C00348-K1",
+     "C09471-K2",
+     "C01326-K2",
+     "C03611-K2",
+     "C04105-K2",
+     "C04528-K1",
+     "C05704-K2",
+     "C08972-K1",
+     "C09582-K1",
+     "C10035-K2",
+     "C11332-K1",
+     "C12030-K1",
+     "C12223-K1",
+     "C13290-K1",
+     "C00129-K1",
+     "C03427-K2",
+     "C05263-K2",
+     "C06198-K1",
+     "C10654-K1"
+    ],
+    "customers": [
+     "C00129",
+     "C00348",
+     "C01326",
+     "C03427",
+     "C03611",
+     "C04105",
+     "C04528",
+     "C05083",
+     "C05263",
+     "C05704",
+     "C06198",
+     "C08972",
+     "C09471",
+     "C09582",
+     "C10035",
+     "C10654",
+     "C11332",
+     "C12030",
+     "C12223",
+     "C13290"
+    ],
+    "closed_cases": []
+   },
+   "how": [
+    {
+     "query": "scheme_peers",
+     "params": {
+      "product": "C",
+      "channel": "online",
+      "amount_lo": 0.0,
+      "amount_hi": 10.0,
+      "need_new_device": false,
+      "need_proxy": false,
+      "min_txns": 3,
+      "from_ts": "2016-12-27 21:09:37",
+      "to_ts": "2017-01-26 21:09:37",
+      "as_of": "2017-01-26 21:09:37"
+     },
+     "ran_at": "2026-10-30T08:18:26Z"
+    },
+    {
+     "query": "scheme_peers",
+     "params": {
+      "product": "C",
+      "channel": "online",
+      "amount_lo": 0.0,
+      "amount_hi": 10.0,
+      "need_new_device": false,
+      "need_proxy": false,
+      "min_txns": 3,
+      "from_ts": "2016-11-27 21:09:37",
+      "to_ts": "2016-12-27 21:09:37",
+      "as_of": "2017-01-26 21:09:37"
+     },
+     "ran_at": "2026-10-30T08:18:26Z"
+    },
+    {
+     "query": "scheme_peers",
+     "params": {
+      "product": "C",
+      "channel": "online",
+      "amount_lo": 0.0,
+      "amount_hi": 10.0,
+      "need_new_device": false,
+      "need_proxy": false,
+      "min_txns": 3,
+      "from_ts": "2016-10-28 21:09:37",
+      "to_ts": "2016-11-27 21:09:37",
+      "as_of": "2017-01-26 21:09:37"
+     },
+     "ran_at": "2026-10-30T08:18:27Z"
+    },
+    {
+     "query": "shared_origin",
+     "params": {
+      "tx": "3660260",
+      "window_days": 7,
+      "score_min": 0.5,
+      "as_of": "2017-01-26 21:09:37"
+     },
+     "ran_at": "2026-10-30T08:18:27Z"
+    },
+    {
+     "query": "device_neighbors",
+     "params": {
+      "device": "D000168",
+      "from_ts": "2016-12-27 15:09:37",
+      "to_ts": "2017-01-26 21:09:37",
+      "as_of": "2017-01-26 21:09:37"
+     },
+     "ran_at": "2026-10-30T08:18:40Z"
+    }
+   ],
+   "ref": "case.connected_card_ids",
+   "when": [
+    "2026-10-30T08:18:26Z",
+    "2026-10-30T08:18:27Z",
+    "2026-10-30T08:18:40Z"
+   ],
+   "attested": true,
+   "reverified": {
+    "verified": true,
+    "missing": []
+   }
+  }
+ ],
+ "sar_sentences": [
+  {
+   "sentence": "This Suspicious Activity Report details a coordinated online micro-billing fraud scheme identified on account card C12975-K2, belonging to customer C12975.",
+   "ids": [
+    "C12975",
+    "C12975-K2"
+   ],
+   "supported": true,
+   "unattested_ids": []
+  },
+  {
+   "sentence": "Between January 5, 2017, and January 26, 2017, six unauthorized online transactions totaling $23.99 for product C were processed against card C12975-K2.",
+   "ids": [
+    "C12975-K2"
+   ],
+   "supported": true,
+   "unattested_ids": []
+  },
+  {
+   "sentence": "The individual transactions comprise 3660255 ($3.51), 3660256 ($5.18), 3660257 ($2.66), 3660258 ($4.75), 3660259 ($4.99), and 3660260 ($2.90).",
+   "ids": [
+    "3660255",
+    "3660256",
+    "3660257",
+    "3660258",
+    "3660259",
+    "3660260"
+   ],
+   "supported": true,
+   "unattested_ids": []
+  },
+  {
+   "sentence": "All six transactions occurred in the card-not-present online channel, originating from billing regions 191 and 337.",
+   "ids": [],
+   "supported": false,
+   "unattested_ids": []
+  },
+  {
+   "sentence": "On January 26, 2017, customer C12975 formally alerted the financial institution disavowing transaction 3660260 and confirming that they did not authorize the charges.",
+   "ids": [
+    "3660260",
+    "C12975"
+   ],
+   "supported": true,
+   "unattested_ids": []
+  },
+  {
+   "sentence": "Historical analysis revealed that card C12975-K2 had no prior history of online product C purchases, as its established baseline consisted exclusively of in-person retail product W transactions.",
+   "ids": [
+    "C12975-K2"
+   ],
+   "supported": true,
+   "unattested_ids": []
+  },
+  {
+   "sentence": "One of the transactions, 3660259, was conducted using device D000168, a desktop Internet Explorer 11 profile that has appeared across 45 cards and 41 prior confirmed fraud cases, including case CC-5084.",
+   "ids": [
+    "3660259",
+    "CC-5084"
+   ],
+   "supported": true,
+   "unattested_ids": []
+  },
+  {
+   "sentence": "Furthermore, graph network analysis identified an identical pattern of low-value online micro-authorizations under $10 across 20 other customer cards, including peer cards C05083-K1, C00348-K1, and C09471-K2 during the same 30-day timeframe.",
+   "ids": [
+    "C00348-K1",
+    "C05083-K1",
+    "C09471-K2"
+   ],
+   "supported": true,
+   "unattested_ids": []
+  },
+  {
+   "sentence": "The low monetary values, extended multi-week spacing, and parallel occurrence across unrelated accounts indicate an automated card enumeration or illicit subscription skimming campaign designed to evade velocity controls.",
+   "ids": [],
+   "supported": false,
+   "unattested_ids": []
+  },
+  {
+   "sentence": "In response to this confirmed compromise, card C12975-K2 was blocked to prevent further loss, the 20 connected peer accounts were flagged for monitoring, and internal case HHF-004 was escalated for comprehensive scheme tracking.",
+   "ids": [
+    "C12975-K2"
+   ],
+   "supported": true,
+   "unattested_ids": []
+  }
+ ]
+}

@@ -3,9 +3,9 @@
   "case": {
     "status": "escalated",
     "verdict": "fraud",
-    "fraud_probability": 0.925,
+    "fraud_probability": 0.955,
     "pattern": "undocumented",
-    "pattern_description": "A coordinated card-not-present campaign across multiple cardholders where attackers systematically generate new device profiles behind anonymous proxies to make unauthorized high-value product-C purchases between $510 and $963. The perpetrators deliberately rotate hardware identifiers between transactions to avoid detection by device-fingerprinting and graph-clustering algorithms. This syndicated cross-account attack fits none of the standard static patterns due to intentional device dissociation.",
+    "pattern_description": "A coordinated multi-card fraud scheme characterized by bursts of two or more online purchases for Product C valued between $510 and $963, conducted through anonymous proxies (IP_PROXY:ANONYMOUS). Rather than sharing a single device fingerprint, the perpetrators rotate to a distinct newly generated device profile for each transaction to evade device-fingerprinting and ring-detection controls. The activity emerged abruptly across multiple distinct cardholders and customers in January 2017 with no historical precedent in prior months.",
     "affected_txn_ids": [
       "3660125",
       "3660126",
@@ -32,34 +32,26 @@
         ]
       },
       {
-        "claim": "3 other cards (3 other customers) newly show the same signature in the 30 days to the alert - 2+ online product-C charges of $510-$963 from a device new to the account behind a proxy, on a card that had not made such charges before - against 0 and 0 in the same window one and two months earlier: C05061-K1, C10553-K1, C07925-K1.",
+        "claim": "3 other cards (3 other customers) newly show the same signature in the 30 days to the alert - 2+ online product-C charges of $510-$963 from a device new to the account behind a proxy, on a card that had not made such charges before - against 0 and 0 in the same window one and two months earlier: C05061-K1, C07925-K1, C10553-K1.",
         "source": "graph",
         "ref": "query:scheme_peers(2+ online product-C charges of $510-$963 from a device new to the account behind a proxy, on a card that had not made such charges before, 2016-12-20..2017-01-19)",
         "entity_ids": [
           "C05061-K1",
-          "C10553-K1",
-          "C07925-K1"
+          "C07925-K1",
+          "C10553-K1"
         ]
       },
       {
-        "claim": "Flagged transaction 3660127 received a low model score of 0.008 with a historical fraud rate of 0.0063 and legacy risk score of 0.07.",
+        "claim": "Flagged transaction 3660127 of $770.78 for product C sharply departs from the holder baseline of 1 prior transaction for product R at $97.95, representing a new product, a new device, and an amount far exceeding prior maximum.",
         "source": "graph",
-        "ref": "query:alert_context(tx=3660127)",
-        "entity_ids": [
-          "3660127"
-        ]
-      },
-      {
-        "claim": "Transaction 3660127 was conducted using device D009721, which was marked as New for the account and operated behind an anonymous proxy (IP_PROXY:ANONYMOUS).",
-        "source": "graph",
-        "ref": "query:alert_context(tx=3660127)",
+        "ref": "query:holder_history(holder=C06220-K1|126|201, before=2017-01-19)",
         "entity_ids": [
           "3660127",
           "C06220-K1"
         ]
       },
       {
-        "claim": "Flagged transaction 3660127 is the third transaction in a run of three high-value online product-C transactions totaling $2,166.71 between 2017-01-17 and 2017-01-19 (3660125 for $637.13, 3660126 for $758.80, and 3660127 for $770.78), all using new devices behind anonymous proxies on a card with no prior online product-C baseline.",
+        "claim": "Card C06220-K1 experienced an abrupt run of 3 high-value online product-C transactions totaling $2,166.71 between 2017-01-17 and 2017-01-19 (tx 3660125 for $637.13, tx 3660126 for $758.80, and tx 3660127 for $770.78), whereas product C had 0 online transactions in the card baseline of 69 transactions.",
         "source": "graph",
         "ref": "query:new_kind_run(card=C06220-K1, 2016-12-20..alert)",
         "entity_ids": [
@@ -70,47 +62,47 @@
         ]
       },
       {
-        "claim": "Three other cards belonging to different customers (C05061-K1, C10553-K1, and C07925-K1) exhibited the exact same signature of 2+ online product-C purchases between $510 and $963 from new devices behind anonymous proxies between 2017-01-12 and 2017-01-17, identifying an active cross-customer syndicate.",
+        "claim": "Flagged transaction 3660127 was routed through an anonymous proxy (IP_PROXY:ANONYMOUS) from device D009721, marked as New for this account, consistent with rotating new devices behind anonymous proxies across the entire 3-transaction run.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3660127)",
+        "entity_ids": [
+          "3660127",
+          "C06220-K1"
+        ]
+      },
+      {
+        "claim": "The signature of 2+ online product-C charges of $510-$963 from a new device behind an anonymous proxy matches 3 other peer cards across 3 customers in January 2017 (C05061-K1, C07925-K1, C10553-K1 with txs 3660106, 3660107, 3660101, 3660103, 3660111, 3660112), compared to 0 in prior months, demonstrating coordinated multi-customer abuse.",
         "source": "graph",
         "ref": "query:scheme_peers(2+ online product-C charges of $510-$963 from a device new to the account behind a proxy, on a card that had not made such charges before, 2016-12-20..2017-01-19)",
         "entity_ids": [
           "C05061-K1",
-          "C10553-K1",
           "C07925-K1",
+          "C10553-K1",
           "C05061",
-          "C10553",
-          "C07925"
+          "C07925",
+          "C10553"
         ]
       },
       {
-        "claim": "The holder baseline has only 1 prior transaction of $97.95 for product R, with flagged transaction 3660127 being new for product C, using a new device, and exceeding the prior maximum amount ($770.78 vs $97.95) with no recurring pattern.",
-        "source": "graph",
-        "ref": "query:holder_history(holder=C06220-K1|126|201, before=2017-01-19)",
-        "entity_ids": [
-          "3660127",
-          "3627503"
-        ]
-      },
-      {
-        "claim": "Card C06220-K1 has 6 prior closed cases including 5 confirmed fraud outcomes (CC-5379, CC-4224, CC-2807, CC-2539, CC-0626) involving online card-not-present and out-of-region card-present fraud, and only 1 cleared alert (CC-0815).",
+        "claim": "Card C06220-K1 has 5 prior confirmed fraud cases (CC-0626, CC-2539, CC-2807, CC-4224, CC-5379), including online unauthorized transactions in CC-0626 and CC-4224. Additionally, case CC-2985 documented a similar multi-card undocumented scheme using anonymous proxies.",
         "source": "graph",
         "ref": "query:linked_cases(tx=3660127)",
         "entity_ids": [
-          "C06220-K1",
-          "CC-5379",
-          "CC-4224",
-          "CC-2807",
-          "CC-2539",
           "CC-0626",
-          "CC-0815"
+          "CC-2539",
+          "CC-2807",
+          "CC-4224",
+          "CC-5379",
+          "C06220-K1"
         ]
       },
       {
-        "claim": "Device D009721 and region 126 in the 7-day window around transaction 3660127 show zero transactions with model scores over 0.5 and lift of 0.0 versus baseline, reflecting deliberate device and region rotation to evade single-element link analysis.",
+        "claim": "Flagged transaction 3660127 occurred in billing region 126, which is an established region for card C06220-K1 accounting for 19 prior transactions (5.2% of card history), and region 126 showed a fraud lift of 0.0 across 325 transactions in the window.",
         "source": "graph",
         "ref": "query:shared_origin(tx=3660127, window=+/-7d)",
         "entity_ids": [
-          "3660127"
+          "3660127",
+          "C06220-K1"
         ]
       },
       {
@@ -139,12 +131,11 @@
       }
     ],
     "similar_prior_cases": [
+      "CC-2985",
       "CC-4224",
-      "CC-0626",
-      "CC-1438",
-      "CC-3681"
+      "CC-0626"
     ],
-    "summary": "Investigation of alert HHF-002 on card C06220-K1 identified an undocumented, syndicated card-not-present fraud scheme. Between January 17 and January 19, 2017, the card was subjected to three unauthorized online product-C charges totaling $2,166.71 (transactions 3660125, 3660126, and 3660127). Each transaction utilized a different newly introduced device (D009715, D009718, and D009721) operating behind anonymous proxies, matching identical attack patterns seen on peer cards C05061-K1, C07925-K1, and C10553-K1. The activity was confirmed as fraud with a probability of 0.93, resulting in card blocking, case escalation, regulatory reporting under Policy R9, and monitoring of connected accounts.",
+    "summary": "Following an analyst review request, card C06220-K1 was investigated for an anomalous burst of three online Product C purchases totaling $2,166.71 between January 17 and January 19, 2017 (transactions 3660125, 3660126, and 3660127). These transactions sharply deviated from established cardholder history and were conducted through anonymous proxies using rotating, newly generated device profiles (D009715, D009718, and D009721) to evade device-fingerprint detection. Cross-card analysis revealed an identical coordinated fraud scheme emerging simultaneously across three peer cards belonging to unrelated customers (C05061-K1, C07925-K1, and C10553-K1) during January 2017. Card C06220-K1 also has five prior confirmed fraud cases in its record. The activity was confirmed as an undocumented coordinated multi-card fraud scheme, resulting in card blocking, connected card monitoring, and regulatory reporting.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHF-002"
   },
@@ -154,7 +145,7 @@
       {
         "action": "BLOCK_CARD",
         "route": "L1",
-        "reason": "Section 6: probability 0.93 >= 0.85 on 6 independent signals"
+        "reason": "Section 6: probability 0.95 >= 0.85 on 6 independent signals"
       },
       {
         "action": "CREATE_CASE",
@@ -181,7 +172,7 @@
       {
         "action": "BLOCK_CARD",
         "route": "L1",
-        "reason": "Section 6: probability 0.93 >= 0.85 on 6 independent signals"
+        "reason": "Section 6: probability 0.95 >= 0.85 on 6 independent signals"
       },
       {
         "action": "CREATE_CASE",
@@ -209,7 +200,7 @@
   "sar": {
     "file": true,
     "reason": "R9 and 3a: coordinated abuse that fits no documented pattern",
-    "narrative": "This Suspicious Activity Report details a coordinated card-not-present fraud scheme targeting customer C06220 on card C06220-K1, alongside related unauthorized transactions identified across peer cards C05061-K1, C07925-K1, and C10553-K1. Between January 17, 2017, and January 19, 2017, card C06220-K1 incurred three unauthorized online purchases for product C totaling $2,166.71. The sequential charges comprised transaction 3660125 for $637.13 on January 17 in region 330, transaction 3660126 for $758.80 on January 18 in region 384, and transaction 3660127 for $770.78 on January 19 in region 126. Each unauthorized transaction was conducted through a new device identifier\u2014D009715, D009718, and D009721 respectively\u2014and routed through anonymous internet proxy connections (IP_PROXY:ANONYMOUS). The perpetrator also varied the associated contact emails across domains including anonymous.com, comcast.net, and verizon.net. This activity marked a complete departure from the cardholder's historical baseline, which contained zero product-C transactions across the prior 60 days. Scheme analysis revealed that three cards belonging to distinct customers\u2014C05061-K1, C07925-K1, and C10553-K1\u2014experienced the identical pattern of repeated online product-C charges between $510 and $963 from new devices behind anonymous proxies between January 12, 2017, and January 17, 2017. The deliberate rotation of device identifiers and IP proxies across multiple customer accounts demonstrates an organized syndicated effort to evade automated fraud filters and single-device link detection. Card C06220-K1 has been blocked, connected accounts have been placed under monitoring, and this filing is submitted under Policy R9 for undocumented coordinated fraud.",
+    "narrative": "This Suspicious Activity Report details an undocumented card-not-present fraud scheme impacting customer C06220 and card C06220-K1, totaling $2,166.71 across three transactions. Between January 17, 2017, and January 19, 2017, card C06220-K1 was used online for three high-value purchases of Product C: transaction 3660125 ($637.13, region 330), transaction 3660126 ($758.80, region 384), and transaction 3660127 ($770.78, region 126). Prior to this burst, card C06220-K1 had zero online Product C transactions across 69 baseline transactions, representing an acute deviation from normal cardholder behavior. All three transactions were conducted through an anonymous proxy service (IP_PROXY:ANONYMOUS) using a rotating newly generated device profile for each separate charge: device D009715, device D009718, and device D009721. This systematic rotation of new devices behind anonymous proxies indicates a deliberate evasion technique to circumvent device-fingerprinting and linked-ring detection rules. Graph analytics identified the identical signature emerging simultaneously across three peer cards belonging to unrelated customers in January 2017: C05061-K1 (customer C05061), C07925-K1 (customer C07925), and C10553-K1 (customer C10553), with zero occurrences in the preceding two months. The peer transactions (3660101, 3660103, 3660106, 3660107, 3660111, and 3660112) demonstrate coordinated abuse across multiple accounts. Card C06220-K1 has also been subject to five prior confirmed fraud cases (CC-0626, CC-2539, CC-2807, CC-4224, and CC-5379). Consequently, card C06220-K1 has been blocked, connected peer cards have been routed for monitoring, and this filing documents the coordinated compromise.",
     "subjects": [
       "C06220",
       "C06220-K1",
@@ -223,8 +214,8 @@
       "2017-01-19"
     ]
   },
-  "stop_reason": "The investigation stopped pursuant to Policy Section 6 because the fraud probability reached a decisive level of 0.93 (exceeding the 0.85 threshold) supported by multiple independent evidence bases, including coordinated cross-card patterns, anomalous device and proxy usage, and abrupt departure from cardholder baseline. Additional verification steps would not alter the determination of coordinated syndicated fraud.",
-  "tool_calls": 48,
-  "tokens": 89363,
-  "latency_s": 216.3
+  "stop_reason": "The investigation stopped pursuant to Policy Section 6 because the fraud probability reached 0.955, exceeding the 0.85 decisive threshold, supported by multiple independent evidentiary signals across cardholder behavior, device evasion techniques, cross-card links, and prior fraud history, such that further inquiries would not alter the decision.",
+  "tool_calls": 56,
+  "tokens": 173325,
+  "latency_s": 289.9
 }

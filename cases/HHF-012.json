@@ -3,7 +3,7 @@
   "case": {
     "status": "closed_legitimate",
     "verdict": "legitimate",
-    "fraud_probability": 0.056,
+    "fraud_probability": 0.058,
     "pattern": "none",
     "pattern_description": "",
     "affected_txn_ids": [],
@@ -13,61 +13,43 @@
     "exposure_usd": 0,
     "evidence": [
       {
-        "claim": "The alert was triggered by a legacy real-time risk score of 0.53 on transaction 3655457.",
+        "claim": "Flagged transaction 3655457 occurred in-person in region 476, which represents 93.2% of card C12223-K1's historical transactions (138 of 148).",
         "source": "graph",
         "ref": "query:alert_context(tx=3655457)",
         "entity_ids": [
           "3655457",
-          "C12223-K1"
+          "C12223-K1",
+          "C12223"
         ]
       },
       {
-        "claim": "The bank's calibrated second-generation fraud model scored transaction 3655457 at 0.001 with an expected historical fraud rate of 0.0063.",
+        "claim": "Card C12223-K1 shows an ongoing pattern of regular in-person purchases for product W in region 476 across early January, including transactions 3655461, 3655460, 3655447, 3655453, 3655451, 3655456, 3655454, 3655463, and 3655445.",
         "source": "graph",
-        "ref": "query:alert_context(tx=3655457)",
-        "entity_ids": [
-          "3655457",
-          "C12223-K1"
-        ]
-      },
-      {
-        "claim": "Transaction 3655457 took place in-person in region 476, the primary home region accounting for 138 of 148 historical transactions on card C12223-K1 and 23 of 26 transactions in the past 30 days.",
-        "source": "graph",
-        "ref": "query:alert_context(tx=3655457)",
-        "entity_ids": [
-          "3655457",
-          "C12223-K1"
-        ]
-      },
-      {
-        "claim": "Transaction 3655457 is an in-person purchase of product W, matching 138 of 148 historical card transactions, with no activity shift or card testing pattern.",
-        "source": "graph",
-        "ref": "query:card_window(card=C12223-K1, 2016-12-10..2017-01-09)",
-        "entity_ids": [
-          "3655457",
-          "C12223-K1"
-        ]
-      },
-      {
-        "claim": "Transaction 3655457 was card-present with no device used, and card C12223-K1 has no association with any suspicious device fraud ring (ring_id -1).",
-        "source": "graph",
-        "ref": "query:alert_context(tx=3655457)",
-        "entity_ids": [
-          "3655457",
-          "C12223-K1"
-        ]
-      },
-      {
-        "claim": "Card C12223-K1 sits in a 2-card community with a 5.0 lift vs base rate, but this is driven by its own historical closed case CC-0179, and neither card has high model scores in the current window.",
-        "source": "graph",
-        "ref": "query:community_profile(card=C12223-K1)",
+        "ref": "query:card_window(card=C12223-K1, 2016-12-30..2017-01-09)",
         "entity_ids": [
           "C12223-K1",
-          "CC-0179"
+          "3655457",
+          "3655461",
+          "3655460",
+          "3655447",
+          "3655453",
+          "3655451",
+          "3655456",
+          "3655454",
+          "3655463",
+          "3655445"
         ]
       },
       {
-        "claim": "Card C12223-K1 experienced an account takeover case CC-0179 six months prior in July 2016 resulting in reissue, but the current holder identity has zero confirmed fraud history.",
+        "claim": "There is no card testing sequence observed on card C12223-K1 and flagged transaction 3655457 is not part of a run or burst of unusual activity.",
+        "source": "graph",
+        "ref": "query:new_kind_run(card=C12223-K1, 2016-12-10..alert)",
+        "entity_ids": [
+          "C12223-K1"
+        ]
+      },
+      {
+        "claim": "Card C12223-K1 was associated with confirmed account takeover case CC-0179 in July 2016, but the card was blocked and reissued, and the current holder identity has 0 prior transactions in confirmed fraud cases.",
         "source": "graph",
         "ref": "query:linked_cases(tx=3655457)",
         "entity_ids": [
@@ -76,12 +58,13 @@
         ]
       },
       {
-        "claim": "The transaction amount of $261.51 is consistent with recent card spending, which included prior in-person transactions of $499.92 and $361.47 in the preceding month.",
+        "claim": "Card C12223-K1 is in community 121635001 with a fraud lift of 5.0, but this is a 2-card community whose elevated rate is driven entirely by the card's own historical case CC-0179 rather than links to external fraudsters.",
         "source": "graph",
-        "ref": "query:card_window(card=C12223-K1, 2016-12-10..2017-01-09)",
+        "ref": "query:community_profile(card=C12223-K1)",
         "entity_ids": [
-          "3655457",
-          "C12223-K1"
+          "C12223-K1",
+          "C01612-K1",
+          "CC-0179"
         ]
       },
       {
@@ -93,13 +76,11 @@
     ],
     "similar_prior_cases": [
       "CC-5371",
-      "CC-1266",
-      "CC-3761",
-      "CC-5368",
       "CC-3639",
-      "CC-4027"
+      "CC-1709",
+      "CC-0179"
     ],
-    "summary": "Alert HHF-012 was triggered by a legacy real-time risk score of 0.53 on transaction 3655457 ($261.51) on card C12223-K1. The calibrated second-generation fraud model evaluated the transaction at 0.001 with a historical fraud rate of only 0.0063. The transaction was conducted in-person for product W within the cardholder's primary home region 476, consistent with 138 of 148 historical transactions and typical transaction amounts. Past account takeover case CC-0179 was resolved six months prior, and the current holder identity has no confirmed fraud history. The alert was determined to be a false alarm, and the transaction is cleared as legitimate cardholder activity.",
+    "summary": "Transaction 3655457 for $261.51 on card C12223-K1 was flagged due to a legacy real-time risk score of 0.53. Graph analysis confirmed that the transaction took place in-person in region 476 for product category W, aligning perfectly with 93.2% of the card's historical transactions. Recent transaction history demonstrates regular, consistent in-person spending in the same region without any testing bursts or customer dispute. Although the card was linked to a prior compromise in July 2016 (CC-0179), the card was subsequently reissued, and the current holder profile has no confirmed fraud history. The alert is confirmed as a false alarm and the case is closed as legitimate.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHF-012"
   },
@@ -109,14 +90,14 @@
       {
         "action": "CLOSE_NO_FRAUD",
         "route": "auto",
-        "reason": "Section 6: probability 0.06 <= 0.15 on 6 independent signals"
+        "reason": "Section 6: probability 0.06 <= 0.15 on 5 independent signals"
       }
     ],
     "final": [
       {
         "action": "CLOSE_NO_FRAUD",
         "route": "auto",
-        "reason": "Section 6: probability 0.06 <= 0.15 on 6 independent signals"
+        "reason": "Section 6: probability 0.06 <= 0.15 on 5 independent signals"
       }
     ],
     "what_changed": "nothing"
@@ -129,8 +110,8 @@
     "total_amount_usd": 0,
     "activity_dates": []
   },
-  "stop_reason": "The investigation concluded under policy section 6 because the evaluated fraud probability of 0.056 is well below the 0.15 threshold, supported by multiple independent exculpatory factors including calibrated model score, home region consistency, spending pattern, and card-present channel.",
-  "tool_calls": 16,
-  "tokens": 109815,
-  "latency_s": 124.0
+  "stop_reason": "Under policy section 6, the investigation concluded because the assessed fraud probability of 0.058 is well below the 0.15 threshold for clearance, supported by multiple independent exculpatory findings, and further inquiry would not change the decision.",
+  "tool_calls": 18,
+  "tokens": 117856,
+  "latency_s": 177.4
 }
