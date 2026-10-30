@@ -119,6 +119,7 @@ def get_case(case_id: str) -> dict:
         "final_signals": trace.get("final_assessment"), "request": trace.get("request"),
         "reply": trace.get("reply"), "report": trace.get("report"),
         "actions": actions,
+        "handover": _handover(case_id, answer, trace) if answer else None,
         "graph": case_graph(trace, answer) if trace else {"nodes": [], "edges": [], "steps": 0}}
 
 
@@ -130,6 +131,45 @@ def get_replay(case_id: str) -> dict:
     if not trace:
         raise HTTPException(404, "this case has no trace")
     return replay(trace, _answer_for(case_id))
+
+
+def _handover(case_id: str, answer: dict, trace: dict) -> dict:
+    """Where a case stands, for someone taking it over cold: built only from the record, so it is
+    exactly as current as the case itself (challenge 14)."""
+    c = answer["case"]
+    decided = _approvals().get(case_id, {})
+    final = answer["next_best_actions"]["final"]
+    done = [{"action": a["action"], "by": "the agent (auto)"} for a in final if a["route"] == "auto"]
+    done += [{"action": a, "by": f"{d['approver']} ({d['role']})", "decision": d["decision"], "at": d["at"]}
+             for a, d in decided.items()]
+    waiting = [{"action": a["action"], "needs": a["route"], "why": a["reason"]}
+               for a in final if a["route"] != "auto" and a["action"] not in decided]
+    recs = _challenges(case_id)
+    settled = {r["action"].removesuffix("-review") for r in recs if r["action"].endswith("-review")}
+    contested = [{"challenge": r["action"], "by": r["by"], "position": r["position"], "why": r["evaluation"]["why"]}
+                 for r in recs if not r["action"].endswith("-review") and r["evaluation"]["status"] == "contested"
+                 and r["action"] not in settled]
+    events = trace.get("events") or []
+    if waiting:
+        nxt = "; ".join(f"an {w['needs']} approver decides {w['action']}" for w in waiting)
+    elif contested:
+        nxt = "a second L2 approver, not " + ", ".join(x["by"] for x in contested) + ", settles the contested challenge"
+    else:
+        nxt = "nothing waits on a person; the case is " + c["status"].replace("_", " ")
+    return {"status": c["status"], "verdict": c["verdict"], "probability": c["fraud_probability"],
+            "pattern": c["pattern"], "exposure_usd": c["exposure_usd"], "summary": c["summary"],
+            "open_question": (trace.get("llm_assessment") or {}).get("uncertainty", ""),
+            "done": done, "waiting": waiting, "contested_challenges": contested,
+            "in_graph": c["graph_case_id"] or None,
+            "last_activity": events[-1] if events else None, "next_step": nxt}
+
+
+@app.get("/api/cases/{case_id}/handover")
+def handover(case_id: str) -> dict:
+    answer, trace = _answer_for(case_id), _read(RUNS / f"{case_id}.trace.json")
+    if not answer:
+        raise HTTPException(404, "case not investigated yet")
+    return _handover(case_id, answer, trace or {})
 
 
 class Approval(BaseModel):

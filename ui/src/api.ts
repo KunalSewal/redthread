@@ -82,7 +82,8 @@ export interface CaseDetail {
   alert: CaseRow
   answer: Answer | null
   events: Event[]
-  /** Tool digests keyed by tool name (or 'tool:{args}' for follow-ups). The backend always sent
+  /** Tool digests keyed by tool name (or 'tool:{args  handover?: Handover | null
+}' for follow-ups). The backend always sent
    *  these; the client used to drop them, which left the evidence panel with nothing to show. */
   evidence: Record<string, Record<string, unknown>>
   assessment: { evidence: Evidence[]; uncertainty?: string; reasoning?: string } | null
@@ -228,4 +229,13 @@ export interface ChallengeRecord {
   by: string; role: string; at: string; decision?: string; in_graph: boolean
   evaluation: { status: string; why: string; probability_before: number | null; probability_after: number | null
     strength: string; ids_in_case: string[]; ids_not_in_case: string[] }
+}
+
+export interface Handover {
+  status: string; verdict: string; probability: number; pattern: string; exposure_usd: number; summary: string
+  open_question: string; in_graph: string | null; next_step: string
+  done: { action: string; by: string; decision?: string; at?: string }[]
+  waiting: { action: string; needs: string; why: string }[]
+  contested_challenges: { challenge: string; by: string; position: string; why: string }[]
+  last_activity: { step: number; kind: string; detail: string; at: string } | null
 }

@@ -791,3 +791,7 @@ code, .ref {
 .challenge-form label { display: grid; gap: 4px; font-size: var(--t-s); color: var(--graphite); }
 .challenge-form textarea, .challenge-form input, .challenge-form select {
   background: var(--sheet-raised); color: var(--ink); border: 1px solid var(--rule-strong); border-radius: 4px; padding: 6px 8px; font: inherit; }
+
+.handover { border: 1px solid var(--rule-strong); border-radius: 6px; padding: 10px 14px; margin: 12px 0; }
+.handover h3 { margin: 0 0 6px; font-size: var(--t-m); }
+.handover p { margin: 4px 0; }

@@ -158,6 +158,23 @@ export function CaseFile({ id }: { id: string }) {
         </header>
 
         <blockquote className="trigger prose">{alert.trigger_text}</blockquote>
+        {detail.handover && !live && (
+          <section className="handover" aria-label="Where this case stands">
+            <h3>Where it stands</h3>
+            <p><strong>Next:</strong> {detail.handover.next_step}.</p>
+            {detail.handover.waiting.length > 0 && (
+              <p>Waiting: {detail.handover.waiting.map((w) => `${w.action} (${w.needs})`).join(', ')}.</p>
+            )}
+            {detail.handover.done.length > 0 && (
+              <p className="hint">Done: {detail.handover.done.map((d) => `${d.action} by ${d.by}${d.decision ? `, ${d.decision}` : ''}`).join('; ')}.</p>
+            )}
+            {detail.handover.open_question && <p className="hint">Still open: {detail.handover.open_question}</p>}
+            {detail.handover.last_activity && (
+              <p className="hint">Last activity: {detail.handover.last_activity.kind}, {detail.handover.last_activity.at}.
+                {detail.handover.in_graph ? ` Case ${detail.handover.in_graph} in the graph.` : ''}</p>
+            )}
+          </section>
+        )}
         {error && <p className="error" role="alert">{error}</p>}
 
         {c && (
