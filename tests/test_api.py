@@ -10,6 +10,10 @@ from fastapi.testclient import TestClient
 from redthread.data import sources
 
 pytestmark = pytest.mark.skipif(not sources.case_pack_csv().exists(), reason="dataset not present")
+# Investigation traces (runs/) are produced by running the agent and are not in git, so a fresh clone
+# with the dataset but no runs skips the views built from them rather than failing.
+needs_trace = pytest.mark.skipif(not (sources.paths.ROOT / "runs" / "HHG-014.trace.json").exists(),
+                                 reason="HHG-014 has not been investigated in this checkout")
 
 
 @pytest.fixture(scope="module")
@@ -39,6 +43,7 @@ def test_a_self_raised_case_is_retrievable_like_any_other(client):
     assert body["alert"]["source"] == "ring_monitor"
 
 
+@needs_trace
 def test_the_case_record_carries_the_belief_ledger(client):
     body = client.get("/api/cases/HHG-014").json()
     belief = body["belief"]
@@ -48,6 +53,7 @@ def test_the_case_record_carries_the_belief_ledger(client):
     assert belief["prior_reason"]
 
 
+@needs_trace
 def test_every_graph_element_knows_when_it_became_known(client):
     """The scrubber rewinds to a step, so a node without one would never appear."""
     graph = client.get("/api/cases/HHG-014").json()["graph"]
@@ -71,6 +77,7 @@ def test_unknown_case_and_ring_are_404(client):
     assert client.get("/api/rings/123456789").status_code == 404
 
 
+@needs_trace
 def test_a_counterfactual_recomputes_belief_and_the_recommendation(client):
     """Striking a line out must reweigh the ledger, not just divide the odds."""
     base = client.get("/api/cases/HHG-014").json()["belief"]
