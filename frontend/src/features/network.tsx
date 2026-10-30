@@ -96,7 +96,7 @@ function ContainmentCard() {
 function PlanSheet({ plan, onClose }: { plan: ContainmentPlan | null; onClose: () => void }) {
   return (
     <Sheet open={!!plan} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
+      <SheetContent className="w-full overflow-y-auto data-[side=right]:sm:max-w-2xl">
         {plan && (
           <>
             <SheetHeader>
@@ -231,10 +231,10 @@ function RingSheet({ ringId, onClose }: { ringId: number | null; onClose: () => 
   const members = usePaged(ring?.members ?? [], 8)
   return (
     <Sheet open={ringId != null} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
+      <SheetContent className="w-full overflow-y-auto data-[side=right]:sm:max-w-2xl">
         <SheetHeader>
           <SheetTitle>Ring {ringId}</SheetTitle>
-          <SheetDescription>{ring ? `${ring.cards} cards sharing ${ring.devices.length} devices` : 'Loading the ring'}</SheetDescription>
+          <SheetDescription>{ring ? `${ring.cards} cards sharing ${ring.devices.length} ${ring.devices.length === 1 ? 'device' : 'devices'}` : 'Loading the ring'}</SheetDescription>
         </SheetHeader>
         <div className="space-y-6 px-4 pb-6">
           {q.isPending ? (

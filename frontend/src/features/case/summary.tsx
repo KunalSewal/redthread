@@ -11,6 +11,14 @@ export function SummaryTab({ detail, onOpenDecisions }: { detail: CaseDetail; on
   const c = a.case
   const h = detail.handover
   const { shift, peers } = schemeEvidence(detail)
+  const touches = (
+    [
+      ['Affected transactions', c.affected_txn_ids],
+      ['Connected cards', c.connected_card_ids],
+      ['Shared devices', c.connected_device_profiles],
+      ['Similar past cases', c.similar_prior_cases],
+    ] as [string, string[]][]
+  ).filter(([, ids]) => ids.length > 0)
 
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
@@ -119,10 +127,11 @@ export function SummaryTab({ detail, onOpenDecisions }: { detail: CaseDetail; on
             <CardTitle>What it touches</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <IdGroup label="Affected transactions" ids={c.affected_txn_ids} />
-            <IdGroup label="Connected cards" ids={c.connected_card_ids} />
-            <IdGroup label="Shared devices" ids={c.connected_device_profiles} />
-            <IdGroup label="Similar past cases" ids={c.similar_prior_cases} />
+            {touches.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No transactions, cards or devices are implicated.</p>
+            ) : (
+              touches.map(([label, ids]) => <IdGroup key={label} label={label} ids={ids} />)
+            )}
           </CardContent>
         </Card>
       </aside>

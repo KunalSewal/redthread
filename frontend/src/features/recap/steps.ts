@@ -99,7 +99,7 @@ export function parseActions(detail: string) {
   return [...detail.matchAll(/([A-Z_]{4,}) \((auto|L1|L2)\)/g)].map((m) => ({ label: action(m[1]), route: m[2] }))
 }
 
-const SKIP = new Set(['note', 'how_to_read', 'definition', 'omitted_note', 'shown_rows'])
+const SKIP = new Set(['note', 'how_to_read', 'definition', 'omitted_note', 'shown_rows', 'rows', 'window'])
 
 /** A few readable facts from what a query returned, without dumping the raw data. */
 export function facts(returned: Record<string, unknown> | undefined) {

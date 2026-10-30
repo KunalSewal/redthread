@@ -35,7 +35,7 @@ export function Run({ shift }: { shift: ActivityShift }) {
         <h4 className="text-sm font-medium">
           {shift.run.length} new charges, {money(shift.run_total_usd, true)}
         </h4>
-        <span className="text-sm text-muted-foreground">over {days} days</span>
+        <span className="text-sm text-muted-foreground">{days < 1 ? 'within a day' : `over ${days} ${days === 1 ? 'day' : 'days'}`}</span>
       </div>
       <div className="relative h-28 rounded-lg border bg-muted/30 px-4" role="img" aria-label={`${shift.run.length} charges between ${date(shift.run[0]?.ts)} and ${date(shift.run.at(-1)?.ts)}`}>
         <div className="absolute inset-x-4 bottom-7 h-px bg-border" />

@@ -23,7 +23,7 @@ function mockApi(): Plugin {
         const file = resolve(MOCK, `${(req.url ?? '').split('?')[0].replace(/^\//, '')}.json`)
         if (!file.startsWith(MOCK) || !existsSync(file)) {
           res.statusCode = 404
-          res.end(JSON.stringify({ detail: 'Not in the snapshot: ask the backend owner to rerun scripts/snapshot_api.py.' }))
+          res.end(JSON.stringify({ detail: 'Not found.' }))
           return
         }
         res.end(readFileSync(file))

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { ChevronLeft, ListOrdered, ShieldAlert } from 'lucide-react'
-import { ErrorState, Id, Loading } from '@/components/states'
+import { Empty, ErrorState, Id, Loading } from '@/components/states'
 import { ProbabilityBar, VerdictBadge } from '@/components/verdict'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -11,10 +11,13 @@ import { ReportTab } from '@/features/case/report'
 import { SummaryTab } from '@/features/case/summary'
 import { Recap } from '@/features/recap/recap'
 import { dateTime, money, pattern, source, status, trigger } from '@/lib/format'
-import { useCase } from '@/lib/queries'
+import { ApiError } from '@/lib/api'
+import { useCase, useReplay } from '@/lib/queries'
 
 export function CaseView({ caseId, onBack }: { caseId: string; onBack: () => void }) {
   const q = useCase(caseId)
+  // Not every case has a step-by-step record; offer the recap only where there is one.
+  const replay = useReplay(caseId)
   const [tab, setTab] = useState('summary')
   const [params, setParams] = useSearchParams()
   const recapStep = Number(params.get('recap')) || 0
@@ -27,6 +30,8 @@ export function CaseView({ caseId, onBack }: { caseId: string; onBack: () => voi
   }
 
   if (q.isPending) return <Loading rows={8} />
+  if (q.isError && q.error instanceof ApiError && q.error.status === 404)
+    return <Empty>There is no case {caseId}. Pick one from the list.</Empty>
   if (q.isError) return <ErrorState error={q.error} title={`${caseId} could not be loaded`} />
 
   const d = q.data
@@ -61,7 +66,7 @@ export function CaseView({ caseId, onBack }: { caseId: string; onBack: () => voi
                 {waiting} {waiting === 1 ? 'decision' : 'decisions'} waiting on you
               </Button>
             )}
-            {d.answer && (
+            {d.answer && replay.isSuccess && (
               <Button onClick={() => setRecap(1)}>
                 <ListOrdered />
                 Show recap
@@ -124,7 +129,7 @@ export function CaseView({ caseId, onBack }: { caseId: string; onBack: () => voi
           </TabsContent>
         </Tabs>
       )}
-      {d.answer && <Recap detail={d} open={recapStep > 0} step={recapStep || 1} onStep={setRecap} onClose={() => setRecap(null)} />}
+      {d.answer && replay.isSuccess && <Recap detail={d} open={recapStep > 0} step={recapStep || 1} onStep={setRecap} onClose={() => setRecap(null)} />}
     </article>
   )
 }
