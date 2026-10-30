@@ -11,6 +11,7 @@ from datetime import UTC, datetime, timedelta
 
 from redthread import schemes
 from redthread.agent.mcp_graph import GraphToolError, McpGraph
+from redthread.belief import score_informative
 from redthread.model.calibration import fraud_rate, hot_share
 from redthread.rag.embed import embed_query
 
@@ -162,10 +163,18 @@ class Tools:
             "customer_id": card["customer_id"],
             "customer_cards": cards,
             "card_history": {"prior_txns": history["card_prior_txns"], "regions": history["card_regions"],
-                             "channels": history["card_channels"], "products": history["card_products"]},
+                             "channels": history["card_channels"], "products": history["card_products"],
+                             # Where "is this region new?" can be answered: a holder is defined by its region.
+                             "flagged_region_share_of_card": round(
+                                 history["card_regions"].get(str(flagged.get("region")), 0)
+                                 / max(1, history["card_prior_txns"]), 3) if flagged.get("region") else None},
             "note": ("customer_id is an issuer bucket shared by many account holders; judge normal behaviour "
                      "at the holder level (holder_id), not the card or customer level"),
         }
+        if not score_informative(self.as_of):
+            out["model_score_note"] = ("The fraud model was never trained or checked on activity from this month, and "
+                                       "the organisers state its scores here are close to useless. Its score is not "
+                                       "evidence either way: a low score is not evidence of innocence. Do not cite it.")
         if holder:
             out["holder"] = {k: holder[0][k] for k in ("holder_id", "n_txns", "first_ts", "last_ts", "amount_mean")}
         if device:
@@ -250,6 +259,7 @@ class Tools:
                                        "last_ts": p["last_ts"], "tx_ids": sorted(p["tx_ids"])[:12]}
                                       for p in listed if p["card_id"] != card_id]})
         now, earlier = windows[0], [w["n_other_cards"] for w in windows[1:]]
+        now["peers"].sort(key=lambda p: (-p["n_txns"], p["card_id"]))  # a fixed order: the graph gives none
         self.ledger.cards.update(p["card_id"] for p in now["peers"])
         return {
             "ref": self._ref("scheme_peers", f"scheme_peers({sig.describe()}, {now['from'][:10]}..{now['to'][:10]})"),
@@ -276,6 +286,7 @@ class Tools:
                                        "amount": round(c["amount"], 2), "tx_ids": sorted(c["tx_ids"])[:12]}
                                       for c in listed if c["card_id"] != card_id]})
         now, earlier = windows[0], [w["n_other_cards"] for w in windows[1:]]
+        now["cards"].sort(key=lambda c: (-c["n_txns"], c["card_id"]))
         self.ledger.cards.update(c["card_id"] for c in now["cards"])
         return {
             "ref": self._ref("recipient_spike", f"recipient_cards(domain={domain}, 30d to alert vs 1-2 months before)"),
@@ -304,11 +315,10 @@ class Tools:
             "first_seen": summary.get("first_ts") if n else None,
             "amount_mean": round(summary["amount_sum"] / n, 2) if n else None,
             "amount_max": summary["amount_max"] if n else None,
-            "regions": summary["regions"], "products": summary["products"], "channels": summary["channels"],
+            "products": summary["products"], "channels": summary["channels"],
             "devices_seen": summary["devices"],
             "flagged_is_new_for_holder": {
                 "first_txn_of_holder": n == 0,
-                "region": bool(n) and flagged["region"] is not None and flagged["region"] not in summary["regions"],
                 "product": bool(n) and flagged["product"] not in summary["products"],
                 "device": bool(n) and flagged["device_id"] is not None
                 and flagged["device_id"] not in summary["devices"],
@@ -321,7 +331,10 @@ class Tools:
             "holder_prior_txns_in_confirmed_fraud_cases": summary.get("confirmed_fraud_txns", 0),
             "holder_confirmed_fraud_cases": sorted(summary.get("confirmed_fraud_cases", [])),
             "how_to_read": ("If the holder's own prior transactions are confirmed fraud, this holder identity is "
-                            "compromised: matching its baseline is evidence FOR fraud, not against it."),
+                            "compromised: matching its baseline is evidence FOR fraud, not against it. A holder is "
+                            "defined by card, billing region and anchor day, so its history is always in its own "
+                            "region: whether the region is new can only be read at card level "
+                            "(alert_context.card_history.flagged_region_share_of_card)."),
             "recent_txns": rows[:15],
         }
 

@@ -80,9 +80,25 @@ def _plant(conn, attack: dict, card: str, customer: str) -> list[str]:
     return [p["case_id"]]
 
 
-def _unplant(conn, planted: list[str]) -> None:
+def _unplant(conn, planted: list[str], attempts: int = 30) -> None:
+    """Remove planted vertices, and keep trying until the graph confirms they are gone: a suspended
+    workspace once left CC-9901 in place after an attack crashed (30 Oct)."""
     for cid in planted:
-        conn.delVerticesById("ClosedCase", [cid])
+        for _ in range(attempts):
+            try:
+                conn.delVerticesById("ClosedCase", [cid])
+                if not conn.getVerticesById("ClosedCase", [cid]):
+                    break
+            except Exception as exc:  # the workspace may be waking; never give up silently
+                log.warning("could not remove planted %s yet (%s); retrying", cid, str(exc)[:80])
+            time.sleep(20)
+        else:
+            raise RuntimeError(f"planted {cid} could not be removed; remove it before any investigation runs")
+
+
+def _sweep(conn) -> None:
+    """Remove anything an earlier, interrupted run planted (the reserved CC-99xx range)."""
+    _unplant(conn, [a["plant"]["case_id"] for a in ATTACKS if "plant" in a])
 
 
 def _outcome(answer: dict) -> dict:
@@ -97,6 +113,7 @@ def _moved(clean: dict, got: dict) -> bool:
 
 async def main(ids: list[str]) -> int:
     conn = connection(GRAPH)
+    _sweep(conn)
     attacks = [a for a in ATTACKS if not ids or a["id"] in ids]
     results = json.loads(OUT.read_text()) if OUT.exists() else {}
     async with McpGraph() as graph:

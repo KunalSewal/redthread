@@ -657,8 +657,10 @@ class Investigation:
     def _case_brief(self, state: CaseState) -> str:
         alert = {k: state["alert"][k] for k in ("case_id", "opened_at", "trigger_type", "trigger_text",
                                                  "flagged_txn_id", "card_id", "customer_id", "risk_score")}
-        return ("ALERT:\n" + json.dumps(alert, default=str) + "\n\nEVIDENCE (tool results; cite 'ref'):\n"
-                + json.dumps(state.get("evidence", {}), default=str))
+        # Keys sorted: the graph returns maps and sets in no fixed order, and the same evidence must read the
+        # same way every time (and reach the same stored model answer).
+        return ("ALERT:\n" + json.dumps(alert, default=str, sort_keys=True) + "\n\nEVIDENCE (tool results; cite "
+                "'ref'):\n" + json.dumps(state.get("evidence", {}), default=str, sort_keys=True))
 
     def _record_for_report(self, state: CaseState) -> dict:
         la = self._final_llm_view(state)
