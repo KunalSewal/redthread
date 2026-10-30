@@ -1,0 +1,190 @@
+{
+  "case_id": "HHF-007",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.964,
+    "pattern": "card_testing",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3660346",
+      "3660347",
+      "3660348",
+      "3660349",
+      "3660350"
+    ],
+    "first_suspicious_txn_id": "3660346",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 246.38,
+    "evidence": [
+      {
+        "claim": "Customer reported: Customer C09582 message: 'I never made this $236.28 purchase. Please check my card.' Refers to 3660350.",
+        "source": "customer",
+        "ref": "trigger:customer_report",
+        "entity_ids": [
+          "3660350"
+        ]
+      },
+      {
+        "claim": "Card C09582-K1 made 5 online product-C charges totalling $246.38 over 0.0 days (3660346, 3660347, 3660348, 3660349, 3660350); in its 219 transactions of the 60 days before, that kind made up 0%.",
+        "source": "graph",
+        "ref": "query:new_kind_run(card=C09582-K1, 2016-12-15..alert)",
+        "entity_ids": [
+          "C09582-K1",
+          "3660346",
+          "3660347",
+          "3660348",
+          "3660349",
+          "3660350"
+        ]
+      },
+      {
+        "claim": "Four small online authorizations of $1.53, $3.46, $3.33, and $1.78 occurred within 27 minutes on 2017-01-14, followed immediately by the $236.28 purchase (3660350), matching the Rule R5 card testing sequence.",
+        "source": "graph",
+        "ref": "query:card_window(card=C09582-K1, 2017-01-04..2017-01-14)",
+        "entity_ids": [
+          "3660346",
+          "3660347",
+          "3660348",
+          "3660349",
+          "3660350",
+          "C09582-K1"
+        ]
+      },
+      {
+        "claim": "Card C09582-K1 had 219 baseline transactions since October 2016 exclusively conducted in person for product W, making the sudden online product C run an anomalous departure from historical behaviour.",
+        "source": "graph",
+        "ref": "query:new_kind_run(card=C09582-K1, 2016-12-15..alert)",
+        "entity_ids": [
+          "C09582-K1",
+          "3660346",
+          "3660347",
+          "3660348",
+          "3660349",
+          "3660350"
+        ]
+      },
+      {
+        "claim": "Flagged transaction 3660350 was assigned a low model_score of 0.003 and risk_score of 0.19 with a historical fraud rate of 0.0063.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3660350)",
+        "entity_ids": [
+          "3660350"
+        ]
+      },
+      {
+        "claim": "The device status for flagged transaction 3660350 is recorded as New for the account.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3660350)",
+        "entity_ids": [
+          "3660350"
+        ]
+      },
+      {
+        "claim": "Card C09582-K1 belongs to Louvain community 96469142 with a lift vs base rate of 1.1, indicating near-average community fraud incidence.",
+        "source": "graph",
+        "ref": "query:community_profile(card=C09582-K1)",
+        "entity_ids": [
+          "C09582-K1"
+        ]
+      },
+      {
+        "claim": "Prior closed cases CC-2643, CC-0370, and CC-2673 establish confirmed fraud precedents where runs of small online authorizations preceded larger purchases.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(\"card testing R5 small online authorizations under $5 followe...\", k=6)",
+        "entity_ids": [
+          "CC-2643",
+          "CC-0370",
+          "CC-2673"
+        ]
+      },
+      {
+        "claim": "Rule R5: Card testing: Rule R5: Card testing. Three or more small online authorizations on one card within an hour, followed by a larger purchase: recommend `DECLINE_TRANSACTION` and `STEP_UP_AUTH`. If a purchase over $100 has already cleared, recommend `BLOCK_CARD`.",
+        "source": "document",
+        "ref": "query:policy_sections(section=Rule R5: Card testing)",
+        "entity_ids": []
+      },
+      {
+        "claim": "Section 3a. A case is not a report: Section 3a. A case is not a report. Two different things, and the agent produces both. **A case** (`CREATE_CASE`) is the bank's internal record of an investigation. Open one whenever fraud probability reaches 0.30, whenever you request evidence, or whenever a customer disputes a charge. A case can be closed as fraud or as legitimate. It can be updated when new evidence arrives. It should be writte",
+        "source": "document",
+        "ref": "query:policy_sections(section=Section 3a. A case is not a report)",
+        "entity_ids": []
+      },
+      {
+        "claim": "Matches published guidance \u2014 FFIEC: Money Laundering and Terrorist Financing Red Flags (part 1): \"FFIEC BSA/AML Appendices - Appendix F \u2013 Money Laundering and Terrorist Financing Red Flags JavaScript must be enabled in your browser in order to use some functions. BSA/AML Manual BSA/AML Manual Appendices Appendix F \u2013 Money Laundering and Terrorist Financing Red Flags Appendices APPENDIX F: MONEY LAUNDERING AND TERRORIST FINANCING \"\"RED FLAGS\"\" The following are examples of potentially suspicio",
+        "source": "external",
+        "ref": "query:policy_search(\"red flags for card testing: card_testing, card_testing_purch\", regulator)",
+        "entity_ids": []
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-2643",
+      "CC-0370",
+      "CC-2673"
+    ],
+    "summary": "Customer C09582 disputed transaction 3660350 ($236.28) on card C09582-K1. Analysis of transaction records revealed a classic card-testing sequence on 2017-01-14, wherein four small online product C authorizations between $1.53 and $3.46 were executed within 27 minutes directly preceding the disputed purchase. This sudden online activity represents an anomalous departure from the cardholder's baseline of 219 consecutive in-person product W transactions. Under Rule R5, the activity is confirmed as card-testing fraud with a total exposure of $246.38, resulting in the card being blocked and pending charges declined.",
+    "written_to_graph": true,
+    "graph_case_id": "CASE-HHF-007"
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "DECLINE_TRANSACTION",
+        "route": "L1",
+        "reason": "R5: card-testing sequence; decline pending authorizations"
+      },
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "R5: a purchase over $100 has already cleared after the test sequence"
+      },
+      {
+        "action": "STEP_UP_AUTH",
+        "route": "auto",
+        "reason": "R5: require step-up authentication before further activity"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "3a: fraud probability at or above 0.30"
+      }
+    ],
+    "final": [
+      {
+        "action": "DECLINE_TRANSACTION",
+        "route": "L1",
+        "reason": "R5: card-testing sequence; decline pending authorizations"
+      },
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "R5: a purchase over $100 has already cleared after the test sequence"
+      },
+      {
+        "action": "STEP_UP_AUTH",
+        "route": "auto",
+        "reason": "R5: require step-up authentication before further activity"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "3a: fraud probability at or above 0.30"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": false,
+    "reason": "3a: fraud suspected but exposure $246.38 is at most $1,000 and there is no shared device, region cluster or link to other customers' fraud; case only",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0,
+    "activity_dates": []
+  },
+  "stop_reason": "The investigation concluded under policy section 6 because a decisive fraud probability of 0.964 was established through multiple independent lines of evidence, specifically decisive card-testing timing patterns and strong baseline behavioural anomalies, meaning additional steps would not change the outcome.",
+  "tool_calls": 47,
+  "tokens": 151849,
+  "latency_s": 119.4
+}

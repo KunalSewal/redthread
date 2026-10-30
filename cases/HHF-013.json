@@ -1,0 +1,123 @@
+{
+  "case_id": "HHF-013",
+  "case": {
+    "status": "closed_legitimate",
+    "verdict": "legitimate",
+    "fraud_probability": 0.123,
+    "pattern": "none",
+    "pattern_description": "",
+    "affected_txn_ids": [],
+    "first_suspicious_txn_id": "",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 0,
+    "evidence": [
+      {
+        "claim": "Flagged transaction 3626720 received a calibrated second-generation model score of 0.008 with an empirical historical fraud rate of 0.0063 (0.63%), strongly indicating legitimate activity.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3626720)",
+        "entity_ids": [
+          "3626720",
+          "C06115-K1"
+        ]
+      },
+      {
+        "claim": "Holder C06115-K1|203|187 previously transacted in region 203 (transaction 3660311 on 2017-01-05 for $181.16) with zero confirmed fraud cases, establishing region 203 as normal for this holder.",
+        "source": "graph",
+        "ref": "query:holder_history(holder=C06115-K1|203|187, before=2017-01-26)",
+        "entity_ids": [
+          "3660311",
+          "3626720"
+        ]
+      },
+      {
+        "claim": "The transaction amount of $409.30 exceeds holder C06115-K1|203|187's previous transaction maximum of $181.16.",
+        "source": "graph",
+        "ref": "query:holder_history(holder=C06115-K1|203|187, before=2017-01-26)",
+        "entity_ids": [
+          "3626720"
+        ]
+      },
+      {
+        "claim": "The channel (in_person) and product (W) match the card's dominant historical usage pattern, where 58 of 59 baseline transactions were W/in_person, and the card has 5 prior transactions in region 203.",
+        "source": "graph",
+        "ref": "query:new_kind_run(card=C06115-K1, 2016-12-27..alert)",
+        "entity_ids": [
+          "C06115-K1",
+          "3626720"
+        ]
+      },
+      {
+        "claim": "Shared origin analysis for region 203 shows 102 transactions across 42 cards in the 7-day window with zero transactions scoring above 0.5 (lift vs all transactions of 0.0).",
+        "source": "graph",
+        "ref": "query:shared_origin(tx=3626720, window=+/-7d)",
+        "entity_ids": [
+          "3626720"
+        ]
+      },
+      {
+        "claim": "Card C06115-K1 sits in community 90177823 with a fraud rate of 2.4% (lift vs base rate of 0.2), is not part of a fraud ring (ring_id -1), and has no linked closed or agent fraud cases.",
+        "source": "graph",
+        "ref": "query:community_profile(card=C06115-K1)",
+        "entity_ids": [
+          "C06115-K1"
+        ]
+      },
+      {
+        "claim": "Prior closed cases triggered by model alerts on unusual amounts or regional activity (such as CC-4591, CC-5371, and CC-3639) were all verified as cardholder legitimate purchases and cleared.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(\"risk score: Real-time model scored transaction 3626720 ($409...\", k=6)",
+        "entity_ids": [
+          "CC-4591",
+          "CC-5371",
+          "CC-3639"
+        ]
+      },
+      {
+        "claim": "Matches published guidance \u2014 FFIEC: Money Laundering and Terrorist Financing Red Flags (part 1): \"FFIEC BSA/AML Appendices - Appendix F \u2013 Money Laundering and Terrorist Financing Red Flags JavaScript must be enabled in your browser in order to use some functions. BSA/AML Manual BSA/AML Manual Appendices Appendix F \u2013 Money Laundering and Terrorist Financing Red Flags Appendices APPENDIX F: MONEY LAUNDERING AND TERRORIST FINANCING \"\"RED FLAGS\"\" The following are examples of potentially suspicio",
+        "source": "external",
+        "ref": "query:policy_search(\"red flags for none: single_signal\", regulator)",
+        "entity_ids": []
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-4591",
+      "CC-5371",
+      "CC-3639",
+      "CC-2037"
+    ],
+    "summary": "Transaction 3626720 ($409.30) on card C06115-K1 was flagged due to a legacy real-time risk score of 0.69. The bank's calibrated second-generation fraud model scored the transaction at 0.008 with a historical fraud rate of only 0.63%. The in-person purchase in region 203 aligns directly with the holder's established regional history and baseline purchasing profile. Furthermore, the card has no association with any fraud rings and resides in a low-risk community with a fraud rate of 2.4%. The alert is determined to be a false alarm, and the transaction is cleared as legitimate cardholder activity.",
+    "written_to_graph": true,
+    "graph_case_id": "CASE-HHF-013"
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "CLOSE_NO_FRAUD",
+        "route": "auto",
+        "reason": "Section 6: probability 0.12 <= 0.15 on 5 independent signals"
+      }
+    ],
+    "final": [
+      {
+        "action": "CLOSE_NO_FRAUD",
+        "route": "auto",
+        "reason": "Section 6: probability 0.12 <= 0.15 on 5 independent signals"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": false,
+    "reason": "3a: fraud is not confirmed or strongly suspected, so no report is required",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0,
+    "activity_dates": []
+  },
+  "stop_reason": "The investigation ended pursuant to policy section 6 because the calculated fraud probability of 0.12 falls at or below the 0.15 closure threshold supported by multiple independent exculpatory signals.",
+  "tool_calls": 15,
+  "tokens": 77092,
+  "latency_s": 108.8
+}

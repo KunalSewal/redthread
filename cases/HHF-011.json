@@ -1,0 +1,129 @@
+{
+  "case_id": "HHF-011",
+  "case": {
+    "status": "closed_legitimate",
+    "verdict": "legitimate",
+    "fraud_probability": 0.096,
+    "pattern": "none",
+    "pattern_description": "",
+    "affected_txn_ids": [],
+    "first_suspicious_txn_id": "",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 0,
+    "evidence": [
+      {
+        "claim": "Transaction 3640919 received a legacy real-time risk score of 0.71, triggering the alert.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3640919)",
+        "entity_ids": [
+          "3640919"
+        ]
+      },
+      {
+        "claim": "The purchase amount of $881.55 on transaction 3640919 is elevated relative to other transactions on card C09241-K2 over the prior 10 days, which peaked at $262.62.",
+        "source": "graph",
+        "ref": "query:card_window(card=C09241-K2, 2017-01-10..2017-01-20)",
+        "entity_ids": [
+          "3640919",
+          "C09241-K2"
+        ]
+      },
+      {
+        "claim": "Region 494 shows 0 transactions scoring >= 0.5 across 41 cards in the 7-day window (lift 0.0 vs base rate), and card C09241-K2 has extensive history in region 494 with 491 prior transactions.",
+        "source": "graph",
+        "ref": "query:shared_origin(tx=3640919, window=+/-7d)",
+        "entity_ids": [
+          "3640919"
+        ]
+      },
+      {
+        "claim": "Holder C09241-K2|494|-43 has zero prior transactions in confirmed fraud cases, and card C09241-K2 shows no activity shift or card testing sequence.",
+        "source": "graph",
+        "ref": "query:holder_history(holder=C09241-K2|494|-43, before=2017-01-20)",
+        "entity_ids": [
+          "3640919",
+          "C09241-K2"
+        ]
+      },
+      {
+        "claim": "All six most similar closed cases triggered by risk scores on large purchases (CC-4158, CC-2956, CC-3761, CC-0339, CC-3639, CC-3092) were confirmed as legitimate cardholder activity and cleared.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(\"risk score: Real-time model scored transaction 3640919 ($881...\", k=6)",
+        "entity_ids": [
+          "CC-4158",
+          "CC-2956",
+          "CC-3761",
+          "CC-0339",
+          "CC-3639",
+          "CC-3092"
+        ]
+      },
+      {
+        "claim": "Card C09241-K2 has ring_id -1 (no fraud ring), and its Louvain community lift of 5.0 reflects closed cases from months prior rather than any active shared fraud link during this episode.",
+        "source": "graph",
+        "ref": "query:community_profile(card=C09241-K2)",
+        "entity_ids": [
+          "C09241-K2",
+          "C11220-K1"
+        ]
+      },
+      {
+        "claim": "The alert named card C09241-K1, but transaction 3640919 is on card C09241-K2; the investigation used the card the transaction was made on.",
+        "source": "graph",
+        "ref": "query:alert_context",
+        "entity_ids": [
+          "3640919",
+          "C09241-K2"
+        ]
+      },
+      {
+        "claim": "Matches published guidance \u2014 FFIEC: Money Laundering and Terrorist Financing Red Flags (part 1): \"FFIEC BSA/AML Appendices - Appendix F \u2013 Money Laundering and Terrorist Financing Red Flags JavaScript must be enabled in your browser in order to use some functions. BSA/AML Manual BSA/AML Manual Appendices Appendix F \u2013 Money Laundering and Terrorist Financing Red Flags Appendices APPENDIX F: MONEY LAUNDERING AND TERRORIST FINANCING \"\"RED FLAGS\"\" The following are examples of potentially suspicio",
+        "source": "external",
+        "ref": "query:policy_search(\"red flags for none: single_signal\", regulator)",
+        "entity_ids": []
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-4158",
+      "CC-2956",
+      "CC-3761",
+      "CC-0339",
+      "CC-3639",
+      "CC-3092"
+    ],
+    "summary": "Transaction 3640919 for $881.55 on card C09241-K2 was flagged solely by a legacy real-time risk score of 0.71. The bank's calibrated second-generation fraud model evaluated the transaction at 0.003 with a historical fraud rate of only 0.63%. The in-person transaction occurred in region 494, where the cardholder possesses an established baseline of 491 prior transactions, and the holder has zero confirmed fraud history. Furthermore, the card does not belong to any active fraud ring, and all comparable historical closed cases were cleared as legitimate. The activity is determined to be legitimate cardholder spending and the case is closed with no fraud.",
+    "written_to_graph": true,
+    "graph_case_id": "CASE-HHF-011"
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "CLOSE_NO_FRAUD",
+        "route": "auto",
+        "reason": "Section 6: probability 0.10 <= 0.15 on 5 independent signals"
+      }
+    ],
+    "final": [
+      {
+        "action": "CLOSE_NO_FRAUD",
+        "route": "auto",
+        "reason": "Section 6: probability 0.10 <= 0.15 on 5 independent signals"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": false,
+    "reason": "3a: fraud is not confirmed or strongly suspected, so no report is required",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0,
+    "activity_dates": []
+  },
+  "stop_reason": "Under policy section 6, the investigation concluded because the probability of 0.096 is below the 0.15 threshold across five independent lines of evidence, confirming that further investigation would not change the outcome.",
+  "tool_calls": 19,
+  "tokens": 221710,
+  "latency_s": 200.9
+}

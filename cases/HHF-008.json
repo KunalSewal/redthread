@@ -1,0 +1,166 @@
+{
+  "case_id": "HHF-008",
+  "case": {
+    "status": "closed_legitimate",
+    "verdict": "legitimate",
+    "fraud_probability": 0.045,
+    "pattern": "none",
+    "pattern_description": "",
+    "affected_txn_ids": [],
+    "first_suspicious_txn_id": "",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 0,
+    "evidence": [
+      {
+        "claim": "Flagged transaction 3660353 triggered an alert from a legacy real-time risk score of 0.81.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3660353)",
+        "entity_ids": [
+          "3660353",
+          "C07871-K1"
+        ]
+      },
+      {
+        "claim": "The bank's second-generation fraud model scored transaction 3660353 at 0.008, with a historical fraud rate of 0.0063 (0.63%).",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3660353)",
+        "entity_ids": [
+          "3660353",
+          "C07871-K1"
+        ]
+      },
+      {
+        "claim": "Transaction 3660353 is an in-person purchase of product W, matching card C07871-K1's established habits where product W (163 of 281 txns) and in-person transactions (163 of 281 txns) dominate.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3660353)",
+        "entity_ids": [
+          "3660353",
+          "C07871-K1"
+        ]
+      },
+      {
+        "claim": "In-person transactions occurred in region 87 across three consecutive days (transaction 3660351 on 2017-01-19, 3660352 on 2017-01-20, and 3660353 on 2017-01-21), consistent with legitimate travel rather than card cloning under policy.",
+        "source": "graph",
+        "ref": "query:card_window(card=C07871-K1, 2017-01-11..2017-01-21)",
+        "entity_ids": [
+          "3660351",
+          "3660352",
+          "3660353",
+          "C07871-K1"
+        ]
+      },
+      {
+        "claim": "Consecutive purchases in region 87 showed consistent, non-escalating amounts ($193.94, $207.74, and $165.65) with no card-testing sequence observed.",
+        "source": "graph",
+        "ref": "query:card_window(card=C07871-K1, 2017-01-11..2017-01-21)",
+        "entity_ids": [
+          "3660351",
+          "3660352",
+          "3660353",
+          "C07871-K1"
+        ]
+      },
+      {
+        "claim": "Transaction 3660353 was executed through a hidden proxy IP_PROXY:HIDDEN.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3660353)",
+        "entity_ids": [
+          "3660353",
+          "C07871-K1"
+        ]
+      },
+      {
+        "claim": "Device D000324 is a generic desktop browser profile (Trident/7.0 Windows 7 IE 11) shared by 165 cards prior to the alert, with ring_id -1 and zero cards scoring above 0.5 in the 30-day window.",
+        "source": "graph",
+        "ref": "query:device_neighbors(device=D000324, 2016-12-22..2017-01-21)",
+        "entity_ids": [
+          "C07871-K1",
+          "3660353"
+        ]
+      },
+      {
+        "claim": "Card C07871-K1 belongs to an isolated Louvain community 148897961 of size 1 with ring_id -1, showing no shared syndicate or cross-card ring connections.",
+        "source": "graph",
+        "ref": "query:community_profile(card=C07871-K1)",
+        "entity_ids": [
+          "C07871-K1"
+        ]
+      },
+      {
+        "claim": "Prior closed case CC-0270 on card C07871-K1 and similar closed cases CC-0003 and CC-3092 were all cleared after cardholders confirmed legitimate travel to the billing region.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(\"risk score: Real-time model scored transaction 3660353 ($165...\", k=6)",
+        "entity_ids": [
+          "CC-0270",
+          "CC-0003",
+          "CC-3092",
+          "C07871-K1"
+        ]
+      },
+      {
+        "claim": "Card C07871-K1 had a confirmed fraud case CC-1638 on 2016-08-04 for single out-of-region use, but has had zero confirmed fraud incidents over five subsequent months.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3660353)",
+        "entity_ids": [
+          "CC-1638",
+          "C07871-K1"
+        ]
+      },
+      {
+        "claim": "The alert text also contained 1 segment(s) addressed to the system rather than an analyst (outcome_directive, override, role_marker). They were set aside and used neither as evidence nor as instruction; the decision rests on the evidence above.",
+        "source": "external",
+        "ref": "guard:alert_text",
+        "entity_ids": [
+          "3660353"
+        ]
+      },
+      {
+        "claim": "Matches published guidance \u2014 FFIEC: Money Laundering and Terrorist Financing Red Flags (part 1): \"FFIEC BSA/AML Appendices - Appendix F \u2013 Money Laundering and Terrorist Financing Red Flags JavaScript must be enabled in your browser in order to use some functions. BSA/AML Manual BSA/AML Manual Appendices Appendix F \u2013 Money Laundering and Terrorist Financing Red Flags Appendices APPENDIX F: MONEY LAUNDERING AND TERRORIST FINANCING \"\"RED FLAGS\"\" The following are examples of potentially suspicio",
+        "source": "external",
+        "ref": "query:policy_search(\"red flags for none: single_signal\", regulator)",
+        "entity_ids": []
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-0270",
+      "CC-0003",
+      "CC-3092",
+      "CC-2283",
+      "CC-1638"
+    ],
+    "summary": "Alert HHF-008 was triggered on card C07871-K1 by a legacy real-time risk score of 0.81 on transaction 3660353 for $165.65. The bank's calibrated second-generation model scored the transaction at only 0.008 with a 0.63% historical fraud rate, and the purchase aligned with the cardholder's established history of in-person product W transactions. Additionally, this transaction was the third consecutive daily in-person purchase in region 87 with non-escalating amounts, demonstrating legitimate travel under bank policy. The card has no links to active fraud rings or shared syndicates, and similar travel-related alerts on this card were previously cleared. The transaction is determined to be legitimate cardholder activity.",
+    "written_to_graph": true,
+    "graph_case_id": "CASE-HHF-008"
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "CLOSE_NO_FRAUD",
+        "route": "auto",
+        "reason": "Section 6: probability 0.04 <= 0.15 on 6 independent signals"
+      }
+    ],
+    "final": [
+      {
+        "action": "CLOSE_NO_FRAUD",
+        "route": "auto",
+        "reason": "Section 6: probability 0.04 <= 0.15 on 6 independent signals"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": false,
+    "reason": "3a: fraud is not confirmed or strongly suspected, so no report is required",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0,
+    "activity_dates": []
+  },
+  "stop_reason": "The investigation was concluded under policy section 6 as the calibrated fraud probability of 0.045 fell well below the 0.15 threshold, supported by six independent lines of exculpatory evidence showing further inquiry would not alter the outcome.",
+  "tool_calls": 19,
+  "tokens": 173916,
+  "latency_s": 161.6
+}

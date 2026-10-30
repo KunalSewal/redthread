@@ -1,0 +1,265 @@
+{
+  "case_id": "HHF-003",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.953,
+    "pattern": "card_not_present_fraud",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3660147",
+      "3660148",
+      "3660149",
+      "3660150",
+      "3660151",
+      "3660152",
+      "3660153"
+    ],
+    "first_suspicious_txn_id": "3660147",
+    "connected_card_ids": [
+      "C09026-K1",
+      "C03040-K2",
+      "C11873-K2",
+      "C04096-K1",
+      "C03080-K2",
+      "C07847-K1",
+      "C08943-K2",
+      "C08563-K1",
+      "C11543-K2",
+      "C09468-K1",
+      "C06220-K1",
+      "C05698-K1",
+      "C07925-K1",
+      "C05061-K1",
+      "C01594-K1",
+      "C09251-K1",
+      "C06962-K2",
+      "C05610-K1",
+      "C01727-K2",
+      "C09148-K1"
+    ],
+    "connected_device_profiles": [],
+    "exposure_usd": 8551.47,
+    "evidence": [
+      {
+        "claim": "Customer reported: Customer C11663 message: 'I did not make these charges on my card. Please look into it.' Refers to 3660153.",
+        "source": "customer",
+        "ref": "trigger:customer_report",
+        "entity_ids": [
+          "3660153"
+        ]
+      },
+      {
+        "claim": "Card C11663-K1 made 7 online product-C charges totalling $8,551.47 over 9.2 days (3660147, 3660148, 3660149, 3660150, 3660151, 3660152, 3660153); in its 4 transactions of the 60 days before, that kind made up 0%.",
+        "source": "graph",
+        "ref": "query:new_kind_run(card=C11663-K1, 2017-01-01..alert)",
+        "entity_ids": [
+          "C11663-K1",
+          "3660147",
+          "3660148",
+          "3660149",
+          "3660150",
+          "3660151",
+          "3660152",
+          "3660153"
+        ]
+      },
+      {
+        "claim": "20 other cards (20 other customers) newly show the same signature in the 30 days to the alert - 3+ online product-C charges of $145-$2,250, on a card that had not made such charges before - against 4 and 10 in the same window one and two months earlier: C09026-K1, C03040-K2, C11873-K2, C04096-K1, C03080-K2, C07847-K1, C08943-K2, C08563-K1, C11543-K2, C09468-K1, C06220-K1, C05698-K1.",
+        "source": "graph",
+        "ref": "query:scheme_peers(3+ online product-C charges of $145-$2,250, on a card that had not made such charges before, 2017-01-01..2017-01-31)",
+        "entity_ids": [
+          "C09026-K1",
+          "C03040-K2",
+          "C11873-K2",
+          "C04096-K1",
+          "C03080-K2",
+          "C07847-K1",
+          "C08943-K2",
+          "C08563-K1",
+          "C11543-K2",
+          "C09468-K1",
+          "C06220-K1",
+          "C05698-K1",
+          "C07925-K1",
+          "C05061-K1",
+          "C01594-K1",
+          "C09251-K1",
+          "C06962-K2",
+          "C05610-K1",
+          "C01727-K2",
+          "C09148-K1"
+        ]
+      },
+      {
+        "claim": "Between 2017-01-22 and 2017-01-31, card C11663-K1 experienced an escalating run of 7 online product-C transactions totaling $8,551.47, starting with $181.73, $357.82, and $811.92 before four consecutive identical charges of $1,800.00 (txns 3660150, 3660151, 3660152, 3660153), departing completely from baseline.",
+        "source": "graph",
+        "ref": "query:new_kind_run(card=C11663-K1, 2017-01-01..alert)",
+        "entity_ids": [
+          "C11663-K1",
+          "3660147",
+          "3660148",
+          "3660149",
+          "3660150",
+          "3660151",
+          "3660152",
+          "3660153"
+        ]
+      },
+      {
+        "claim": "The cardholder actively conducted normal in-person product-W transactions (txn 3652065 for $50.51 in region 327 on 2017-01-26 and txn 3652063 for $136.96 in region 315 on 2017-01-27) concurrent with the unauthorized online product-C charges, confirming the physical card remained in the holder's possession.",
+        "source": "graph",
+        "ref": "query:card_window(card=C11663-K1, 2017-01-21..2017-01-31)",
+        "entity_ids": [
+          "C11663-K1",
+          "3652065",
+          "3652063"
+        ]
+      },
+      {
+        "claim": "Scheme peer analysis identified 20 other cards exhibiting the exact same signature of 3+ online product-C charges in January 2017, showing tightly clustered sequential transaction IDs (e.g. C07847-K1 txns 3660143-3660146, C08943-K2 txns 3660155-3660158, and C08563-K1 txns 3660160-3660163 immediately framing this card's batch).",
+        "source": "graph",
+        "ref": "query:scheme_peers(3+ online product-C charges of $145-$2,250, on a card that had not made such charges before, 2017-01-01..2017-01-31)",
+        "entity_ids": [
+          "C11663-K1",
+          "C07847-K1",
+          "C08943-K2",
+          "C08563-K1"
+        ]
+      },
+      {
+        "claim": "Flagged transaction 3660153 produced a very low model score of 0.001 with a historical fraud rate of 0.0063 and risk score 0.09.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3660153)",
+        "entity_ids": [
+          "3660153",
+          "C11663-K1"
+        ]
+      },
+      {
+        "claim": "Flagged transaction billing region 315 shows a low fraud lift of 0.17 relative to all transactions, with only 2 of 630 transactions in the window scoring over 0.5.",
+        "source": "graph",
+        "ref": "query:shared_origin(tx=3660153, window=+/-7d)",
+        "entity_ids": [
+          "3660153",
+          "C11663-K1"
+        ]
+      },
+      {
+        "claim": "No device ID was recorded for flagged transaction 3660153 or any online transaction in the run, and the card's historically associated device D003426 has a generic profile not tied to any fraud ring (ring_id -1).",
+        "source": "graph",
+        "ref": "query:device_neighbors(device=D003426, 2017-01-01..2017-01-31)",
+        "entity_ids": [
+          "C11663-K1"
+        ]
+      },
+      {
+        "claim": "Card C11663-K1 and customer C11663 have no prior closed fraud cases on file.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3660153)",
+        "entity_ids": [
+          "C11663-K1",
+          "C11663"
+        ]
+      },
+      {
+        "claim": "Rule R2: Customer denies the transaction: Rule R2: Customer denies the transaction. Recommend `BLOCK_CARD` and `CREATE_CASE`. Add `FILE_REPORT` if exposure exceeds $1,000 or the case connects to a shared device profile or another card's fraud.",
+        "source": "document",
+        "ref": "query:policy_sections(section=Rule R2: Customer denies the transaction)",
+        "entity_ids": []
+      },
+      {
+        "claim": "Section 3a. A case is not a report: Section 3a. A case is not a report. Two different things, and the agent produces both. **A case** (`CREATE_CASE`) is the bank's internal record of an investigation. Open one whenever fraud probability reaches 0.30, whenever you request evidence, or whenever a customer disputes a charge. A case can be closed as fraud or as legitimate. It can be updated when new evidence arrives. It should be writte",
+        "source": "document",
+        "ref": "query:policy_sections(section=Section 3a. A case is not a report)",
+        "entity_ids": []
+      },
+      {
+        "claim": "Matches published guidance \u2014 FinCEN: Advisory on Imposter Scams and Money Mule Schemes (part 3): COVID-19 Imposter Scams and Money Mule Schemes Consumer frauds include imposter scams and money mule schemes, where actors deceive victims by impersonating federal government agencies, international organizations, or charities. FinCEN identified the financial red flag indicators described below to alert financial institutions to these frauds and to assist financial institutions in detecting, preve",
+        "source": "external",
+        "ref": "query:policy_search(\"red flags for card not present fraud: While card-not-present\", regulator)",
+        "entity_ids": []
+      }
+    ],
+    "similar_prior_cases": [],
+    "summary": "Customer C11663 reported unauthorized activity on card C11663-K1, referencing transaction 3660153. Investigation revealed a series of seven unauthorized online product-C transactions between January 22 and January 31, 2017, totaling $8,551.47 and escalating to four identical charges of $1,800.00. The legitimate cardholder conducted concurrent in-person purchases in regions 327 and 315, confirming the physical card remained in their possession while card credentials were breached. Furthermore, 20 other cards across distinct accounts exhibited identical batch transaction activity with sequential transaction IDs during the same period. The activity was confirmed as card-not-present fraud, and card blocking and regulatory reporting were executed.",
+    "written_to_graph": true,
+    "graph_case_id": "CASE-HHF-003"
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L2",
+        "reason": "R2: customer states they did not make the transaction; exposure $8,551.47"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R2; 3a: a report always has a case behind it"
+      },
+      {
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "3a: the fraud connects to 20 other card(s), which is a connection to another customer's fraud"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L2",
+        "reason": "R2: customer states they did not make the transaction; exposure $8,551.47"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R2; 3a: a report always has a case behind it"
+      },
+      {
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "3a: the fraud connects to 20 other card(s), which is a connection to another customer's fraud"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": true,
+    "reason": "3a: the fraud connects to 20 other card(s), which is a connection to another customer's fraud",
+    "narrative": "This Suspicious Activity Report details a coordinated card-not-present fraud scheme involving customer C11663 and card C11663-K1. Between January 22, 2017, and January 31, 2017, seven unauthorized online product-C transactions totaling $8,551.47 were processed against card C11663-K1 across regions 327 and 315. Transaction amounts rapidly escalated from $181.73 to four consecutive charges of $1,800.00 (transactions 3660150, 3660151, 3660152, and 3660153). No device telemetry was provided for the online transactions, which were executed using an associated email on yahoo.com. During this fraudulent run, the cardholder maintained continuous physical possession of the card, evidenced by normal in-person retail purchases on January 26 (transaction 3652065 in region 327) and January 27, 2017 (transaction 3652063 in region 315). Network peer analysis identified 20 additional compromised cards from unrelated customers subjected to identical transaction patterns during January 2017. These authorizations occurred in sequential transaction ID blocks, with card C11663-K1 transactions (3660147 through 3660153) framed directly between batches for cards C07847-K1 (transactions 3660143 through 3660146) and C08943-K2 (transactions 3660155 through 3660158). The sequential execution across multiple accounts indicates automated, batch card-not-present fraud resulting from a common card data compromise. Upon confirmation of unauthorized use following customer dispute HHF-003, card C11663-K1 was permanently blocked to mitigate ongoing exposure.",
+    "subjects": [
+      "C11663",
+      "C11663-K1",
+      "C09026-K1",
+      "C03040-K2",
+      "C11873-K2",
+      "C04096-K1",
+      "C03080-K2",
+      "C07847-K1",
+      "C08943-K2",
+      "C08563-K1",
+      "C11543-K2",
+      "C09468-K1",
+      "C06220-K1",
+      "C05698-K1",
+      "C07925-K1",
+      "C05061-K1",
+      "C01594-K1",
+      "C09251-K1",
+      "C06962-K2",
+      "C05610-K1",
+      "C01727-K2",
+      "C09148-K1"
+    ],
+    "total_amount_usd": 8551.47,
+    "activity_dates": [
+      "2017-01-22",
+      "2017-01-31"
+    ]
+  },
+  "stop_reason": "The investigation ended under policy section 6 because the fraud probability reached 0.953, supported by two decisive independent lines of evidence: concurrent physical card usage by the holder during the unauthorized online run and tightly sequential cross-card scheme peer patterns across 20 other cards.",
+  "tool_calls": 70,
+  "tokens": 150904,
+  "latency_s": 291.5
+}

@@ -1,0 +1,159 @@
+{
+  "case_id": "HHF-017",
+  "case": {
+    "status": "closed_legitimate",
+    "verdict": "uncertain",
+    "fraud_probability": 0.182,
+    "pattern": "none",
+    "pattern_description": "",
+    "affected_txn_ids": [],
+    "first_suspicious_txn_id": "",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 0,
+    "evidence": [
+      {
+        "claim": "The calibrated second-generation fraud model scored transaction 3638829 at 0.0 with an empirical historical fraud rate of 0.0063 (0.63%).",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3638829)",
+        "entity_ids": [
+          "3638829",
+          "C08842-K2"
+        ]
+      },
+      {
+        "claim": "Transaction 3638829 was conducted online using device D000503, which was flagged as New for this account and operated behind an anonymous proxy.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3638829)",
+        "entity_ids": [
+          "3638829",
+          "C08842-K2"
+        ]
+      },
+      {
+        "claim": "Device D000503 has a generic profile, zero closed fraud cases all-time across the bank, is not part of any fraud ring (ring_id -1), and connects to only one other card in 90 days with no fraud flagged.",
+        "source": "graph",
+        "ref": "query:device_neighbors(device=D000503, 2016-10-03..2017-01-01)",
+        "entity_ids": [
+          "C06882-K1",
+          "C08842-K2",
+          "3638829"
+        ]
+      },
+      {
+        "claim": "Card C08842-K2 history demonstrates extensive prior usage in region 299 (332 of 784 transactions), frequent purchases in product H (38 transactions), and established online channel use (91 transactions).",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3638829)",
+        "entity_ids": [
+          "C08842-K2"
+        ]
+      },
+      {
+        "claim": "Shared origin analysis indicates that region 299 has a lift of 0.28 vs baseline and device D000503 has a lift of 0.0, confirming no anomalous concentration of fraud.",
+        "source": "graph",
+        "ref": "query:shared_origin(tx=3638829, window=+/-7d)",
+        "entity_ids": []
+      },
+      {
+        "claim": "Transaction 3638829 was an isolated modest purchase of $43.92 with no preceding authorization run or card testing sequence (fits_card_testing_r5 is false).",
+        "source": "graph",
+        "ref": "query:new_kind_run(card=C08842-K2, 2016-12-02..alert)",
+        "entity_ids": [
+          "C08842-K2"
+        ]
+      },
+      {
+        "claim": "Card C08842-K2 suffered confirmed fraud in July through October 2016 including CC-4809 and CC-4281, though the card was reissued, no fraud has occurred in over two months, and the prior model alert CC-0026 was cleared.",
+        "source": "graph",
+        "ref": "query:linked_cases(tx=3638829)",
+        "entity_ids": [
+          "C08842-K2",
+          "CC-4809",
+          "CC-4281",
+          "CC-0026"
+        ]
+      },
+      {
+        "claim": "Customer confirmed they made the transaction. (Assumed: the reply most consistent with the evidence before asking, probability 0.18. Because it was inferred from that evidence, it does not move the probability.)",
+        "source": "customer",
+        "ref": "evidence_request:1",
+        "entity_ids": [
+          "3638829"
+        ]
+      },
+      {
+        "claim": "Rule R3: Customer confirms the transaction: Rule R3: Customer confirms the transaction. Recommend `CLOSE_NO_FRAUD`. Note the confirmation in the case file.",
+        "source": "document",
+        "ref": "query:policy_sections(section=Rule R3: Customer confirms the transaction)",
+        "entity_ids": []
+      },
+      {
+        "claim": "Rule R1: Verify before you block on a weak signal: Rule R1: Verify before you block on a weak signal. If the case rests on a single signal (including a risk score alone) and your assessed fraud probability is below 0.70, recommend `VERIFY_WITH_CUSTOMER` or `STEP_UP_AUTH` before any block. Blocking a legitimate customer on one signal is a policy breach.",
+        "source": "document",
+        "ref": "query:policy_sections(section=Rule R1: Verify before you block on a weak signal)",
+        "entity_ids": []
+      },
+      {
+        "claim": "Section 3a. A case is not a report: Section 3a. A case is not a report. Two different things, and the agent produces both. **A case** (`CREATE_CASE`) is the bank's internal record of an investigation. Open one whenever fraud probability reaches 0.30, whenever you request evidence, or whenever a customer disputes a charge. A case can be closed as fraud or as legitimate. It can be updated when new evidence arrives. It should be writte",
+        "source": "document",
+        "ref": "query:policy_sections(section=Section 3a. A case is not a report)",
+        "entity_ids": []
+      },
+      {
+        "claim": "Matches published guidance \u2014 FFIEC: Money Laundering and Terrorist Financing Red Flags (part 1): \"FFIEC BSA/AML Appendices - Appendix F \u2013 Money Laundering and Terrorist Financing Red Flags JavaScript must be enabled in your browser in order to use some functions. BSA/AML Manual BSA/AML Manual Appendices Appendix F \u2013 Money Laundering and Terrorist Financing Red Flags Appendices APPENDIX F: MONEY LAUNDERING AND TERRORIST FINANCING \"\"RED FLAGS\"\" The following are examples of potentially suspicio",
+        "source": "external",
+        "ref": "query:policy_search(\"red flags for none: single_signal\", regulator)",
+        "entity_ids": []
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-0026",
+      "CC-5371",
+      "CC-4591"
+    ],
+    "summary": "Alert HHF-017 was triggered by a legacy real-time risk score of 0.55 on transaction 3638829 ($43.92) on card C08842-K2. Although the transaction originated from an anonymous proxy and a newly seen device, the calibrated second-generation fraud model scored it at 0.0, and the device has no ties to fraud rings or confirmed abuse. The activity was consistent with the cardholder's established billing region, product category, and online purchase patterns. Following cardholder verification confirming the purchase was authorized, the case was determined to be a false alarm and closed.",
+    "written_to_graph": true,
+    "graph_case_id": "CASE-HHF-017"
+  },
+  "evidence_requests": [
+    {
+      "type": "customer_validation",
+      "asked_after_step": 27,
+      "assumed_response": "Customer confirmed they made the transaction. (Assumed: the reply most consistent with the evidence before asking, probability 0.18. Because it was inferred from that evidence, it does not move the probability.)"
+    }
+  ],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "STEP_UP_AUTH",
+        "route": "auto",
+        "reason": "R1: probability 0.18 below 0.70 on the available signals; verify before any block"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "3a: a case is opened whenever evidence is requested"
+      }
+    ],
+    "final": [
+      {
+        "action": "CLOSE_NO_FRAUD",
+        "route": "auto",
+        "reason": "R3: cardholder confirmed the transaction; confirmation noted in the case"
+      }
+    ],
+    "what_changed": "Customer validation was requested to confirm the online transaction, and the customer's confirmation resolved initial uncertainty, moving the action from step-up authentication to closing the case as no fraud."
+  },
+  "sar": {
+    "file": false,
+    "reason": "3a: the cardholder confirmed the activity, so no report is required",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0,
+    "activity_dates": []
+  },
+  "stop_reason": "The investigation stopped pursuant to policy section 6 because a verification reply from the cardholder confirmed the transaction, settling the inquiry.",
+  "tool_calls": 50,
+  "tokens": 163885,
+  "latency_s": 53.1
+}

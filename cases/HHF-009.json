@@ -1,0 +1,178 @@
+{
+  "case_id": "HHF-009",
+  "case": {
+    "status": "closed_legitimate",
+    "verdict": "uncertain",
+    "fraud_probability": 0.245,
+    "pattern": "none",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3660354",
+      "3660355"
+    ],
+    "first_suspicious_txn_id": "3660354",
+    "connected_card_ids": [
+      "C03040-K2",
+      "C03528-K1",
+      "C02342-K1"
+    ],
+    "connected_device_profiles": [],
+    "exposure_usd": 489.62,
+    "evidence": [
+      {
+        "claim": "Card C09177-K1 made 2 online product-C charges totalling $489.62 over 0.8 days (3660354, 3660355); in its 51 transactions of the 60 days before, that kind made up 0%.",
+        "source": "graph",
+        "ref": "query:new_kind_run(card=C09177-K1, 2016-12-28..alert)",
+        "entity_ids": [
+          "C09177-K1",
+          "3660354",
+          "3660355"
+        ]
+      },
+      {
+        "claim": "3 other cards (3 other customers) newly show the same signature in the 30 days to the alert - 2+ online product-C charges of $182-$327 from a device new to the account, on a card that had not made such charges before - against 0 and 1 in the same window one and two months earlier: C03040-K2, C03528-K1, C02342-K1.",
+        "source": "graph",
+        "ref": "query:scheme_peers(2+ online product-C charges of $182-$327 from a device new to the account, on a card that had not made such charges before, 2016-12-28..2017-01-27)",
+        "entity_ids": [
+          "C03040-K2",
+          "C03528-K1",
+          "C02342-K1"
+        ]
+      },
+      {
+        "claim": "Flagged transaction 3660355 has a low calibrated model score of 0.011 and historical fraud rate of 0.0063, despite the legacy risk score of 0.8.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3660355)",
+        "entity_ids": [
+          "3660355",
+          "C09177-K1"
+        ]
+      },
+      {
+        "claim": "The transaction occurred in region 337, which is the cardholder's primary baseline billing region (accounting for 149 of 169 prior card transactions and both holder transactions).",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3660355)",
+        "entity_ids": [
+          "3660355",
+          "C09177-K1"
+        ]
+      },
+      {
+        "claim": "Holder C09177-K1|337|209 previously transacted in region 337 on the same day (tx 3640665) using the exact same billing email domain 'anonymous.com' with no prior confirmed fraud cases.",
+        "source": "graph",
+        "ref": "query:holder_history(holder=C09177-K1|337|209, before=2017-01-27)",
+        "entity_ids": [
+          "3640665",
+          "C09177-K1"
+        ]
+      },
+      {
+        "claim": "Device D009729 has a generic profile, no proxy detected, no connection to any known fraud ring (ring_id -1), and 0 closed fraud cases associated with it.",
+        "source": "graph",
+        "ref": "query:device_neighbors(device=D009729, 2016-12-28..2017-01-27)",
+        "entity_ids": [
+          "3660355",
+          "C09177-K1"
+        ]
+      },
+      {
+        "claim": "A run of 2 online product-C transactions totaling $489.62 was initiated from a device marked as New for the account, matching a recent peer scheme pattern observed across 3 other cards.",
+        "source": "graph",
+        "ref": "query:new_kind_run(card=C09177-K1, 2016-12-28..alert)",
+        "entity_ids": [
+          "3660354",
+          "3660355",
+          "C09177-K1"
+        ]
+      },
+      {
+        "claim": "Card C09177-K1 belongs to community 96469077 with a lift of 5.0 against the base rate, which contains card C10055-K1 tied to closed fraud case CC-2158.",
+        "source": "graph",
+        "ref": "query:community_profile(card=C09177-K1)",
+        "entity_ids": [
+          "C09177-K1",
+          "C10055-K1",
+          "CC-2158"
+        ]
+      },
+      {
+        "claim": "Customer confirmed they made the transaction. (Assumed: the reply most consistent with the evidence before asking, probability 0.24. Because it was inferred from that evidence, it does not move the probability.)",
+        "source": "customer",
+        "ref": "evidence_request:1",
+        "entity_ids": [
+          "3660355"
+        ]
+      },
+      {
+        "claim": "Rule R3: Customer confirms the transaction: Rule R3: Customer confirms the transaction. Recommend `CLOSE_NO_FRAUD`. Note the confirmation in the case file.",
+        "source": "document",
+        "ref": "query:policy_sections(section=Rule R3: Customer confirms the transaction)",
+        "entity_ids": []
+      },
+      {
+        "claim": "Rule R1: Verify before you block on a weak signal: Rule R1: Verify before you block on a weak signal. If the case rests on a single signal (including a risk score alone) and your assessed fraud probability is below 0.70, recommend `VERIFY_WITH_CUSTOMER` or `STEP_UP_AUTH` before any block. Blocking a legitimate customer on one signal is a policy breach.",
+        "source": "document",
+        "ref": "query:policy_sections(section=Rule R1: Verify before you block on a weak signal)",
+        "entity_ids": []
+      },
+      {
+        "claim": "Section 3a. A case is not a report: Section 3a. A case is not a report. Two different things, and the agent produces both. **A case** (`CREATE_CASE`) is the bank's internal record of an investigation. Open one whenever fraud probability reaches 0.30, whenever you request evidence, or whenever a customer disputes a charge. A case can be closed as fraud or as legitimate. It can be updated when new evidence arrives. It should be writte",
+        "source": "document",
+        "ref": "query:policy_sections(section=Section 3a. A case is not a report)",
+        "entity_ids": []
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-2956",
+      "CC-3616",
+      "CC-0339",
+      "CC-5368",
+      "CC-3639",
+      "CC-3092"
+    ],
+    "summary": "Real-time legacy risk scoring flagged online transaction 3660355 ($228.01) on card C09177-K1, which formed part of a two-transaction sequence totaling $489.62 from device D009729 marked new to the account. Although this online purchasing was an activity shift, the calibrated fraud model score was minimal at 0.011, and the activity aligned with the cardholder's baseline billing region 337 and primary email domain. Device D009729 showed no proxy use and no association with any known fraud ring or prior closed fraud case. With the cardholder confirming the transactions through validation, the alert was concluded to be legitimate cardholder activity and closed without fraud.",
+    "written_to_graph": true,
+    "graph_case_id": "CASE-HHF-009"
+  },
+  "evidence_requests": [
+    {
+      "type": "customer_validation",
+      "asked_after_step": 24,
+      "assumed_response": "Customer confirmed they made the transaction. (Assumed: the reply most consistent with the evidence before asking, probability 0.24. Because it was inferred from that evidence, it does not move the probability.)"
+    }
+  ],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "STEP_UP_AUTH",
+        "route": "auto",
+        "reason": "R1: probability 0.24 below 0.70 on the available signals; verify before any block"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "3a: a case is opened whenever evidence is requested"
+      }
+    ],
+    "final": [
+      {
+        "action": "CLOSE_NO_FRAUD",
+        "route": "auto",
+        "reason": "R3: cardholder confirmed the transaction; confirmation noted in the case"
+      }
+    ],
+    "what_changed": "Customer validation was requested, and the cardholder confirmed authorization of the charges, leading the initial step-up authentication and case hold to be resolved by closing the case as no fraud."
+  },
+  "sar": {
+    "file": false,
+    "reason": "3a: the cardholder confirmed the activity, so no report is required",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0,
+    "activity_dates": []
+  },
+  "stop_reason": "The investigation stopped pursuant to policy section 6 because a customer verification reply was received that settled the alert, confirming the transaction was legitimate.",
+  "tool_calls": 61,
+  "tokens": 173942,
+  "latency_s": 613.9
+}

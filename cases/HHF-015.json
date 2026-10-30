@@ -1,0 +1,112 @@
+{
+  "case_id": "HHF-015",
+  "case": {
+    "status": "closed_legitimate",
+    "verdict": "legitimate",
+    "fraud_probability": 0.106,
+    "pattern": "none",
+    "pattern_description": "",
+    "affected_txn_ids": [],
+    "first_suspicious_txn_id": "",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 0,
+    "evidence": [
+      {
+        "claim": "Flagged transaction 3601725 scored 0.0 on the second-generation model with an expected historical fraud rate of 0.0063 (0.63%), indicating very low fraud likelihood.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3601725)",
+        "entity_ids": [
+          "3601725",
+          "C00543-K1"
+        ]
+      },
+      {
+        "claim": "Transaction 3601725 ($112.75) matches card C00543-K1's primary usage pattern of in-person purchases under product code W, which accounts for 114 of 116 lifetime transactions.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3601725)",
+        "entity_ids": [
+          "3601725",
+          "C00543-K1"
+        ]
+      },
+      {
+        "claim": "Card C00543-K1 has prior history in billing region 485 with 9 transactions, demonstrating that in-person transactions in region 485 are not unprecedented for this card.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3601725)",
+        "entity_ids": [
+          "C00543-K1"
+        ]
+      },
+      {
+        "claim": "Card C00543-K1 does not belong to any fraud ring (ring_id -1) and is situated in a Louvain community of 3 cards with zero confirmed fraud cases (lift_vs_base_rate of 0.0).",
+        "source": "graph",
+        "ref": "query:community_profile(card=C00543-K1)",
+        "entity_ids": [
+          "C00543-K1",
+          "C13010-K1",
+          "C00959-K1"
+        ]
+      },
+      {
+        "claim": "Customer C00543 and card C00543-K1 have zero prior fraud cases, and similar model alerts on in-person travel or regional transactions (such as CC-2956, CC-3616, and CC-0536) were cleared as legitimate cardholder purchases.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(\"risk score: Real-time model scored transaction 3601725 ($112...\", k=6)",
+        "entity_ids": [
+          "C00543",
+          "C00543-K1",
+          "CC-2956",
+          "CC-3616",
+          "CC-0536"
+        ]
+      },
+      {
+        "claim": "Matches published guidance \u2014 FFIEC: Money Laundering and Terrorist Financing Red Flags (part 1): \"FFIEC BSA/AML Appendices - Appendix F \u2013 Money Laundering and Terrorist Financing Red Flags JavaScript must be enabled in your browser in order to use some functions. BSA/AML Manual BSA/AML Manual Appendices Appendix F \u2013 Money Laundering and Terrorist Financing Red Flags Appendices APPENDIX F: MONEY LAUNDERING AND TERRORIST FINANCING \"\"RED FLAGS\"\" The following are examples of potentially suspicio",
+        "source": "external",
+        "ref": "query:policy_search(\"red flags for none: single_signal\", regulator)",
+        "entity_ids": []
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-2956",
+      "CC-3616",
+      "CC-3639",
+      "CC-0536",
+      "CC-1266",
+      "CC-3761"
+    ],
+    "summary": "An alert was triggered on card C00543-K1 after transaction 3601725 ($112.75) received a legacy real-time risk score of 0.71. In contrast, the bank's calibrated second-generation fraud model scored the transaction at 0.0 with an expected historical fraud rate of 0.63%. The in-person purchase under product code W matches 114 of 116 lifetime transactions on the card, and the cardholder has an established history of 9 prior purchases in billing region 485. Furthermore, the card has no ties to fraud rings and belongs to a clean community with no history of confirmed fraud. The alert was determined to be a false alarm and closed as legitimate.",
+    "written_to_graph": true,
+    "graph_case_id": "CASE-HHF-015"
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "CLOSE_NO_FRAUD",
+        "route": "auto",
+        "reason": "Section 6: probability 0.11 <= 0.15 on 4 independent signals"
+      }
+    ],
+    "final": [
+      {
+        "action": "CLOSE_NO_FRAUD",
+        "route": "auto",
+        "reason": "Section 6: probability 0.11 <= 0.15 on 4 independent signals"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": false,
+    "reason": "3a: fraud is not confirmed or strongly suspected, so no report is required",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0,
+    "activity_dates": []
+  },
+  "stop_reason": "Investigation concluded under policy section 6 because the fraud probability reached 0.11 (below the 0.15 threshold for closing without fraud) supported by multiple independent exculpatory evidence bases, meaning further investigative steps would not alter the decision.",
+  "tool_calls": 17,
+  "tokens": 98439,
+  "latency_s": 168.3
+}

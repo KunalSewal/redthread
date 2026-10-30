@@ -1,0 +1,265 @@
+{
+  "case_id": "HHF-006",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.887,
+    "pattern": "card_not_present_fraud",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3660261",
+      "3660262",
+      "3660263"
+    ],
+    "first_suspicious_txn_id": "3660261",
+    "connected_card_ids": [
+      "C05610-K1",
+      "C01594-K1",
+      "C03060-K1",
+      "C10350-K1",
+      "C01357-K1",
+      "C00534-K2",
+      "C01507-K1",
+      "C04668-K1",
+      "C11940-K1",
+      "C11617-K1",
+      "C06115-K1",
+      "C08384-K1",
+      "C04146-K1",
+      "C02167-K2",
+      "C06639-K1",
+      "C11743-K2"
+    ],
+    "connected_device_profiles": [],
+    "exposure_usd": 967.68,
+    "evidence": [
+      {
+        "claim": "16 other cards paid recipient email sc.rr.com in the 30 days to the alert, against 0 and 0 in the same window one and two months earlier: C05610-K1, C01594-K1, C03060-K1, C10350-K1, C01357-K1, C00534-K2, C01507-K1, C04668-K1, C11940-K1, C11617-K1, C06115-K1, C08384-K1.",
+        "source": "graph",
+        "ref": "query:recipient_cards(domain=sc.rr.com, 30d to alert vs 1-2 months before)",
+        "entity_ids": [
+          "C05610-K1",
+          "C01594-K1",
+          "C03060-K1",
+          "C10350-K1",
+          "C01357-K1",
+          "C00534-K2",
+          "C01507-K1",
+          "C04668-K1",
+          "C11940-K1",
+          "C11617-K1",
+          "C06115-K1",
+          "C08384-K1",
+          "C04146-K1",
+          "C02167-K2",
+          "C06639-K1",
+          "C11743-K2"
+        ]
+      },
+      {
+        "claim": "Card C01727-K2 made 3 online product-C charges totalling $967.68 over 10.7 days (3660261, 3660262, 3660263); in its 33 transactions of the 60 days before, that kind made up 0%.",
+        "source": "graph",
+        "ref": "query:new_kind_run(card=C01727-K2, 2016-12-29..alert)",
+        "entity_ids": [
+          "C01727-K2",
+          "3660261",
+          "3660262",
+          "3660263"
+        ]
+      },
+      {
+        "claim": "Recipient email domain sc.rr.com exhibits a strong multi-card spike with 16 other cards active in the past 30 days compared to 0 in the prior two months, all conducting online transactions without shared devices.",
+        "source": "graph",
+        "ref": "query:recipient_cards(domain=sc.rr.com, 30d to alert vs 1-2 months before)",
+        "entity_ids": [
+          "C05610-K1",
+          "C01594-K1",
+          "C03060-K1",
+          "C10350-K1",
+          "C01357-K1",
+          "C00534-K2",
+          "C01507-K1",
+          "C04668-K1",
+          "C11940-K1",
+          "C11617-K1",
+          "C06115-K1",
+          "C08384-K1",
+          "C04146-K1",
+          "C02167-K2",
+          "C06639-K1",
+          "C11743-K2"
+        ]
+      },
+      {
+        "claim": "Card C01727-K2 shifted abruptly from a baseline of 33 in-person product-W purchases to a run of three online product-C transactions totaling $967.68 (3660261, 3660262, 3660263) sent to recipient email sc.rr.com.",
+        "source": "graph",
+        "ref": "query:new_kind_run(card=C01727-K2, 2016-12-29..alert)",
+        "entity_ids": [
+          "C01727-K2",
+          "3660261",
+          "3660262",
+          "3660263"
+        ]
+      },
+      {
+        "claim": "Card C01727-K2 has 5 prior closed cases confirmed as fraud (CC-4908, CC-1975, CC-1833, CC-1501, CC-0723), demonstrating historical vulnerability to compromise.",
+        "source": "graph",
+        "ref": "query:linked_cases(tx=3660263)",
+        "entity_ids": [
+          "CC-4908",
+          "CC-1975",
+          "CC-1833",
+          "CC-1501",
+          "CC-0723",
+          "C01727-K2"
+        ]
+      },
+      {
+        "claim": "Online charges to sc.rr.com occurred interleaved with genuine in-person card-present transactions in region 231 (such as 3607101 and 3607094), typical of card-not-present number compromise.",
+        "source": "graph",
+        "ref": "query:card_window(card=C01727-K2, 2017-01-18..2017-01-28)",
+        "entity_ids": [
+          "3660263",
+          "3607101",
+          "3607094",
+          "C01727-K2"
+        ]
+      },
+      {
+        "claim": "Flagged transaction 3660263 occurred in billing region 231, matching 119 of the card's 121 historical transactions.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3660263)",
+        "entity_ids": [
+          "3660263",
+          "C01727-K2"
+        ]
+      },
+      {
+        "claim": "Flagged transaction 3660263 scored low on the fraud model at 0.128 with a historical fraud rate of 0.2315 and risk score of 0.15, and had match flag M4 set to M1.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3660263)",
+        "entity_ids": [
+          "3660263"
+        ]
+      },
+      {
+        "claim": "Flagged transaction 3660263 and the other transactions in the sc.rr.com run carry no device ID, proxy, or device status, presenting no device link to known rings.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3660263)",
+        "entity_ids": [
+          "3660263"
+        ]
+      },
+      {
+        "claim": "Section 3a. A case is not a report: Section 3a. A case is not a report. Two different things, and the agent produces both. **A case** (`CREATE_CASE`) is the bank's internal record of an investigation. Open one whenever fraud probability reaches 0.30, whenever you request evidence, or whenever a customer disputes a charge. A case can be closed as fraud or as legitimate. It can be updated when new evidence arrives. It should be writte",
+        "source": "document",
+        "ref": "query:policy_sections(section=Section 3a. A case is not a report)",
+        "entity_ids": []
+      },
+      {
+        "claim": "Rule R6: Shared origin: Rule R6: Shared origin. When several cards show fraud from the same device profile, the same billing region, or the same recipient email in one window, name the shared element, recommend `CREATE_CASE` and `FILE_REPORT`, and `MONITOR_CONNECTED_CARDS` for every card that shares it.",
+        "source": "document",
+        "ref": "query:policy_sections(section=Rule R6: Shared origin)",
+        "entity_ids": []
+      },
+      {
+        "claim": "Matches published guidance \u2014 FinCEN: Advisory on Imposter Scams and Money Mule Schemes (part 3): COVID-19 Imposter Scams and Money Mule Schemes Consumer frauds include imposter scams and money mule schemes, where actors deceive victims by impersonating federal government agencies, international organizations, or charities. FinCEN identified the financial red flag indicators described below to alert financial institutions to these frauds and to assist financial institutions in detecting, preve",
+        "source": "external",
+        "ref": "query:policy_search(\"red flags for card not present fraud: shared_origin, linked_\", regulator)",
+        "entity_ids": []
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-4908",
+      "CC-1975",
+      "CC-1833",
+      "CC-1501",
+      "CC-0723"
+    ],
+    "summary": "An investigation was initiated following an analyst request to examine card losses lacking shared device telemetry. Review of card C01727-K2 revealed three unauthorized online product-C charges totaling $967.68 sent to recipient domain sc.rr.com between January 17 and January 28, 2017, breaking an established baseline of strictly in-person transactions. Legitimate card-present charges continued in region 231 concurrently with the online transactions, demonstrating card-not-present compromise. Graph analysis linked these transactions to an emerging multi-card scheme where 16 other cards directed payments to the same recipient domain over the preceding 30 days. The card has been blocked, connected cards placed on monitoring, and a regulatory report filed.",
+    "written_to_graph": true,
+    "graph_case_id": "CASE-HHF-006"
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "Section 6: probability 0.89 >= 0.85 on 6 independent signals"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "3a: fraud probability at or above 0.30; R6: several cards show fraud from sc.rr.com; 3a: a report always has a case behind it"
+      },
+      {
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "3a: the fraud connects to 16 other card(s), which is a connection to another customer's fraud"
+      },
+      {
+        "action": "MONITOR_CONNECTED_CARDS",
+        "route": "auto",
+        "reason": "R6: 16 connected card(s) share the same origin"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "Section 6: probability 0.89 >= 0.85 on 6 independent signals"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "3a: fraud probability at or above 0.30; R6: several cards show fraud from sc.rr.com; 3a: a report always has a case behind it"
+      },
+      {
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "3a: the fraud connects to 16 other card(s), which is a connection to another customer's fraud"
+      },
+      {
+        "action": "MONITOR_CONNECTED_CARDS",
+        "route": "auto",
+        "reason": "R6: 16 connected card(s) share the same origin"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": true,
+    "reason": "3a: the fraud connects to 16 other card(s), which is a connection to another customer's fraud",
+    "narrative": "This Suspicious Activity Report details an organized card-not-present fraud scheme involving customer C01727 and primary card C01727-K2, connected to an ongoing attack pattern impacting 16 other customer cards. Between January 17, 2017, and January 28, 2017, three unauthorized online transactions totaling $967.68 were executed on card C01727-K2. The unauthorized charges include transaction 3660261 for $305.41 on January 17, 2017, transaction 3660262 for $366.35 on January 18, 2017, and transaction 3660263 for $295.92 on January 28, 2017. All three purchases were conducted online within region 231 for product-C, listing payer email addresses at gmail.com and recipient email addresses at sc.rr.com. No device telemetry, persistent device identifiers, or proxy indicators were captured during the authorization attempts. This activity represents an abrupt departure from the cardholder's baseline of strictly in-person product-W transactions in region 231. Furthermore, legitimate in-person transactions continued locally during this same timeframe, including transactions 3607094 and 3607101, confirming that physical custody of the card was retained while card details were exploited remotely. Knowledge graph analysis identified that 16 other cards, including C05610-K1, C01594-K1, and C03060-K1, similarly transacted with recipient domain sc.rr.com over the prior 30 days, compared to zero in the preceding two months. Card C01727-K2 also has five prior confirmed fraud cases, demonstrating repeat exposure to compromise. The bank has blocked card C01727-K2, initiated monitoring on all 16 connected cards, and filed this report to document the coordinated fraud ring.",
+    "subjects": [
+      "C01727",
+      "C01727-K2",
+      "C05610-K1",
+      "C01594-K1",
+      "C03060-K1",
+      "C10350-K1",
+      "C01357-K1",
+      "C00534-K2",
+      "C01507-K1",
+      "C04668-K1",
+      "C11940-K1",
+      "C11617-K1",
+      "C06115-K1",
+      "C08384-K1",
+      "C04146-K1",
+      "C02167-K2",
+      "C06639-K1",
+      "C11743-K2"
+    ],
+    "total_amount_usd": 967.68,
+    "activity_dates": [
+      "2017-01-17",
+      "2017-01-28"
+    ]
+  },
+  "stop_reason": "The investigation concluded under Policy Section 6 because the fraud probability reached 0.887, exceeding the decisive threshold of 0.85 supported by multiple independent lines of incriminating evidence, meaning further inquiries would not alter the decision.",
+  "tool_calls": 73,
+  "tokens": 159161,
+  "latency_s": 250.1
+}

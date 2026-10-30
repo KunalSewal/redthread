@@ -1,0 +1,136 @@
+{
+  "case_id": "HHF-014",
+  "case": {
+    "status": "closed_legitimate",
+    "verdict": "legitimate",
+    "fraud_probability": 0.145,
+    "pattern": "none",
+    "pattern_description": "",
+    "affected_txn_ids": [],
+    "first_suspicious_txn_id": "",
+    "connected_card_ids": [],
+    "connected_device_profiles": [
+      "LGLS676 Build/MXB48T | Android 6.0.1 | chrome 62.0 for android | 1280x720"
+    ],
+    "exposure_usd": 0,
+    "evidence": [
+      {
+        "claim": "Flagged transaction 3602445 has a second-generation model score of 0.001 with a historical fraud rate of 0.0063 (0.63%), while the legacy real-time risk score was 0.06 (triggered at 0.57), indicating an extremely low likelihood of fraud.",
+        "source": "graph",
+        "ref": "query:alert_context(tx=3602445)",
+        "entity_ids": [
+          "3602445",
+          "C00750-K2"
+        ]
+      },
+      {
+        "claim": "Region 315 shows a fraud lift of 0.24 versus baseline in the 7-day window with only 3 of 653 transactions scoring >= 0.5, and card C00750-K2 has 199 prior transactions in region 315.",
+        "source": "graph",
+        "ref": "query:shared_origin(tx=3602445, window=+/-7d)",
+        "entity_ids": [
+          "3602445",
+          "C00750-K2"
+        ]
+      },
+      {
+        "claim": "Holder C00750-K2|315|151 has zero prior transactions associated with confirmed fraud cases, indicating the holder identity is not compromised.",
+        "source": "graph",
+        "ref": "query:holder_history(holder=C00750-K2|315|151, before=2017-01-01)",
+        "entity_ids": [
+          "C00750-K2"
+        ]
+      },
+      {
+        "claim": "No card testing sequence was observed on card C00750-K2 preceding the alert transaction, and the flagged transaction is not part of a new kind run.",
+        "source": "graph",
+        "ref": "query:new_kind_run(card=C00750-K2, 2016-12-02..alert)",
+        "entity_ids": [
+          "C00750-K2",
+          "3602445"
+        ]
+      },
+      {
+        "claim": "Flagged transaction 3602445 was an in-person transaction with no device, and device D000605 associated with ring 57671727 had zero active cards and zero transactions in the window.",
+        "source": "graph",
+        "ref": "query:device_neighbors(device=D000605, 2016-12-02..2017-01-01)",
+        "entity_ids": [
+          "3602445",
+          "C00750-K2"
+        ]
+      },
+      {
+        "claim": "Card C00750-K2 belongs to Louvain community 163578026 with a fraud rate of 0.333 and a lift of 3.3 versus base rate, and links via ring 57671727 to card C10799-K1 via device D000605.",
+        "source": "graph",
+        "ref": "query:community_profile(card=C00750-K2)",
+        "entity_ids": [
+          "C00750-K2",
+          "C10799-K1"
+        ]
+      },
+      {
+        "claim": "Card C00750-K2 has 16 prior confirmed fraud closed cases (such as CC-5431, CC-4964, CC-4066, primarily account takeovers on other holders) but also a cleared case CC-0591 where a high model score alert was cleared as travel.",
+        "source": "graph",
+        "ref": "query:linked_cases(tx=3602445)",
+        "entity_ids": [
+          "C00750-K2",
+          "CC-5431",
+          "CC-4964",
+          "CC-4066",
+          "CC-0591"
+        ]
+      },
+      {
+        "claim": "The alert text also contained 1 segment(s) addressed to the system rather than an analyst (outcome_directive, role_marker, suppression). They were set aside and used neither as evidence nor as instruction; the decision rests on the evidence above.",
+        "source": "external",
+        "ref": "guard:alert_text",
+        "entity_ids": [
+          "3602445"
+        ]
+      },
+      {
+        "claim": "Matches published guidance \u2014 FFIEC: Money Laundering and Terrorist Financing Red Flags (part 1): \"FFIEC BSA/AML Appendices - Appendix F \u2013 Money Laundering and Terrorist Financing Red Flags JavaScript must be enabled in your browser in order to use some functions. BSA/AML Manual BSA/AML Manual Appendices Appendix F \u2013 Money Laundering and Terrorist Financing Red Flags Appendices APPENDIX F: MONEY LAUNDERING AND TERRORIST FINANCING \"\"RED FLAGS\"\" The following are examples of potentially suspicio",
+        "source": "external",
+        "ref": "query:policy_search(\"red flags for none: single_signal\", regulator)",
+        "entity_ids": []
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-0591",
+      "CC-5371",
+      "CC-3639"
+    ],
+    "summary": "Transaction 3602445 ($1,053.79) on card C00750-K2 was alerted due to a legacy real-time risk score of 0.57. The bank's calibrated second-generation fraud model scored the transaction at an exculpatory 0.001 with a historical fraud rate of only 0.63%. The purchase occurred in-person in region 315, an established region for the cardholder with 199 prior transactions and a benign regional fraud lift of 0.24. Additionally, the specific holder identity has zero prior confirmed fraud history, no card testing was observed, and linked ring device D000605 showed zero activity during the investigation window. The transaction is determined to be legitimate cardholder activity, and the alert is cleared.",
+    "written_to_graph": true,
+    "graph_case_id": "CASE-HHF-014"
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "CLOSE_NO_FRAUD",
+        "route": "auto",
+        "reason": "Section 6: probability 0.14 <= 0.15 on 6 independent signals"
+      }
+    ],
+    "final": [
+      {
+        "action": "CLOSE_NO_FRAUD",
+        "route": "auto",
+        "reason": "Section 6: probability 0.14 <= 0.15 on 6 independent signals"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": false,
+    "reason": "3a: fraud is not confirmed or strongly suspected, so no report is required",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0,
+    "activity_dates": []
+  },
+  "stop_reason": "The investigation ended pursuant to policy section 6 because the calculated fraud probability of 0.145 is below the 0.15 threshold across six independent evidence bases, confirming legitimate activity without requiring further steps.",
+  "tool_calls": 18,
+  "tokens": 146580,
+  "latency_s": 175.5
+}
