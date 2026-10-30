@@ -8,7 +8,9 @@
 3. our schema and dataset validation of every answer for the current case pack
 4. our policy and point-in-time audit (scripts/check_policy.py)
 5. the organisers' grader (data/round2/grader/grade.py), with ID and arithmetic checks
-6. accuracy of the Round 1 answers against their now-known outcomes (a regression signal)
+6. every query in gsql/03_queries.gsql installed on the live graph
+7. the README's numbers equal what scripts/fill_readme.py computes from their files
+8. accuracy of the Round 1 answers against their now-known outcomes (a regression signal)
 
 Writes runs/gate.json so a result can be quoted with its evidence. Nothing here edits an answer.
 """
@@ -123,6 +125,7 @@ def main() -> int:
         run("policy and point-in-time audit", [PY, "scripts/check_policy.py", "cases"]),
         official_grader(pack, ROOT / "cases", None if args.quick else R2 / "transactions_2017q1.csv"),
         installed_queries(),
+        run("README numbers match their files", [PY, "scripts/fill_readme.py", "--check"]),
         round1_accuracy(),
     ]
     (ROOT / "runs").mkdir(exist_ok=True)

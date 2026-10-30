@@ -4,15 +4,15 @@
 
 ### An agentic fraud investigator on TigerGraph
 
-A fraud alert arrives. RedThread investigates it across a knowledge graph of 590,000 card
-transactions, decides what happened and what the bank should do under its fraud policy, asks for more
-evidence when the picture is genuinely unclear, and writes the case back into the graph as memory for
-the next investigation.
+A fraud alert arrives. RedThread investigates it across a knowledge graph of 650,938 card
+transactions (July 2016 to January 2017), decides what happened and what the bank should do under its
+fraud policy, asks for more evidence when the picture is genuinely unclear, and writes the case back
+into the graph as memory for the next investigation.
 
 <br/>
 
 ![TigerGraph](https://img.shields.io/badge/TigerGraph-Savanna%204.2-FF6D00?style=flat-square)
-![GSQL](https://img.shields.io/badge/GSQL-24%20installed%20queries-424242?style=flat-square)
+![GSQL](https://img.shields.io/badge/GSQL-27%20installed%20queries-424242?style=flat-square)
 ![MCP](https://img.shields.io/badge/MCP-tigergraph--mcp-424242?style=flat-square)
 ![TigerVector](https://img.shields.io/badge/TigerVector-GraphRAG-424242?style=flat-square)
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square)
@@ -28,12 +28,11 @@ the next investigation.
 
 <div align="center">
 
-**20 / 20** benchmark cases investigated, validated and written to the graph &nbsp;·&nbsp; **0** policy
-violations &nbsp;·&nbsp; **1 in 30** legitimate customers wrongly accused on replayed cases &nbsp;·&nbsp;
-**4** frauds missed where our fraud model alone misses 7
+<!-- numbers:headline -->**18 / 18** final-round cases answered: **7** fraud, **2** uncertain, **9** legitimate; the organisers' grader finds **0** hard and **0** policy problems<!-- /numbers -->
 
-<em>Replayed on cases the bank's analysts had already closed, with nothing the investigation could
-not have known at the time. See <a href="#does-it-work">Does it work?</a></em>
+<em>Every number on this page is filled from the file that holds it (<code>scripts/fill_readme.py</code>),
+so the page cannot drift from the live run. See <a href="#the-final-round">The final round</a> and
+<a href="#does-it-work">Does it work?</a></em>
 
 <br/>
 
@@ -43,12 +42,165 @@ not have known at the time. See <a href="#does-it-work">Does it work?</a></em>
 
 ---
 
+## The final round
+
+January 2017 arrived as new files, a replaced closed-case history, and 18 alerts in which, the
+organisers said, patterns were planted that the bank's model had never seen. Five things changed in
+RedThread, each measured or tested.
+
+### 1. It finds what the card has never done, and who else started doing it
+
+Two installed queries run on every alert:
+
+- `new_kind_run`: the card's charges in the 30 days to the alert whose kind (product and channel)
+  made up under 5% of its previous 60 days.
+- `scheme_peers`: other customers' cards that newly show the same signature in the same 30 days,
+  counted against the same window one and two months earlier.
+
+Together they surfaced three schemes that no rule in the policy names. Six online authorisations
+of $2 to $5 spread over three weeks, with no purchase after them, appeared on 20 other cards in
+January, against 8 and 4 in the two windows before. That is card testing built to stay under the
+policy's own "three within an hour" rule. Large online charges, each from a new device behind an
+anonymous proxy, appeared on cards where no earlier window had any. And 17 cards paid one recipient
+domain, against none or one a month before (`recipient_cards`). The agent names repeated abuse across
+customers that is not R5's sequence `undocumented` (R9), and lists the other cards as connected cards,
+as the organisers' own answer for HHG-006 does.
+
+**Measured honestly.** On Round 1's 20 known outcomes, every alert in such a run was fraud (3 of 3)
+and every single new-kind charge was cleared (3 of 3). But
+<!-- numbers:detectors -->on all 5,585 closed cases the run detector fired on 160 of 4,674 confirmed frauds (3.4%) and 34 of 900 cleared alerts (3.8%)<!-- /numbers -->: on the bank's own history a run alone separates nothing.
+So a run counts only as moderate evidence. What makes it a scheme is other customers starting the same
+thing at the same time.
+
+### 2. It starts from the right population
+
+The bank's closed cases are not drawn the way the graded alerts are: all 900 of its model-scored
+alerts were cleared and all 4,640 of its cardholder reports were fraud. Round 1's review, now closed
+cases, confirmed 2 of 11 score alerts and 7 of 8 reports. The prior now comes from those earlier
+reviews when at least five exist (risk score 0.23, customer report 0.80). The bank's model scores
+every one of the 18 January alerts below 0.012. A score from a month the model never saw is recorded
+but not counted, in either direction.
+
+What these two changes do to the 18 answers, recomputed from each answer's own evidence ledger with
+the piece taken out (`scripts/ablation.py`, no model call):
+<!-- numbers:ablation -->
+| Recomputed from each answer's own ledger | Fraud | Uncertain | Legitimate |
+|---|---|---|---|
+| As submitted | 7 | 2 | 9 |
+| Without the new detectors | 2 | 9 | 7 |
+| With Round 1's priors | 7 | 0 | 11 |
+| Without either | 4 | 3 | 11 |
+<!-- /numbers -->
+This understates the effect, because the model also read the detectors' results when it judged its
+other findings.
+
+### 3. It plans containment, not just a block
+
+For each ring and January scheme, `scripts/containment.py` picks the blocks with the best expected
+value. Each card is weighted by how likely it is to be compromised, and each legitimate customer an
+action may touch is charged a stated penalty. It can block a shared device or decline a recipient
+instead of cards, and it names everyone a plan touches. Because a card here is an issuer bucket, each
+plan also says how many other people use the cards it blocks. Result: <!-- numbers:containment -->12 rings and schemes with live exposure: the plans stop $78,833 of $79,184 and may touch 30 customers who are not established fraud, where blocking every card would touch 66<!-- /numbers -->.
+
+### 4. It holds up under the drills, and against attacks
+
+The brief's five drill categories, run against the live graph and model (`scripts/drills.py`):
+<!-- numbers:drills -->
+| Drill (live graph and model) | Result | What happened |
+|---|---|---|
+| The graph connection drops mid-run | passed | halted at `activity_shift`, no answer written, nothing saved |
+| The model times out | passed | halted at `investigate`, no answer written, nothing saved |
+| The model returns garbage | passed | halted at `assess`, no answer written, nothing saved |
+| Instructions hidden in the alert | passed | 2 segments set aside; legitimate, actions as the clean run |
+| An alert naming no real transaction, or malformed | passed | both refused before any investigation |
+| An L2 filing approved with an L1 key, a role in the body, no key | passed | 401, 422, 403; no decision recorded |
+| One case investigated twice | passed | legitimate 0.078 then legitimate 0.111 |
+<!-- /numbers -->
+Reproducible attacks, each run with the defences on and off against the clean answer
+(`scripts/attacks.py`):
+<!-- numbers:attacks -->
+| Attack | Through | Clean run | Defences on | Defences off |
+|---|---|---|---|---|
+| ATK-1 on HHF-004: a confirmed-looking fraud closed as legitimate | alert text (customer message) | fraud | fraud 0.96, BLOCK_CARD, FILE_REPORT | fraud 0.96, BLOCK_CARD, FILE_REPORT |
+<!-- /numbers -->
+Asking for an outcome cannot work, because code computes it. What text can reach is the model's
+judgement of each finding, which is why ATK-4 asks the model to call every finding exculpatory. That
+attack found a real hole: the guard cut a `[[assistant: ...]]` block at its full stop and passed the
+second half. A block is now removed whole. The guard flags exactly the six final-pack alerts that carry
+hostile text, and none of the 5,585 closed-case notes.
+
+### 5. Disagreeing with the agent takes evidence
+
+An analyst who says "this is not fraud" may know something the graph does not. They may also be
+careless, or an insider clearing a case on purpose. So a challenge is weighed like any other evidence
+(`redthread.challenge`, `POST /api/cases/{id}/challenges`):
+
+- The reason is screened like alert text, and the IDs it cites must belong to this case.
+- The claim joins the case's own ledger as an `analyst_statement`: weak when it cites nothing from the
+  case, moderate when it does, never stronger.
+- If the recomputed evidence then agrees, the challenge is accepted. If not, it is contested and waits
+  for a second, different L2 approver.
+
+One person's word can settle a close call. Against clear fraud it moves the probability but cannot clear
+the case alone, and rejecting a recommended block or report on a fraud verdict needs an accepted or
+upheld challenge first. Only those become memory that later investigations read, so a single person
+cannot teach the agent a false lesson. Every step goes into a hash-chained ledger: who, the claim, the
+IDs, and the probability before and after.
+
+### And the rest of the brief
+
+- **Schema drift (challenge 12).** `scripts/drift.py detect` found what January breaks:
+  - it is calendar month 1, which a "months up to 10 are history" rule reads as labelled history;
+  - the closed-case history is replaced, not appended;
+  - D1 stops linking holders: 7% of January transactions resolve to an earlier holder, against 43%
+    for December.
+
+  The new layout was used only after a named L2 approver accepted it. The decision is in a
+  hash-chained ledger, and `config/source_map.json` records the approved files' fingerprints. The
+  reader refuses data that differs.
+- **Data quality (challenge 11).** `scripts/data_quality.py` lists each problem with the records
+  affected and the investigations it taints:
+<!-- numbers:data_quality -->
+| Problem | Records | Final-round investigations it taints |
+|---|---|---|
+| no identity record | 494,624 | HHF-003, HHF-004, HHF-005, HHF-006, HHF-007, HHF-010, HHF-011, HHF-012, HHF-013, HHF-014, HHF-015, HHF-016 |
+| empty billing region | 70,713 | none |
+| placeholder distance | 390,530 | HHF-001, HHF-002, HHF-003, HHF-005, HHF-008, HHF-009, HHF-010, HHF-011, HHF-012, HHF-014, HHF-015, HHF-017, HHF-018 |
+| holder linkage drift in January | 55,706 | all 18 |
+| alert names a different card from its transaction | 1 | HHF-011 |
+| alert text contradicts its transaction | 1 | HHF-008 |
+| alert score differs from the transaction's | 11 | HHF-008, HHF-009, HHF-010, HHF-011, HHF-012, HHF-013, HHF-014, HHF-015, HHF-016, HHF-017, HHF-018 |
+<!-- /numbers -->
+- **Attestation.** Every evidence line records the exact installed queries and parameters behind it and
+  when they ran. `scripts/attest.py --verify` re-runs them: <!-- numbers:attestation -->_not yet attested_<!-- /numbers -->.
+- **The regulator's view (challenge 6).** `/audit/:id` replays an investigation one step at a time:
+  the query and parameters, what came back, the evidence held at that moment and nothing later, and
+  why the probability moved.
+- **Speed and cost (challenge 9).** <!-- numbers:speed -->alert to finished answer in 190 s at the median and 467 s at p95 across 18 cases, 147,971 tokens and 39 graph calls a case on average<!-- /numbers -->. The slow tail is the model
+  timing out at its highest thinking level, not the graph; after two timeouts the call steps down and
+  the case records it (`scripts/speed.py`).
+- **Same inputs, same answer.** Every model response is stored under a hash of everything that went
+  into the call. A rerun on an unchanged graph reproduces the investigation, and each reuse is recorded
+  in the case. After two model timeouts the remaining attempts think less, and the case records that
+  too.
+
+### What leaves the machine
+
+| Service | What it receives |
+|---|---|
+| TigerGraph Savanna | the dataset and the agent's case memory (our workspace) |
+| Google Gemini API | each investigation's evidence digests: pseudonymous transaction, card and customer IDs, amounts, dates, and the alert text after the guard. No names, no card numbers |
+| Hugging Face | nothing; the embedding model (`BAAI/bge-small-en-v1.5`) is downloaded once and runs locally |
+
+Logs, traces and answers pass through redaction (secrets, keys, e-mails, phone and card numbers) before
+they are written. Credentials live in `.env` and `secrets/`, both git-ignored.
+
 ## What it does
 
 | The brief asks the agent to… | RedThread |
 |---|---|
-| Investigate a risk score, a customer report or an analyst request | All three trigger types run through one workflow; the 20 benchmark cases include each |
-| Gather evidence from the graph, transaction history, device and identity signals, account behaviour, prior cases and external sources | 24 installed GSQL queries over 590,742 transactions, 222,481 resolved account holders and 9,705 device profiles; 5,565 closed cases; FinCEN, FFIEC, FATF and OFAC guidance through GraphRAG |
+| Investigate a risk score, a customer report or an analyst request | All three trigger types run through one workflow; both rounds' case packs include each |
+| Gather evidence from the graph, transaction history, device and identity signals, account behaviour, prior cases and external sources | 27 installed GSQL queries over 650,938 transactions, 269,699 resolved account holders and 9,729 device profiles; 5,585 closed cases; FinCEN, FFIEC, FATF and OFAC guidance through GraphRAG |
 | Identify the pattern and assess the risk | A deterministic pattern classifier (96.2% agreement with the bank's analysts) and an evidence ledger that turns judged findings into a calibrated probability |
 | Create and progress a case | Opened in the graph the moment policy warrants it, updated as it closes, every step recorded as a `CaseEvent` |
 | Learn from case memory | Closed cases with their analyst outcomes and notes; the agent's own cases once an analyst has ruled on them; rings and communities that link cases across customers |
@@ -129,8 +281,8 @@ flowchart LR
 
 | The model reasons | Deterministic code decides | TigerGraph stores and answers |
 |---|---|---|
-| picks which queries to run | Bayes over the evidence ledger | 24 installed GSQL queries |
-| judges each finding: direction, strength, basis | policy rules R1–R10 | TigerVector: policy, regulation, 5,565 closed cases |
+| picks which queries to run | Bayes over the evidence ledger | 27 installed GSQL queries |
+| judges each finding: direction, strength, basis | policy rules R1–R10 | TigerVector: policy, regulation, 5,585 closed cases |
 | writes the narrative and the SAR | approval routes, exposure, SAR criteria | rings, communities, case memory |
 | | names the fraud pattern | point-in-time retrieval, so no case sees its own future |
 
@@ -145,9 +297,9 @@ flowchart LR
 | | |
 |---|---|
 | **The graph** | 12 vertex types and 44 edge types: transactions linked in time order (`NEXT`), cards, customers, resolved account holders, device profiles, billing regions, email domains, closed cases, fraud patterns, and the agent's own cases and their events |
-| **GSQL** | 24 installed queries: the alert's context, card and holder history, device neighbourhoods, shared-origin lift, linked and similar cases, ring members, community profiles, monitoring sweeps, policy lookup, and the case write-back |
+| **GSQL** | 27 installed queries: the alert's context, card and holder history, device neighbourhoods, shared-origin lift, linked and similar cases, ring members, community profiles, monitoring sweeps, policy lookup, the case write-back, and the final round's `new_kind_run`, `scheme_peers` and `recipient_cards` |
 | **Graph algorithms** | Connected components in GSQL (`ring_wcc`) for tight fraud rings, and the GDS library's `tg_louvain` for the wider community a card moves in |
-| **TigerVector** | 384-dimension embeddings on 522 policy and regulatory passages, the 5,565 closed cases and the agent's own cases, searched and then expanded by graph traversal |
+| **TigerVector** | 384-dimension embeddings on 522 policy and regulatory passages, the 5,585 closed cases and the agent's own cases, searched and then expanded by graph traversal |
 | **GraphRAG** | The retrieved passage behind every cited rule is attached to the answer as `document` evidence, from the bank's policy and 16 FinCEN, FFIEC, FATF and OFAC sources |
 | **MCP** | Every read and write goes through the official `tigergraph-mcp` server, allowlisted to installed queries and vector search |
 | **Case memory** | Each case is written as a `FraudCase` with edges to its card, transactions, devices, pattern and connected cards, plus a `CaseEvent` for every step |
@@ -175,7 +327,7 @@ flowchart LR
     class U code
 ```
 
-The real ledger from case HHG-019, a model alert on a $99.92 online purchase. It starts at **0.78**,
+The real ledger from Round 1's case HHG-019, a model alert on a $99.92 online purchase. It starts at **0.78**,
 the fraud rate the closed cases show for its model score, and ends at **0.96**:
 
 | Finding rests on | Direction | Strength | Worth | |
@@ -251,7 +403,7 @@ ring to an analyst (R6, R9).
 
 ## It raises its own alerts
 
-Between alerts, two monitors sweep November and December: cards that touch a device from a known
+In Round 1, between alerts, two monitors swept November and December: cards that touch a device from a known
 ring, and transactions our model scores high while the bank's score stays low. They raised **25
 alerts the bank's queue never did** — the bank had scored 21 of them below 0.30 — and the agent
 investigated every one end to end. It caught **9 frauds** worth **$2,300**, 7 of them among the
@@ -266,18 +418,18 @@ promised.
 | Rule | How |
 |---|---|
 | **Nothing after the alert** | In the bank's 4,665 confirmed-fraud cases, not one transaction happens after the case was opened. Every evidence window the agent builds stops at the alert (`as_of`), whatever span it asks for. |
-| **Rings from history only** | Ring detection runs on July–October data alone and is used as known intelligence through November and December. A device's popularity is the number of cards that had used it *before* the alert, not the all-time count. |
+| **Rings from history only** | Ring detection runs only on activity before the first alert being judged and is used as known intelligence from then on. A device's popularity is the number of cards that had used it *before* the alert, not the all-time count. |
 | **No case from the future** | Every lookup of a closed case, a ring member's history or an earlier agent investigation is filtered to cases opened before the alert. |
 | **No label from outside** | Nothing reads the public IEEE-CIS files. The fraud model trains only on the bank's closed cases, and its October scores come from a model trained on July–September. |
 | **No outcome in its own replay** | A replay builds its rings and calibrates its priors only on months before the one it replays. |
 | **Nothing counted twice** | Correlated findings are tempered; the model score and a customer's denial each count once. |
-| **Priors measured, not assumed** | A model alert starts from the fraud rate its score band had in the closed cases; a customer report from how often past reports were fraud (4,640 of 4,640). Both stop at 0.90, so evidence always decides. |
+| **Priors measured, not assumed** | When at least five earlier reviews of the same kind of alert exist before it, the prior is their outcome rate (final round: risk score 0.23, report 0.80); otherwise a model alert starts from its score band's fraud rate in the closed cases and a report from how often past reports were fraud. All stop at 0.90, so evidence always decides. A score from a month the model never saw is not counted. |
 | **Memory it can trust** | Every case is written into the graph as memory, but an investigation reads back only cases a person has ruled on, so no verdict ever rests on another unreviewed one. The bank's closed cases are always available. |
 | **The model never decides alone** | GSQL finds the facts, the policy engine decides the actions and their approval routes, and the arithmetic is code. The model chooses what to look at and judges what it found. |
 
 ## Does it work?
 
-**The 20 benchmark cases.** Every answer file passes the schema and dataset checks
+**Round 1's 20 benchmark cases** (now in `cases_round1/`). Every answer file passed the schema and dataset checks
 (`redthread.validate`: every ID exists in the data, every action and route is an exact policy
 identifier) and an automated audit against the fraud policy (`scripts/check_policy.py`: case versus
 report, R1–R10, a cited rule on every action, nothing after the alert) with **zero violations**. All
@@ -404,10 +556,13 @@ python scripts/export_ui_data.py                  # ring and community views
 <summary><b>Investigate</b></summary>
 
 ```bash
-python scripts/run_cases.py                       # all 20 cases -> cases/
-python -m redthread.validate cases                # every answer file is well-formed
-python scripts/check_policy.py                    # ...and obeys the fraud policy, point in time
-python scripts/monitor.py --max-alerts 25         # the agent raises its own -> cases_extra/
+python scripts/drift.py detect                    # what the January files change and break
+python scripts/approvers.py add --name "..." --role L2   # prints an approver key, once
+python scripts/drift.py approve --key <L2 key>    # only then is the new data layout read
+python scripts/run_cases.py                       # the 18 final-round cases -> cases/
+python scripts/gate.py                            # ruff, tests, schema, policy audit, organisers' grader,
+                                                  # installed queries
+python scripts/attest.py --verify                 # four-part attestation per claim, queries re-run
 ```
 
 </details>
@@ -420,7 +575,14 @@ python scripts/backtest.py --n 60 --month 10 --seed 909 --out backtest_pit.json 
 python scripts/fit_aggregation.py                 # fit the tempering on a separate sample
 python scripts/baselines.py --backtest runs/backtest_pit.json   # the agent vs score-only methods
 python scripts/eval_patterns.py                   # classifier vs 4,665 analyst labels
-python -m pytest                                  # policy, ledger, schema, simulator, tools, API
+python scripts/backtest_detectors.py              # the run detector on all 5,585 closed cases
+python scripts/ablation.py                        # each answer without the new detectors or priors
+python scripts/containment.py                     # a containment plan per ring and scheme
+python scripts/drills.py                          # the five drill categories, live
+python scripts/attacks.py                         # attacks with the defences on and off
+python scripts/data_quality.py                    # data problems and the investigations they taint
+python scripts/fill_readme.py                     # refill this page's numbers from those files
+python -m pytest                                  # 164 tests
 ```
 
 </details>
@@ -445,15 +607,19 @@ cd ui && npm install && npx vite                  # http://localhost:5173
 | `src/redthread/answer.py`, `validate.py` | answer-file schema and dataset checks |
 | `src/redthread/api/` | workbench backend |
 | `src/redthread/model/` | fraud model features and score calibration |
-| `gsql/` | schema, vector attributes, loading jobs, 24 installed queries |
+| `gsql/` | schema, vector attributes, loading jobs, 27 installed queries |
 | `scripts/` | data prep, model training, graph setup, knowledge base, case runner, monitoring, evaluation |
 | `ui/` | the workbench (React, Vite) |
-| `cases/` | the 20 answer files |
-| `cases_extra/` | 25 alerts the agent raised by itself |
-| `tests/` | policy, ledger, schema, simulator, tools and API tests |
+| `cases/` | the 18 final-round answer files |
+| `cases_round1/` | Round 1's 20 answer files, as submitted |
+| `cases_extra/` | 25 alerts the agent raised by itself in Round 1 |
+| `attestations/` | the four-part attestation of every claim in `cases/` |
+| `config/source_map.json` | the approved data layout, with each file's fingerprint |
+| `src/redthread/schemes.py`, `containment.py` | the final round's detectors and containment planner |
+| `tests/` | policy, ledger, schema, guard, drift, containment, schemes, simulator, tools and API tests |
 
 > [!TIP]
 > Ring detection is our own connected-components pass over *suspicious, new-to-account* device use,
-> tuned so it finds tight rings (eight in the July–October history) rather than one 118-card blob
+> tuned so it finds tight rings (nine, from the history before the first final-round alert) rather than one 118-card blob
 > formed by chaining through phones thousands of people share. TigerGraph's GDS `tg_louvain` runs on
 > top of it for the wider neighbourhood.
