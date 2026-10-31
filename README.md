@@ -36,7 +36,7 @@ so the page cannot drift from the live run. See <a href="#the-final-round">The f
 
 <br/>
 
-<img src="assets/case-file.png" alt="The RedThread case file for HHG-019: verdict, probability against the bank's score, exposure, report filed, and the case summary" width="880"/>
+<img src="assets/case-workspace.png" alt="The RedThread case workspace for HHF-004: fraud at 0.94, an undocumented scheme, the alert with the instruction the guard set aside, and the decisions waiting on an analyst" width="880"/>
 
 </div>
 
@@ -189,9 +189,9 @@ IDs, and the probability before and after.
 <!-- /numbers -->
 - **Attestation.** Every evidence line records the exact installed queries and parameters behind it and
   when they ran. `scripts/attest.py --verify` re-runs them: <!-- numbers:attestation -->207 of 209 claims across 18 answers carry their queries; re-running the queries returned every named ID for 151 and missed some for 0<!-- /numbers -->.
-- **The regulator's view (challenge 6).** `/audit/:id` replays an investigation one step at a time:
-  the query and parameters, what came back, the evidence held at that moment and nothing later, and
-  why the probability moved.
+- **The regulator's view (challenge 6).** Each case's recap in the workbench replays the investigation one
+  step at a time (`GET /api/cases/{id}/replay`): the query and parameters, what came back, the evidence
+  held at that moment and nothing later, and why the probability moved.
 - **Speed and cost (challenge 9).** <!-- numbers:speed -->alert to finished answer in 261 s at the median and 575 s at p95 across 18 cases, 181,444 tokens and 38.6 graph calls a case on average<!-- /numbers -->. The slow tail is the model
   timing out at its highest thinking level, not the graph; after two timeouts the call steps down and
   the case records it (`scripts/speed.py`).
@@ -240,7 +240,7 @@ flowchart TB
 
     subgraph WB["Workbench"]
         API["FastAPI<br/>cases, audit replay, handover,<br/>counterfactual, containment, evaluation"]
-        UI["React workbench<br/>docket, case file, audit view, rings, trust"]
+        UI["React workbench<br/>dashboard, case workspace, recap,<br/>networks, assurance"]
         AP["Approvals and challenges<br/>approver keys, roles, four eyes,<br/>hash-chained ledgers"]
         API --> UI --> AP
     end
@@ -621,39 +621,44 @@ fraud, new-device fraud and out-of-region use.
 
 ## The interface
 
-A fraud analyst's workbench, not a dashboard. Five routes, each answering one question.
+An analyst's workbench in [`frontend/`](frontend) (React, TypeScript, Tailwind, shadcn/ui), in light
+and dark themes. Three pages, each answering one question.
 
 <div align="center">
-<img src="assets/docket.png" alt="The docket: the twenty benchmark alerts with trigger, verdict, probability, pattern, exposure and actions awaiting approval" width="880"/>
+<img src="assets/dashboard.png" alt="The dashboard: 43 cases, the decisions waiting on an analyst, money at risk, reports to file, and verdicts split by the bank's queue and the alerts the agent raised itself" width="880"/>
 </div>
 
 | Route | Answers |
 |---|---|
-| `/` | what is in front of the team, separating the bank's queue from the alerts the agent raised itself |
-| `/case/:id` | why this verdict, what is uncertain, what happens next, who signs it off |
-| `/missed` | what continuous monitoring adds over the bank's queue |
-| `/rings/:id?` | is this one card, or an organised group |
-| `/trust` | should you believe it: replayed accuracy, and the agent against score-only methods |
+| `/` | what RedThread does, told through one real case (HHF-004), and the headline results |
+| `/app` | what is in front of the team: the decisions waiting on a person, verdicts by where the alert came from, fraud networks with their containment plans, and the assurance evidence (replayed accuracy, drills, attacks, ablation, data quality) |
+| `/app/cases/:id` | why this verdict, what is uncertain, what happens next and who signs it off: a searchable case list beside the case, with Summary, Evidence, Decisions and Report |
 
-**The thread is a scrubber.** Each investigation is a line down the left of the case file, one node
-per step. Arrow keys walk it backwards and the whole case file rewinds with it — the evidence graph
-shows only the entities known by then, the belief scale shows where belief stood, the evidence digest
-swaps to the tool that ran, and the action plan shows the plan as of then. One control drives five
-views, which turns the required narrative into a single continuous move instead of a tour of tabs.
+**The recap.** Any case can be replayed one step at a time, the view a regulator would ask for (challenge 6).
+Each step shows the query it ran and its parameters, what came back, the graph as it was known at that
+moment and nothing later, and where the probability stood. Hidden instructions the guard set aside appear
+as their own step.
 
-**Approvals are enforced.** Actions routed `L1` or `L2` wait for a person with that authority; a team
-lead cannot approve a regulatory filing. Every decision is written onto the case in the graph, where
-the next investigation can see it.
+<div align="center">
+<img src="assets/recap.png" alt="Step 6 of the HHF-004 recap: scheme_peers found 20 other cards starting the same probes, against 8 and 4 in the two months before" width="880"/>
+</div>
+
+**Approvals and challenges are enforced by the server.** Actions routed `L1` or `L2` wait for an analyst
+signed in with a named key, and the role comes from the key, never the request. Disagreeing with a verdict
+takes a reason and the IDs it rests on; a contested challenge waits for a second, different analyst. Every
+decision is written onto the case in the graph.
 
 **Counterfactuals are live.** Because the ledger arithmetic is deterministic, unticking any line
 recomputes the probability *and* the recommended action through the same functions the agent used —
 no model call, and no second implementation that can drift.
 
-**Presenter mode.** `/case/:id?replay=1` pushes the stored trace through the same state machine at a
-readable pace. It is the real trace, so a demo can run with the workspace suspended and no API key.
+**It runs without a backend.** `npm run dev:mock` serves a snapshot of every API response
+(`scripts/snapshot_api.py`), so the workbench opens with no dataset, graph or key. Anything that would
+change a case is refused with a clear message rather than faked.
 
-Orange encodes fraud and nothing else — never "selected", never "primary button". An uncertain verdict
-gets no hue at all, so it cannot compete with the accent.
+Fraud red marks fraud and nothing else — never "selected", never "primary button". An uncertain verdict
+gets no hue at all. The earlier workbench, with its scrubbing case file and presenter mode, is still in
+[`ui/`](ui).
 
 ## Running it
 
@@ -709,7 +714,7 @@ python scripts/drills.py                          # the five drill categories, l
 python scripts/attacks.py                         # attacks with the defences on and off
 python scripts/data_quality.py                    # data problems and the investigations they taint
 python scripts/fill_readme.py                     # refill this page's numbers from those files
-python -m pytest                                  # 164 tests
+python -m pytest                                  # 177 tests
 ```
 
 </details>
@@ -719,8 +724,17 @@ python -m pytest                                  # 164 tests
 
 ```bash
 python -m uvicorn redthread.api.app:app --port 8000
-cd ui && npm install && npx vite                  # http://localhost:5173
+cd frontend && npm install && npm run dev         # http://localhost:5181, proxies /api to :8000
 ```
+
+Without a backend, from the recorded snapshot (read-only):
+
+```bash
+cd frontend && npm install && npm run dev:mock    # http://localhost:5180
+```
+
+Approving and challenging take an analyst key: `python scripts/approvers.py add --name "..." --role L2`.
+Settling a contested challenge needs a second, different analyst.
 
 </details>
 
@@ -736,7 +750,8 @@ cd ui && npm install && npx vite                  # http://localhost:5173
 | `src/redthread/model/` | fraud model features and score calibration |
 | `gsql/` | schema, vector attributes, loading jobs, 27 installed queries |
 | `scripts/` | data prep, model training, graph setup, knowledge base, case runner, monitoring, evaluation |
-| `ui/` | the workbench (React, Vite) |
+| `frontend/` | the workbench (React, TypeScript, Tailwind, shadcn/ui) |
+| `ui/` | the earlier workbench, kept as it was; its `mock/api/` snapshot also feeds `frontend/` |
 | `cases/` | the 18 final-round answer files |
 | `cases_round1/` | Round 1's 20 answer files, as submitted |
 | `cases_extra/` | 25 alerts the agent raised by itself in Round 1 |
